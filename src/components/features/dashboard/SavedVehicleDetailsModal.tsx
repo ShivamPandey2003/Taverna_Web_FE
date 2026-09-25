@@ -1,9 +1,9 @@
 import { X } from "reicon-react";
 import { useNavigate } from "react-router";
-import { toast } from "sonner";
+// import { toast } from "sonner";
 import type { Vehicle } from "@/types/vehicle";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { removeVehicle, selectVehicleById } from "@/redux/vehicle/vehicleSlice";
+import { selectVehicleById } from "@/redux/vehicle/vehicleSlice";
 import { setSelectedVehicle } from "@/redux/booking/bookingSlice";
 import {
   closeVehicleDetails,
@@ -48,10 +48,10 @@ export function SavedVehicleDetailsModal({
     navigate("/dashboard/book-service");
   };
 
-  const onRemoveVehicle = () => {
-    dispatch(removeVehicle(vehicle.id));
-    toast.success(`${vehicle.brand} ${vehicle.model} removed`);
-  };
+  // const onRemoveVehicle = () => {
+  //   dispatch(removeVehicle(vehicle.id));
+  //   toast.success(`${vehicle.brand} ${vehicle.model} removed`);
+  // };
 
   return (
     <div className="absolute inset-0 z-50">
