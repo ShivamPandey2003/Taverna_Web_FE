@@ -42,10 +42,10 @@ export function Navbar() {
           </button> */}
           <NotificationDropdown/>
 
-          {/* User */}
+          {/* User; admins have no account page */}
           <button
             type="button"
-            onClick={() => navigate("/dashboard/account")}
+            onClick={() => navigate(isAdmin ? "/admin" : "/dashboard/account")}
             className="flex items-center gap-3"
           >
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-800">

@@ -2,6 +2,9 @@ import { RequireAuth } from "@/components/auth/RequireAuth";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { Account } from "@/pages/Account";
 import { AdminBookings } from "@/pages/AdminBookings";
+import { AdminDealerships } from "@/pages/AdminDealerships";
+import { AdminRelationshipManagers } from "@/pages/AdminRelationshipManagers";
+import { AdminValets } from "@/pages/AdminValets";
 import { BookService } from "@/pages/BookService";
 import { Dashboard } from "@/pages/Dashboard";
 import Home from "@/pages/Home";
@@ -16,10 +19,10 @@ const Router = createBrowserRouter([
     element: <Home />,
   },
   {
-    // Customer dashboard: any logged-in account, admins included
+    // Customer dashboard: customers only; admins are sent to /admin
     path: "dashboard",
     element: (
-      <RequireAuth>
+      <RequireAuth role="user">
         <DashboardLayout />
       </RequireAuth>
     ),
@@ -62,6 +65,18 @@ const Router = createBrowserRouter([
       {
         index: true,
         element: <AdminBookings />,
+      },
+      {
+        path: "dealerships",
+        element: <AdminDealerships />,
+      },
+      {
+        path: "valets",
+        element: <AdminValets />,
+      },
+      {
+        path: "relationship-managers",
+        element: <AdminRelationshipManagers />,
       },
     ],
   },

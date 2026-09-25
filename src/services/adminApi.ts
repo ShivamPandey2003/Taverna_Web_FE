@@ -5,10 +5,21 @@ import type {
   BookingListParams,
   Paginated,
   PaymentInfo,
+  StaffListParams,
   StaffMember,
+  StaffRole,
 } from "@/types/admin";
+import type { Dealership } from "@/types/dealership";
 
 export type PaymentInput = Omit<PaymentInfo, "updatedAt">;
+export type StaffInput = Pick<StaffMember, "name" | "phone" | "available">;
+
+// Valets and relationship managers share one API shape under different paths
+const staffPaths: Record<StaffRole, string> = {
+  valet: "/admin/valets",
+  manager: "/admin/relationship-managers",
+};
+export type DealershipInput = Omit<Dealership, "id">;
 
 // Sorting, filtering, search and pagination all happen on the server
 export const adminApi = {
@@ -55,15 +66,49 @@ export const adminApi = {
       () => request<AdminBooking>("put", `/admin/bookings/${id}/payment`, payment),
     ),
 
-  listValets: () =>
+  completeBooking: (id: string) =>
     callApi(
-      () => mockServer.listValets(),
-      () => request<StaffMember[]>("get", "/admin/valets"),
+      () => mockServer.completeBooking(id),
+      () => request<AdminBooking>("put", `/admin/bookings/${id}/complete`),
     ),
 
-  listRelationshipManagers: () =>
+  listStaff: (role: StaffRole, params: StaffListParams) =>
     callApi(
-      () => mockServer.listRelationshipManagers(),
-      () => request<StaffMember[]>("get", "/admin/relationship-managers"),
+      () => mockServer.listStaff(role, params),
+      () =>
+        request<Paginated<StaffMember>>(
+          "get",
+          `${staffPaths[role]}${toQueryString({ ...params })}`,
+        ),
+    ),
+
+  createStaff: (role: StaffRole, input: StaffInput) =>
+    callApi(
+      () => mockServer.createStaff(role, input),
+      () => request<StaffMember>("post", staffPaths[role], input),
+    ),
+
+  updateStaff: (role: StaffRole, id: string, input: StaffInput) =>
+    callApi(
+      () => mockServer.updateStaff(role, id, input),
+      () => request<StaffMember>("put", `${staffPaths[role]}/${id}`, input),
+    ),
+
+  deleteStaff: (role: StaffRole, id: string) =>
+    callApi(
+      () => mockServer.deleteStaff(role, id),
+      () => request<{ id: string }>("delete", `${staffPaths[role]}/${id}`),
+    ),
+
+  listDealerships: (search: string) =>
+    callApi(
+      () => mockServer.listDealerships(search),
+      () => request<Dealership[]>("get", `/admin/dealerships${toQueryString({ search })}`),
+    ),
+
+  createDealership: (input: DealershipInput) =>
+    callApi(
+      () => mockServer.createDealership(input),
+      () => request<Dealership>("post", "/admin/dealerships", input),
     ),
 };

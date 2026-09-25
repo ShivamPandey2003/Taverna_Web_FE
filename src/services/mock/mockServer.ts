@@ -3,12 +3,19 @@ import type { AuthSession, AuthUser } from "@/types/auth";
 import type {
   AdminBooking,
   BookingListParams,
+  Invoice,
+  InvoiceLine,
   Paginated,
   PaymentInfo,
+  StaffListParams,
   StaffMember,
+  StaffRole,
 } from "@/types/admin";
+import type { Dealership } from "@/types/dealership";
 import type { ServiceId } from "@/types/service";
 import { authStorage } from "@/services/authStorage";
+import { shortName } from "@/libs/utils";
+import { dealerships as seedDealerships } from "@/components/features/review/dealership.data";
 
 // In-browser stand-in for the backend. Data is kept in localStorage so bookings
 // placed from the user dashboard show up in the admin dashboard.
@@ -20,6 +27,7 @@ type MockDb = {
   bookings: AdminBooking[];
   valets: StaffMember[];
   relationshipManagers: StaffMember[];
+  dealerships: Dealership[];
 };
 
 const valets: StaffMember[] = [
@@ -101,7 +109,7 @@ function seedBookings(): AdminBooking[] {
   const now = Date.now();
   const day = 24 * 60 * 60 * 1000;
 
-  return Array.from({ length: 42 }, (_, index) => {
+  const bookings = Array.from({ length: 42 }, (_, index): AdminBooking => {
     const [name, email, phone] = pick(customers);
     const [brand, model, year] = pick(vehicles);
     const createdAt = new Date(now - Math.floor(random() * 30 * day)).toISOString();
@@ -153,21 +161,45 @@ function seedBookings(): AdminBooking[] {
       payment,
     };
   });
+
+  // The demo customer's seeded bookings are finished history, so they can book right away
+  return bookings.map((booking, index) =>
+    booking.customer.id !== "u-alex"
+      ? booking
+      : {
+          ...booking,
+          status: BookingStatus.SERVICE_COMPLETE,
+          confirmedAt: booking.createdAt,
+          valet: booking.valet ?? valets[0],
+          relationshipManager: booking.relationshipManager ?? relationshipManagers[0],
+          payment: booking.payment ?? {
+            amount: 180,
+            method: "card",
+            status: "paid",
+            transactionId: `TXN-${100000 + index}`,
+            updatedAt: booking.createdAt,
+          },
+        },
+  );
 }
 
 function loadDb(): MockDb {
-  try {
-    const raw = localStorage.getItem(DB_KEY);
-    if (raw) return JSON.parse(raw) as MockDb;
-  } catch {
-    // fall through to a fresh seed
-  }
-  return {
+  const seed: MockDb = {
     users: seedUsers,
     bookings: seedBookings(),
     valets,
     relationshipManagers,
+    dealerships: seedDealerships,
   };
+
+  try {
+    const raw = localStorage.getItem(DB_KEY);
+    // Seed collections added after the DB was first saved
+    if (raw) return { ...seed, ...(JSON.parse(raw) as Partial<MockDb>) };
+  } catch {
+    // fall through to a fresh seed
+  }
+  return seed;
 }
 
 const db = loadDb();
@@ -197,10 +229,116 @@ function requireAdmin() {
   }
 }
 
+const staffIdPrefixes: Record<StaffRole, string> = { valet: "valet", manager: "rm" };
+const staffLabels: Record<StaffRole, string> = {
+  valet: "valet",
+  manager: "relationship manager",
+};
+
+function staffList(role: StaffRole) {
+  return role === "valet" ? db.valets : db.relationshipManagers;
+}
+
+function findStaff(role: StaffRole, id: string) {
+  const member = staffList(role).find((item) => item.id === id);
+  if (!member) throw new Error(`We couldn't find this ${staffLabels[role]}.`);
+  return member;
+}
+
+const phoneDigits = (phone: string) => phone.replace(/\D/g, "");
+
+function assertPhoneFree(role: StaffRole, phone: string, exceptId?: string) {
+  const taken = staffList(role).some(
+    (member) => member.id !== exceptId && phoneDigits(member.phone) === phoneDigits(phone),
+  );
+  if (taken) throw new Error("Someone with this phone number already exists.");
+}
+
+// Bookings the member is assigned to that are still in progress (no payment yet)
+function openAssignments(role: StaffRole, id: string) {
+  return db.bookings.filter((booking) => {
+    const assigned = role === "valet" ? booking.valet : booking.relationshipManager;
+    return assigned?.id === id && !booking.payment;
+  });
+}
+
+// A customer's booking that isn't complete yet; they can only have one at a time
+function findOpenBooking(customerId: string) {
+  return (
+    db.bookings.find(
+      (booking) =>
+        booking.customer.id === customerId && booking.status !== BookingStatus.SERVICE_COMPLETE,
+    ) ?? null
+  );
+}
+
 function findBooking(id: string) {
   const booking = db.bookings.find((item) => item.id === id);
   if (!booking) throw new Error("We couldn't find this booking.");
   return booking;
+}
+
+// A booking the logged-in customer owns (admins can open any)
+function findMyBooking(id: string) {
+  const user = currentUser();
+  const booking = findBooking(id);
+  if (booking.customer.id !== user.id && user.role !== "admin") {
+    throw new Error("We couldn't find this booking.");
+  }
+  return booking;
+}
+
+const TAX_RATE = 0.08;
+const roundCents = (value: number) => Math.round(value * 100) / 100;
+
+function serviceLine(booking: AdminBooking) {
+  if (booking.serviceId === "loaner-only") return "Loaner Service";
+  return booking.valet ? `Valet Service by ${shortName(booking.valet.name)}` : "Valet Service";
+}
+
+// Standard bill: service, fuel surcharge, convenience fee (+ tow) and tax
+function createInvoice(booking: AdminBooking): Invoice {
+  const items: InvoiceLine[] = [
+    { label: serviceLine(booking), amount: booking.serviceId === "pickup-delivery" ? 340 : 180 },
+    { label: "Fuel surcharge", amount: 12 },
+    { label: "Convenience fee", amount: 4.48 },
+  ];
+  if (!booking.driveable) items.push({ label: "Tow truck", amount: 49 });
+
+  const subtotal = roundCents(items.reduce((sum, item) => sum + item.amount, 0));
+  const tax = roundCents(subtotal * TAX_RATE);
+
+  return {
+    issuedAt: new Date().toISOString(),
+    items,
+    subtotal,
+    taxRate: TAX_RATE,
+    tax,
+    total: roundCents(subtotal + tax),
+  };
+}
+
+// Bill for an amount the admin entered (tax included), so the invoice matches the payment
+function createInvoiceForTotal(booking: AdminBooking, total: number): Invoice {
+  const subtotal = roundCents(total / (1 + TAX_RATE));
+
+  return {
+    issuedAt: new Date().toISOString(),
+    items: [{ label: serviceLine(booking), amount: subtotal }],
+    subtotal,
+    taxRate: TAX_RATE,
+    tax: roundCents(total - subtotal),
+    total: roundCents(total),
+  };
+}
+
+const statusOrder = Object.values(BookingStatus);
+
+// Moves the booking forward to `status`, never back
+function advanceStatusTo(booking: AdminBooking, status: BookingStatus) {
+  if (statusOrder.indexOf(booking.status) < statusOrder.indexOf(status)) {
+    booking.status = status;
+  }
 }
 
 export const mockServer = {
@@ -243,6 +381,11 @@ export const mockServer = {
     >,
   ) {
     const user = currentUser();
+    if (findOpenBooking(user.id)) {
+      throw new Error(
+        "You already have a service in progress. You can book again once it's complete.",
+      );
+    }
     const booking: AdminBooking = {
       ...input,
       id: `PC-${Date.now().toString().slice(-6)}`,
@@ -259,12 +402,77 @@ export const mockServer = {
     return booking;
   },
 
+  getMyOpenBooking() {
+    return findOpenBooking(currentUser().id);
+  },
+
   getMyBooking(id: string) {
-    const user = currentUser();
-    const booking = findBooking(id);
-    if (booking.customer.id !== user.id && user.role !== "admin") {
-      throw new Error("We couldn't find this booking.");
+    return findMyBooking(id);
+  },
+
+  // Pays the generated bill; the vehicle then heads back to the customer
+  payInvoice(id: string) {
+    const booking = findMyBooking(id);
+    if (booking.payment?.status === "paid") throw new Error("This bill is already paid.");
+    if (!booking.invoice) throw new Error("There's no bill to pay yet.");
+    booking.payment = {
+      amount: booking.invoice.total,
+      method: "card",
+      status: "paid",
+      transactionId: `TXN-${Date.now().toString().slice(-6)}`,
+      updatedAt: new Date().toISOString(),
+    };
+    advanceStatusTo(booking, BookingStatus.VEHICLE_RETURN);
+    if (booking.status === BookingStatus.VEHICLE_RETURN) booking.etaMinutes = 30;
+    persist();
+    return booking;
+  },
+
+  // Demo only: moves the booking one status forward, filling in what the admin
+  // (or the valet app) would normally set on the way
+  simulateNextStatus(id: string) {
+    const booking = findMyBooking(id);
+    const now = new Date().toISOString();
+
+    switch (booking.status) {
+      case BookingStatus.IN_QUEUE:
+        booking.status = BookingStatus.BOOKED;
+        booking.confirmedAt ??= now;
+        break;
+      case BookingStatus.BOOKED:
+        booking.valet ??= { ...(db.valets.find((item) => item.available) ?? db.valets[0]) };
+        booking.status = BookingStatus.VALET_ASSIGNED;
+        booking.etaMinutes = 45;
+        break;
+      case BookingStatus.VALET_ASSIGNED:
+        booking.status = BookingStatus.VEHICLE_PICKED_UP;
+        booking.etaMinutes = null;
+        break;
+      case BookingStatus.VEHICLE_PICKED_UP:
+        booking.relationshipManager ??= {
+          ...(db.relationshipManagers.find((item) => item.available) ??
+            db.relationshipManagers[0]),
+        };
+        booking.status = BookingStatus.VEHICLE_ARRIVED;
+        break;
+      case BookingStatus.VEHICLE_ARRIVED:
+        booking.status = BookingStatus.IN_SERVICE;
+        break;
+      case BookingStatus.IN_SERVICE:
+        booking.invoice ??= createInvoice(booking);
+        booking.status = BookingStatus.BILL_GENERATED;
+        break;
+      case BookingStatus.BILL_GENERATED:
+        throw new Error("Pay the bill to get your vehicle back.");
+      case BookingStatus.VEHICLE_RETURN:
+        booking.status = BookingStatus.SERVICE_COMPLETE;
+        booking.etaMinutes = null;
+        break;
+      case BookingStatus.SERVICE_COMPLETE:
+        throw new Error("This service is already complete.");
     }
+
+    persist();
     return booking;
   },
 
@@ -369,17 +577,153 @@ export const mockServer = {
       throw new Error("Assign a relationship manager before updating payment.");
     }
     booking.payment = { ...payment, updatedAt: new Date().toISOString() };
+
+    // The customer sees the bill once the admin records the payment. An unpaid
+    // bill follows the amount the admin entered.
+    const amountChanged = booking.invoice?.total !== payment.amount;
+    if (!booking.invoice || (payment.status === "pending" && amountChanged)) {
+      booking.invoice = createInvoiceForTotal(booking, payment.amount);
+    }
+    if (payment.status === "paid") {
+      advanceStatusTo(booking, BookingStatus.VEHICLE_RETURN);
+    } else {
+      advanceStatusTo(booking, BookingStatus.BILL_GENERATED);
+    }
+
     persist();
     return booking;
   },
 
-  listValets() {
+  completeBooking(id: string) {
     requireAdmin();
-    return db.valets;
+    const booking = findBooking(id);
+    if (booking.payment?.status !== "paid") {
+      throw new Error("Record the payment as paid before completing the service.");
+    }
+    booking.status = BookingStatus.SERVICE_COMPLETE;
+    booking.etaMinutes = null;
+    persist();
+    return booking;
   },
 
-  listRelationshipManagers() {
+  // ---- Staff (valets and relationship managers) ----
+  listStaff(role: StaffRole, params: StaffListParams): Paginated<StaffMember> {
     requireAdmin();
-    return db.relationshipManagers;
+    const search = params.search.trim().toLowerCase();
+    const digits = phoneDigits(search);
+
+    const filtered = staffList(role).filter((member) => {
+      if (params.availability === "available" && !member.available) return false;
+      if (params.availability === "busy" && member.available) return false;
+      if (!search) return true;
+
+      return (
+        member.name.toLowerCase().includes(search) ||
+        (digits !== "" && phoneDigits(member.phone).includes(digits))
+      );
+    });
+
+    const sortValue = (member: StaffMember) => {
+      switch (params.sortBy) {
+        case "phone":
+          return member.phone;
+        case "available":
+          return member.available ? 1 : 0;
+        default:
+          return member.name.toLowerCase();
+      }
+    };
+
+    const direction = params.sortOrder === "asc" ? 1 : -1;
+    const sorted = [...filtered].sort((first, second) =>
+      sortValue(first) < sortValue(second)
+        ? -direction
+        : sortValue(first) > sortValue(second)
+          ? direction
+          : 0,
+    );
+
+    const totalPages = Math.max(1, Math.ceil(sorted.length / params.pageSize));
+    const page = Math.min(params.page, totalPages);
+    const start = (page - 1) * params.pageSize;
+
+    return {
+      items: sorted.slice(start, start + params.pageSize),
+      total: sorted.length,
+      page,
+      pageSize: params.pageSize,
+      totalPages,
+    };
+  },
+
+  createStaff(role: StaffRole, input: Pick<StaffMember, "name" | "phone" | "available">) {
+    requireAdmin();
+    assertPhoneFree(role, input.phone);
+    const member: StaffMember = { id: `${staffIdPrefixes[role]}-${Date.now()}`, ...input };
+    staffList(role).push(member);
+    persist();
+    return member;
+  },
+
+  updateStaff(
+    role: StaffRole,
+    id: string,
+    input: Pick<StaffMember, "name" | "phone" | "available">,
+  ) {
+    requireAdmin();
+    const member = findStaff(role, id);
+    assertPhoneFree(role, input.phone, id);
+    Object.assign(member, input);
+
+    // Bookings keep a copy of the assigned member; keep their name and phone current
+    db.bookings.forEach((booking) => {
+      if (role === "valet" && booking.valet?.id === id) booking.valet = { ...member };
+      if (role === "manager" && booking.relationshipManager?.id === id) {
+        booking.relationshipManager = { ...member };
+      }
+    });
+
+    persist();
+    return member;
+  },
+
+  deleteStaff(role: StaffRole, id: string) {
+    requireAdmin();
+    const member = findStaff(role, id);
+    const open = openAssignments(role, id).length;
+    if (open > 0) {
+      throw new Error(
+        `${member.name} is assigned to ${open} open booking${open === 1 ? "" : "s"}. Reassign ${open === 1 ? "it" : "them"} first.`,
+      );
+    }
+    const list = staffList(role);
+    list.splice(list.indexOf(member), 1);
+    persist();
+    return { id };
+  },
+
+  // ---- Dealerships ----
+  listDealerships(search: string) {
+    requireAdmin();
+    const query = search.trim().toLowerCase();
+    if (!query) return db.dealerships;
+
+    return db.dealerships.filter((dealership) =>
+      [dealership.name, dealership.address].some((value) =>
+        value.toLowerCase().includes(query),
+      ),
+    );
+  },
+
+  createDealership(input: Omit<Dealership, "id">) {
+    requireAdmin();
+    const name = input.name.trim().toLowerCase();
+    if (db.dealerships.some((dealership) => dealership.name.toLowerCase() === name)) {
+      throw new Error("A dealership with this name already exists.");
+    }
+    const dealership: Dealership = { id: `dealership-${Date.now()}`, ...input };
+    db.dealerships.push(dealership);
+    persist();
+    return dealership;
   },
 };

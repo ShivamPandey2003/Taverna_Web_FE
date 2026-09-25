@@ -5,8 +5,14 @@ import { selectSession, setAuthMode } from "@/redux/auth/authSlice";
 import { openAuthModal } from "@/redux/modals/homeModal/homeModalSlice";
 import type { UserRole } from "@/types/auth";
 
+// Where each role lands when it opens the other role's pages
+const roleHomePaths: Record<UserRole, string> = {
+  user: "/dashboard",
+  admin: "/admin",
+};
+
 interface RequireAuthProps {
-  // Omit to allow any logged-in account. Admins can open every user page too.
+  // Omit to allow any logged-in account
   role?: UserRole;
   children: ReactNode;
 }
@@ -27,8 +33,9 @@ export function RequireAuth({ role, children }: RequireAuthProps) {
     return <Navigate to="/" replace />;
   }
 
-  if (role === "admin" && session.user.role !== "admin") {
-    return <Navigate to="/dashboard" replace />;
+  // Customers can't open admin pages and admins can't open customer pages
+  if (role && session.user.role !== role) {
+    return <Navigate to={roleHomePaths[session.user.role]} replace />;
   }
 
   return children;

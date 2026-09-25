@@ -1,23 +1,20 @@
-import { SortAsc, SortDesc, SortV } from "reicon-react";
-import { cn } from "@/libs/utils";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   selectBookingListParams,
+  setPage,
+  setPageSize,
   toggleSort,
 } from "@/redux/adminBookings/adminBookingsSlice";
 import {
+  openBookingDetails,
   openBookingWorkflow,
-  WORKFLOW_STEPS,
 } from "@/redux/modals/adminModal/adminModalSlice";
 import { useAdminBookings } from "@/services/queries/adminQueries";
 import type { BookingSortField } from "@/types/admin";
 import { BookingStatusBadge } from "./BookingStatusBadge";
+import { SortButton } from "./SortButton";
 import { TablePagination } from "./TablePagination";
-import {
-  completedStepCount,
-  formatShortDateTime,
-  serviceLabels,
-} from "./admin.utils";
+import { formatShortDateTime, serviceLabels } from "./admin.utils";
 
 const columns: { label: string; sortField?: BookingSortField }[] = [
   { label: "Booking ID", sortField: "id" },
@@ -27,7 +24,7 @@ const columns: { label: string; sortField?: BookingSortField }[] = [
   { label: "Created", sortField: "createdAt" },
   { label: "Scheduled", sortField: "scheduledAt" },
   { label: "Status", sortField: "status" },
-  { label: "Progress" },
+  { label: "Actions" },
 ];
 
 export function BookingsTable() {
@@ -99,7 +96,7 @@ export function BookingsTable() {
             {data?.items.map((booking) => (
               <tr
                 key={booking.id}
-                onClick={() => dispatch(openBookingWorkflow(booking.id))}
+                onClick={() => dispatch(openBookingDetails(booking.id))}
                 className="cursor-pointer transition hover:bg-gray-50"
               >
                 {/* One line per row; the full details are in the booking modal */}
@@ -137,8 +134,18 @@ export function BookingsTable() {
                   <BookingStatusBadge status={booking.status} />
                 </td>
 
-                <td className="px-4 py-2">
-                  <ProgressDots done={completedStepCount(booking)} />
+                <td className="px-4 py-2 text-right">
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      // Don't also open the details modal
+                      event.stopPropagation();
+                      dispatch(openBookingWorkflow(booking.id));
+                    }}
+                    className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-900 transition hover:bg-gray-100"
+                  >
+                    Manage
+                  </button>
                 </td>
               </tr>
             ))}
@@ -152,58 +159,10 @@ export function BookingsTable() {
           pageSize={data.pageSize}
           total={data.total}
           totalPages={data.totalPages}
+          onPageChange={(page) => dispatch(setPage(page))}
+          onPageSizeChange={(size) => dispatch(setPageSize(size))}
         />
       )}
-    </div>
-  );
-}
-
-function SortButton({
-  label,
-  active,
-  order,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  order: "asc" | "desc";
-  onClick: () => void;
-}) {
-  const Icon = !active ? SortV : order === "asc" ? SortAsc : SortDesc;
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-1.5 uppercase tracking-wide transition hover:text-gray-900",
-        active && "text-gray-900",
-      )}
-    >
-      {label}
-      <Icon size={14} className={active ? "text-gray-900" : "text-gray-300"} />
-    </button>
-  );
-}
-
-// Filled dots = workflow steps done (confirm, valet, manager, payment)
-function ProgressDots({ done }: { done: number }) {
-  return (
-    <div className="flex items-center gap-2" title={`${done} of ${WORKFLOW_STEPS.length} steps done`}>
-      <div className="flex gap-1">
-        {WORKFLOW_STEPS.map((step, index) => (
-          <span
-            key={step}
-            className={cn(
-              "h-1.5 w-4 rounded-full",
-              index < done ? "bg-emerald-500" : "bg-gray-200",
-            )}
-          />
-        ))}
-      </div>
-      <span className="text-xs text-gray-500">
-        {done}/{WORKFLOW_STEPS.length}
-      </span>
     </div>
   );
 }
