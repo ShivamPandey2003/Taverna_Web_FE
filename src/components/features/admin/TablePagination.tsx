@@ -1,15 +1,15 @@
 import { AngleLeft, AngleRight } from "reicon-react";
 import { cn } from "@/libs/utils";
-import { useAppDispatch } from "@/redux/hooks";
-import { setPage, setPageSize } from "@/redux/adminBookings/adminBookingsSlice";
 
-const PAGE_SIZES = [10, 20, 50];
+const PAGE_SIZES = [12, 24, 48];
 
 interface TablePaginationProps {
   page: number;
   pageSize: number;
   total: number;
   totalPages: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
 }
 
 // Up to five page numbers centred on the current page
@@ -19,9 +19,14 @@ function visiblePages(page: number, totalPages: number) {
   return Array.from({ length: end - start + 1 }, (_, index) => start + index);
 }
 
-export function TablePagination({ page, pageSize, total, totalPages }: TablePaginationProps) {
-  const dispatch = useAppDispatch();
-
+export function TablePagination({
+  page,
+  pageSize,
+  total,
+  totalPages,
+  onPageChange,
+  onPageSizeChange,
+}: TablePaginationProps) {
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
 
@@ -35,7 +40,7 @@ export function TablePagination({ page, pageSize, total, totalPages }: TablePagi
 
         <select
           value={pageSize}
-          onChange={(event) => dispatch(setPageSize(Number(event.target.value)))}
+          onChange={(event) => onPageSizeChange(Number(event.target.value))}
           className="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-700 outline-none"
           aria-label="Rows per page"
         >
@@ -50,7 +55,7 @@ export function TablePagination({ page, pageSize, total, totalPages }: TablePagi
       <div className="flex items-center gap-1">
         <button
           type="button"
-          onClick={() => dispatch(setPage(page - 1))}
+          onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
           className="flex h-8 w-8 items-center justify-center rounded-md text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
           aria-label="Previous page"
@@ -62,7 +67,7 @@ export function TablePagination({ page, pageSize, total, totalPages }: TablePagi
           <button
             key={number}
             type="button"
-            onClick={() => dispatch(setPage(number))}
+            onClick={() => onPageChange(number)}
             className={cn(
               "h-8 min-w-8 rounded-md px-2 text-sm font-medium transition",
               number === page
@@ -77,7 +82,7 @@ export function TablePagination({ page, pageSize, total, totalPages }: TablePagi
 
         <button
           type="button"
-          onClick={() => dispatch(setPage(page + 1))}
+          onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
           className="flex h-8 w-8 items-center justify-center rounded-md text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
           aria-label="Next page"

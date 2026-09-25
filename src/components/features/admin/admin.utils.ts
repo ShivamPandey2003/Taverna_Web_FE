@@ -60,7 +60,3 @@ export function isStepUnlocked(booking: AdminBooking, step: WorkflowStep) {
 export function firstOpenStep(booking: AdminBooking): WorkflowStep {
   return WORKFLOW_STEPS.find((step) => !isStepDone(booking, step)) ?? "payment";
 }
-
-export function completedStepCount(booking: AdminBooking) {
-  return WORKFLOW_STEPS.filter((step) => isStepDone(booking, step)).length;
-}

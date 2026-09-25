@@ -11,13 +11,23 @@ import {
 import { selectVehicles } from "@/redux/vehicle/vehicleSlice";
 import { openSelectVehicle } from "@/redux/modals/bookServiceModal/bookServiceModalSlice";
 
-export function ServicesList() {
+interface ServicesListProps {
+  // A service is already in progress
+  disabled?: boolean;
+}
+
+export function ServicesList({ disabled = false }: ServicesListProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const vehicles = useAppSelector(selectVehicles);
   const selectedVehicle = useAppSelector(selectBookingVehicle);
 
   const handleServiceSelect = (service: Service) => {
+    if (disabled) {
+      toast.error("You can book again once your current service is complete.");
+      return;
+    }
+
     if (!selectedVehicle) {
       if (vehicles.length === 0) {
         toast.error("Add a vehicle before booking a service.");
@@ -39,6 +49,7 @@ export function ServicesList() {
           key={service.id}
           service={service}
           onSelect={handleServiceSelect}
+          disabled={disabled}
         />
       ))}
     </div>

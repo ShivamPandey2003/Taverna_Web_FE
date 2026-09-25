@@ -1,18 +1,26 @@
 import { ArrowRight, Check } from 'reicon-react';
 
 import type { Service } from "@/types/service";
+import { cn } from "@/libs/utils";
 
 interface ServiceBookingCardProps {
   service: Service;
   onSelect?: (service: Service) => void;
+  disabled?: boolean;
 }
 
 export function ServiceBookingCard({
   service,
   onSelect,
+  disabled = false,
 }: ServiceBookingCardProps) {
   return (
-    <article className="rounded-2xl border border-gray-200 bg-white px-6 py-6">
+    <article
+      className={cn(
+        "rounded-2xl border border-gray-200 bg-white px-6 py-6",
+        disabled && "opacity-50",
+      )}
+    >
       {/* Main content */}
       <div className="flex gap-6">
         {/* Image */}
@@ -60,7 +68,8 @@ export function ServiceBookingCard({
             <button
               type="button"
               onClick={() => onSelect?.(service)}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-900 transition hover:bg-gray-100"
+              disabled={disabled}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-900 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
               aria-label={`Book ${service.title}`}
             >
               <ArrowRight size={18} />
@@ -74,7 +83,8 @@ export function ServiceBookingCard({
         <button
           type="button"
           onClick={() => onSelect?.(service)}
-          className="ml-auto block text-sm font-semibold text-gray-900 hover:text-emerald-600"
+          disabled={disabled}
+          className="ml-auto block text-sm font-semibold text-gray-900 hover:text-emerald-600 disabled:cursor-not-allowed disabled:hover:text-gray-900"
         >
           Tap to book this service
         </button>
