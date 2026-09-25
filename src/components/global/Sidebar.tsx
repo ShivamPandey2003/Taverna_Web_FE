@@ -1,9 +1,10 @@
-import { HomeSmile, Calendar, Tag, UserCircle, ClipboardList, Logout } from 'reicon-react';
+import { HomeSmile, Calendar, Tag, UserCircle, ClipboardList, Logout, Building, Car, Users } from 'reicon-react';
 
 import { NavLink } from "react-router";
 import { useAppSelector } from "@/redux/hooks";
 import { selectIsAdmin } from "@/redux/auth/authSlice";
 import { useLogout } from "@/hooks/useLogout";
+import { ServiceStatusCard } from "@/components/features/tracking/ServiceStatusCard";
 
 const navigation = [
   {
@@ -34,6 +35,21 @@ const adminNavigation = [
     path: "/admin",
     icon: ClipboardList,
   },
+  {
+    label: "Dealerships",
+    path: "/admin/dealerships",
+    icon: Building,
+  },
+  {
+    label: "Valets",
+    path: "/admin/valets",
+    icon: Car,
+  },
+  {
+    label: "Relationship Managers",
+    path: "/admin/relationship-managers",
+    icon: Users,
+  },
 ];
 
 // Paths that must match exactly so child routes don't also highlight them
@@ -48,25 +64,19 @@ export function Sidebar() {
 
       <nav className="flex-1 space-y-2 p-6">
 
-        {isAdmin && (
-          <>
-            <p className="px-4 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-400">
-              Admin
-            </p>
-            {adminNavigation.map((item) => (
-              <SidebarLink key={item.path} {...item} />
-            ))}
-            <p className="px-4 pb-1 pt-4 text-xs font-semibold uppercase tracking-wide text-gray-400">
-              My Dashboard
-            </p>
-          </>
-        )}
-
-        {navigation.map((item) => (
+        {/* Admins can't open customer pages, so they only get the admin links */}
+        {(isAdmin ? adminNavigation : navigation).map((item) => (
           <SidebarLink key={item.path} {...item} />
         ))}
 
       </nav>
+
+      {/* The customer's running service; can't be closed */}
+      {!isAdmin && (
+        <div className="px-6 pb-4">
+          <ServiceStatusCard />
+        </div>
+      )}
 
       <div className="border-t border-gray-200 p-6">
         <button

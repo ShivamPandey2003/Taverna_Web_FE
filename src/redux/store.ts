@@ -10,6 +10,8 @@ import account from "./account/accountSlice";
 import auth from "./auth/authSlice";
 import location from "./location/locationSlice";
 import adminBookings from "./adminBookings/adminBookingsSlice";
+import adminDealerships from "./adminDealerships/adminDealershipsSlice";
+import adminStaff from "./adminStaff/adminStaffSlice";
 import { authStorage } from "@/services/authStorage";
 
 // Modal visibility, one reducer per page
@@ -19,6 +21,8 @@ import bookServiceModal from "./modals/bookServiceModal/bookServiceModalSlice";
 import reviewModal from "./modals/reviewModal/reviewModalSlice";
 import accountModal from "./modals/accountModal/accountModalSlice";
 import adminModal from "./modals/adminModal/adminModalSlice";
+import dealershipModal from "./modals/dealershipModal/dealershipModalSlice";
+import staffModal from "./modals/staffModal/staffModalSlice";
 
 const rootReducer = combineReducers({
   vehicle,
@@ -30,6 +34,8 @@ const rootReducer = combineReducers({
   auth,
   location,
   adminBookings,
+  adminDealerships,
+  adminStaff,
 
   homeModal,
   dashboardModal,
@@ -37,6 +43,8 @@ const rootReducer = combineReducers({
   reviewModal,
   accountModal,
   adminModal,
+  dealershipModal,
+  staffModal,
 });
 
 export const store = configureStore({

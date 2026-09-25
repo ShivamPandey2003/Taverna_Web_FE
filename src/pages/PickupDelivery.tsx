@@ -14,6 +14,8 @@ import { DriveableStatus } from "@/components/features/review/DriveableStatus";
 import { TowTruckNotice } from "@/components/features/review/TowTruckNotice";
 import { SelectVehicleModal } from "@/components/features/booking/SelectVehicleModal";
 import { AddAddressModal } from "@/components/features/addresses/AddAddressModal";
+import { ServiceInProgressNotice } from "@/components/features/booking/ServiceInProgressNotice";
+import { useServiceInProgress } from "@/components/features/tracking/serviceStatus";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   selectBooking,
@@ -31,6 +33,7 @@ import {
   selectReviewModal,
 } from "@/redux/modals/reviewModal/reviewModalSlice";
 import type { ServiceId } from "@/types/service";
+import { cn } from "@/libs/utils";
 
 const serviceSubtitle: Record<ServiceId, string> = {
   "pickup-delivery": "We pickup & deliver",
@@ -49,13 +52,21 @@ export function PickupDelivery() {
   const activeModal = useAppSelector(selectReviewModal);
 
   const hasPickup = !!address || pickupLocation?.type === "current";
-  const canBook = !!vehicle && hasPickup && !!dealership;
+  const [booking, setBooking] = useState(false);
+  // One service at a time. Ignored while this page's own booking is being placed,
+  // so the notice doesn't flash before we move to tracking.
+  const serviceInProgress = useServiceInProgress() && !booking;
+  const canBook = !!vehicle && hasPickup && !!dealership && !serviceInProgress;
+  // Loaner Only customers drive in themselves, so there's no pickup to schedule
+  const canSchedule = service.id !== "loaner-only";
 
   const closeModal = () => dispatch(closeReviewModal());
 
-  const [booking, setBooking] = useState(false);
-
   const handleBook = async (scheduledAt: string | null = null) => {
+    if (serviceInProgress) {
+      toast.error("You can book again once your current service is complete.");
+      return;
+    }
     if (!canBook) {
       toast.error("Select a vehicle, pickup address and dealership first.");
       return;
@@ -63,11 +74,12 @@ export function PickupDelivery() {
 
     setBooking(true);
     const booked = await dispatch(confirmBooking(scheduledAt));
-    setBooking(false);
 
     // A failed API call has already been reported by the API layer
     if (booked) {
       navigate("/dashboard/book-service/tracking", { replace: true });
+    } else {
+      setBooking(false);
     }
   };
 
@@ -93,6 +105,12 @@ export function PickupDelivery() {
             <p className="mt-0.5 text-sm text-gray-500">{serviceSubtitle[service.id]}</p>
           </div>
         </header>
+
+        {serviceInProgress && (
+          <div className="mt-6">
+            <ServiceInProgressNotice />
+          </div>
+        )}
 
         {/* Vehicle */}
         <div className="mt-9">
@@ -128,15 +146,22 @@ export function PickupDelivery() {
         </div>
 
         {/* Actions */}
-        <div className="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 sticky bottom-0 bg-[#f8f9fa] w-full p-2">
-          <button
-            type="button"
-            disabled={!canBook || booking}
-            onClick={() => dispatch(openReviewModal("schedule"))}
-            className="h-[52px] rounded-lg border border-gray-900 bg-white text-sm font-semibold text-gray-900 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Schedule
-          </button>
+        <div
+          className={cn(
+            "mt-10 grid grid-cols-1 gap-5 sticky bottom-0 bg-[#f8f9fa] w-full p-2",
+            canSchedule && "sm:grid-cols-2",
+          )}
+        >
+          {canSchedule && (
+            <button
+              type="button"
+              disabled={!canBook || booking}
+              onClick={() => dispatch(openReviewModal("schedule"))}
+              className="h-[52px] rounded-lg border border-gray-900 bg-white text-sm font-semibold text-gray-900 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Schedule
+            </button>
+          )}
 
           <button
             type="button"
@@ -167,7 +192,7 @@ export function PickupDelivery() {
         }}
       />
       <SchedulePickupModal
-        open={activeModal === "schedule"}
+        open={canSchedule && activeModal === "schedule"}
         onClose={closeModal}
         onConfirm={(date) => {
           closeModal();

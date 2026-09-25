@@ -35,7 +35,7 @@ export function ConfirmStep({ booking, onDone }: ConfirmStepProps) {
     <div className="rounded-xl border border-gray-200 p-5">
       <h3 className="text-base font-bold text-gray-900">Confirm this booking</h3>
       <p className="mt-1 text-sm text-gray-500">
-        Check the details above. Confirming lets the customer know their booking was accepted.
+        Confirming lets the customer know their booking was accepted.
       </p>
 
       <button

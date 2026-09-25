@@ -8,7 +8,7 @@ import type {
 // Query sent to the admin bookings API; any change here triggers a refetch
 const initialState: BookingListParams = {
   page: 1,
-  pageSize: 10,
+  pageSize: 12,
   sortBy: "createdAt",
   sortOrder: "desc",
   search: "",

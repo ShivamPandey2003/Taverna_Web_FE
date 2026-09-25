@@ -14,6 +14,23 @@
 
   --color-border: #e5e7eb;
 
+  /* Service status: waiting on us vs. moving along */
+  --color-status-pending: #f97316;
+  --color-status-active: #06c167;
+
+  --animate-toast-in: toast-in 220ms ease-out;
+
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   --radius-card: 12px;
   --radius-button: 7px;
 
