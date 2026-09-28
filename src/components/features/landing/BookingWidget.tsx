@@ -27,45 +27,50 @@ export function BookingWidget() {
   };
 
   return (
-    <div className="space-y-3 relative">
-      {/* Pickup */}
-      <div className="flex items-center gap-3 rounded-lg border border-gray-300 px-4 py-3">
-        <div className="h-6 w-6 rounded-full border-2 border-black flex items-center justify-center">
-          <div className="bg-black h-3.5 w-3.5 rounded-full"></div>
+    <div className="space-y-3">
+      <div className="relative space-y-3">
+        {/* Line joining the two markers, centre to centre at any width */}
+        <div className="absolute bottom-1/4 left-[27px] top-1/4 w-1 bg-black" />
+
+        {/* Pickup */}
+        <div className="flex items-center gap-3 rounded-lg border border-gray-300 px-4 py-3">
+          <div className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-black bg-white">
+            <div className="bg-black h-3.5 w-3.5 rounded-full"></div>
+          </div>
+
+          <div className="min-w-0 flex-1 text-sm line-clamp-1">
+            Pickup from{" "}
+            {loading ? (
+              <strong>Getting location...</strong>
+            ) : error ? (
+              <strong>{error}</strong>
+            ) : (
+              // 540 SW 14th Ave, Fort Lauderdale, FL 33312, USA
+              <strong>{address}</strong>
+            )}
+          </div>
+
+          <button className="shrink-0 text-gray-500">
+            <XCircle size={20} />
+          </button>
         </div>
 
-        <div className="flex-1 text-sm line-clamp-1">
-          Pickup from{" "}
-          {loading ? (
-            <strong>Getting location...</strong>
-          ) : error ? (
-            <strong>{error}</strong>
-          ) : (
-            // 540 SW 14th Ave, Fort Lauderdale, FL 33312, USA
-            <strong>{address}</strong>
-          )}
+        {/* Delivery */}
+        <div className="flex items-center gap-3 rounded-lg border border-gray-300 px-4 py-3">
+          <div className="relative h-6 w-6 shrink-0 rounded-sm bg-black" />
+
+          <div className="min-w-0 flex-1 text-sm line-clamp-1">
+            Deliver to <strong>Taverna Dealership, Fort Lauderdale</strong>
+          </div>
+
+          <span className="shrink-0 rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-primary">
+            Closest
+          </span>
+
+          <button className="shrink-0 text-gray-500">
+            <XCircle size={20} />
+          </button>
         </div>
-
-        <button className="text-gray-500">
-          <XCircle size={20} />
-        </button>
-      </div>
-      <div className="h-16 absolute border-r-6 border-black top-1/6 left-6.5" />
-      {/* Delivery */}
-      <div className="flex items-center gap-3 rounded-lg border border-gray-300 px-4 py-3">
-        <div className="h-6 w-6 rounded-sm bg-black" />
-
-        <div className="flex-1 text-sm line-clamp-1">
-          Deliver to <strong>Taverna Dealership, Fort Lauderdale</strong>
-        </div>
-
-        <span className="rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-primary">
-          Closest
-        </span>
-
-        <button className="text-gray-500">
-          <XCircle size={20} />
-        </button>
       </div>
 
       {/* Buttons */}

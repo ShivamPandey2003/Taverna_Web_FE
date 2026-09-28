@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { Account } from "@/pages/Account";
 import { AdminBookings } from "@/pages/AdminBookings";
 import { AdminDealerships } from "@/pages/AdminDealerships";
-import { AdminRelationshipManagers } from "@/pages/AdminRelationshipManagers";
+import { AdminAdvisors } from "@/pages/AdminAdvisors";
 import { AdminValets } from "@/pages/AdminValets";
 import { BookService } from "@/pages/BookService";
 import { Dashboard } from "@/pages/Dashboard";
@@ -75,8 +75,8 @@ const Router = createBrowserRouter([
         element: <AdminValets />,
       },
       {
-        path: "relationship-managers",
-        element: <AdminRelationshipManagers />,
+        path: "advisors",
+        element: <AdminAdvisors />,
       },
     ],
   },

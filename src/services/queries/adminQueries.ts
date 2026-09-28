@@ -4,12 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import {
-  adminApi,
-  type DealershipInput,
-  type PaymentInput,
-  type StaffInput,
-} from "@/services/adminApi";
+import { adminApi, type DealershipInput, type StaffInput } from "@/services/adminApi";
 import type { BookingListParams, StaffListParams, StaffRole } from "@/types/admin";
 import type { Dealership } from "@/types/dealership";
 
@@ -120,14 +115,32 @@ export function useDealerships(search: string) {
   });
 }
 
-export function useCreateDealership() {
+// Add, edit and delete refresh every dealership list
+function useDealershipMutation<TVariables, TData>(
+  mutationFn: (variables: TVariables) => Promise<TData>,
+) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: DealershipInput) => adminApi.createDealership(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.dealerships }),
+    mutationFn,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.dealerships });
+      // Renaming a dealership also renames it on its bookings
+      queryClient.invalidateQueries({ queryKey: adminKeys.bookings });
+    },
   });
 }
+
+export const useCreateDealership = () =>
+  useDealershipMutation((input: DealershipInput) => adminApi.createDealership(input));
+
+export const useUpdateDealership = () =>
+  useDealershipMutation(({ id, input }: { id: string; input: DealershipInput }) =>
+    adminApi.updateDealership(id, input),
+  );
+
+export const useDeleteDealership = () =>
+  useDealershipMutation((id: string) => adminApi.deleteDealership(id));
 
 // Every workflow step refreshes both the open booking and the table
 function useBookingMutation<TVariables>(
@@ -160,7 +173,8 @@ export const useAssignRelationshipManager = () =>
 export const useCompleteBooking = () =>
   useBookingMutation((id: string) => adminApi.completeBooking(id));
 
-export const useUpdatePayment = () =>
-  useBookingMutation(({ id, payment }: { id: string; payment: PaymentInput }) =>
-    adminApi.updatePayment(id, payment),
-  );
+export const useGenerateInvoice = () =>
+  useBookingMutation((id: string) => adminApi.generateInvoice(id));
+
+export const useConfirmPayment = () =>
+  useBookingMutation((id: string) => adminApi.confirmPayment(id));

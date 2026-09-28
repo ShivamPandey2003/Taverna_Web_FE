@@ -3,18 +3,18 @@ import type { RootState } from "@/redux/store";
 import type { StaffRole } from "@/types/admin";
 
 // Steps of the admin booking workflow, in the order they must be completed
-export const WORKFLOW_STEPS = ["confirm", "valet", "manager", "payment"] as const;
+export const WORKFLOW_STEPS = ["confirm", "valet", "manager", "payment", "complete"] as const;
 export type WorkflowStep = (typeof WORKFLOW_STEPS)[number];
 
 // Modals on the admin bookings page (/admin)
 type AdminModalState = {
   // Read-only booking details
   detailsBookingId: string | null;
-  // Workflow stepper (confirm, valet, manager, payment)
+  // Workflow stepper (confirm, valet, advisor, payment, complete)
   workflowBookingId: string | null;
   // null = open on the first step that isn't done yet
   activeStep: WorkflowStep | null;
-  // "Add valet / relationship manager" modal, opened from a workflow step
+  // "Add valet / advisor" modal, opened from a workflow step
   addStaff: { role: StaffRole; name: string } | null;
 };
 

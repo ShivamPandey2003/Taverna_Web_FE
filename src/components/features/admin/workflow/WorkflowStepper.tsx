@@ -7,8 +7,9 @@ import { isStepDone, isStepUnlocked } from "../admin.utils";
 const stepLabels: Record<WorkflowStep, string> = {
   confirm: "Confirm booking",
   valet: "Assign valet",
-  manager: "Relationship manager",
+  manager: "Assign advisor",
   payment: "Payment",
+  complete: "Complete service",
 };
 
 interface WorkflowStepperProps {
@@ -19,7 +20,7 @@ interface WorkflowStepperProps {
 
 export function WorkflowStepper({ booking, activeStep, onSelect }: WorkflowStepperProps) {
   return (
-    <ol className="grid grid-cols-4 gap-2">
+    <ol className="grid grid-cols-2 gap-2 sm:grid-cols-5">
       {WORKFLOW_STEPS.map((step, index) => {
         const done = isStepDone(booking, step);
         const unlocked = isStepUnlocked(booking, step);

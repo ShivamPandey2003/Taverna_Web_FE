@@ -1,10 +1,9 @@
-import { useAppSelector } from "@/redux/hooks";
-import { selectDealershipSearch } from "@/redux/adminDealerships/adminDealershipsSlice";
 import { useDealerships } from "@/services/queries/adminQueries";
 import { DealershipCard } from "./DealershipCard";
+import { useDealershipSearch } from "./useDealershipSearch";
 
 export function DealershipGrid() {
-  const search = useAppSelector(selectDealershipSearch);
+  const { search } = useDealershipSearch();
   const { data, isPending, isError, refetch } = useDealerships(search);
 
   if (isError) {

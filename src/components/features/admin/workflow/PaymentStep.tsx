@@ -1,138 +1,111 @@
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import type { AdminBooking } from "@/types/admin";
 import { BookingStatus } from "@/types/booking";
-import { useCompleteBooking, useUpdatePayment } from "@/services/queries/adminQueries";
-import { paymentSchema, type PaymentFormData } from "@/schema/payment.schema";
+import {
+  useCompleteBooking,
+  useConfirmPayment,
+  useGenerateInvoice,
+} from "@/services/queries/adminQueries";
 import { formatCurrency, formatDateTime } from "../admin.utils";
-import { FormField } from "@/components/ui/FormField";
 import { StepDone } from "./ConfirmStep";
 
-const methods: { value: PaymentFormData["method"]; label: string }[] = [
-  { value: "card", label: "Card" },
-  { value: "cash", label: "Cash" },
-  { value: "insurance", label: "Insurance" },
-  { value: "warranty", label: "Warranty" },
-];
+interface StepProps {
+  booking: AdminBooking;
+  onDone: () => void;
+}
 
-const statuses: { value: PaymentFormData["status"]; label: string }[] = [
-  { value: "pending", label: "Pending" },
-  { value: "paid", label: "Paid" },
-  { value: "refunded", label: "Refunded" },
-];
+// The admin never enters payment details: the bill comes from the server and
+// the admin only confirms that the customer paid it
+export function PaymentStep({ booking, onDone }: StepProps) {
+  const generateInvoice = useGenerateInvoice();
+  const confirmPayment = useConfirmPayment();
+  const { invoice, payment } = booking;
 
-export function PaymentStep({ booking }: { booking: AdminBooking }) {
-  const updatePayment = useUpdatePayment();
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<PaymentFormData>({
-    resolver: zodResolver(paymentSchema),
-    defaultValues: {
-      amount: booking.payment?.amount,
-      method: booking.payment?.method ?? "card",
-      status: booking.payment?.status ?? "pending",
-      transactionId: booking.payment?.transactionId ?? "",
-    },
-  });
-
-  const onSubmit = (payment: PaymentFormData) => {
-    updatePayment.mutate(
-      { id: booking.id, payment },
-      {
-        onSuccess: () => toast.success(`Payment updated for ${booking.id}`),
-      },
+  if (payment?.status === "paid") {
+    return (
+      <StepDone
+        text={`${formatCurrency(payment.amount)} paid on ${formatDateTime(payment.updatedAt)}`}
+        actionLabel="Next: complete service"
+        onAction={onDone}
+      />
     );
+  }
+
+  if (!invoice) {
+    const handleGenerate = () => {
+      generateInvoice.mutate(booking.id, {
+        onSuccess: () => toast.success(`Bill sent to ${booking.customer.name}`),
+      });
+    };
+
+    return (
+      <div className="rounded-xl border border-gray-200 p-5">
+        <h3 className="text-base font-bold text-gray-900">Generate the bill</h3>
+        <p className="mt-1 text-sm text-gray-500">
+          Once the service work is done, send the customer their bill so they can pay it.
+        </p>
+
+        <button
+          type="button"
+          onClick={handleGenerate}
+          disabled={generateInvoice.isPending}
+          className="mt-5 h-11 w-full rounded-lg bg-black text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {generateInvoice.isPending ? "Generating..." : "Generate Bill"}
+        </button>
+      </div>
+    );
+  }
+
+  const handleConfirm = () => {
+    confirmPayment.mutate(booking.id, {
+      onSuccess: () => {
+        toast.success(`Payment confirmed for ${booking.id}`);
+        onDone();
+      },
+    });
   };
 
   return (
-    <div className="space-y-4">
-      {booking.payment && (
-        <StepDone
-          text={`${formatCurrency(booking.payment.amount)} · ${booking.payment.status} · updated ${formatDateTime(booking.payment.updatedAt)}`}
-        />
-      )}
-
-      <CompleteService booking={booking} />
-
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="rounded-xl border border-gray-200 p-5"
-      >
-        <h3 className="text-base font-bold text-gray-900">Payment information</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          Record what the customer owes or has paid for this service.
-        </p>
-
-        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <FormField label="Amount (USD)" error={errors.amount?.message}>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              {...register("amount", { valueAsNumber: true })}
-              className="form-input"
-            />
-          </FormField>
-
-          <FormField label="Payment method" error={errors.method?.message}>
-            <select {...register("method")} className="form-input">
-              {methods.map((method) => (
-                <option key={method.value} value={method.value}>
-                  {method.label}
-                </option>
-              ))}
-            </select>
-          </FormField>
-
-          <FormField label="Payment status" error={errors.status?.message}>
-            <select {...register("status")} className="form-input">
-              {statuses.map((status) => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
-          </FormField>
-
-          <FormField label="Transaction / reference ID (optional)" error={errors.transactionId?.message}>
-            <input
-              placeholder="TXN-123456"
-              {...register("transactionId")}
-              className="form-input"
-            />
-          </FormField>
+    <div className="rounded-xl border border-gray-200 p-5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h3 className="text-base font-bold text-gray-900">Confirm payment</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Confirm once the customer has paid the full amount due.
+          </p>
         </div>
 
-        <button
-          type="submit"
-          disabled={updatePayment.isPending}
-          className="mt-5 h-11 w-full rounded-lg bg-black text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {updatePayment.isPending
-            ? "Saving..."
-            : booking.payment
-              ? "Update Payment"
-              : "Save Payment"}
-        </button>
-      </form>
+        <div className="text-right">
+          <p className="text-xs text-gray-500">Amount due</p>
+          <p className="text-xl font-bold text-gray-900">{formatCurrency(invoice.total)}</p>
+        </div>
+      </div>
+
+      <p className="mt-3 text-xs text-gray-500">
+        Bill issued {formatDateTime(invoice.issuedAt)}
+      </p>
+
+      <button
+        type="button"
+        onClick={handleConfirm}
+        disabled={confirmPayment.isPending}
+        className="mt-5 h-11 w-full rounded-lg bg-black text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {confirmPayment.isPending ? "Confirming..." : "Confirm Payment Received"}
+      </button>
     </div>
   );
 }
 
-// Last action of the workflow. Completing the service lets the customer book again.
-function CompleteService({ booking }: { booking: AdminBooking }) {
+// Last step; only unlocked once the payment is confirmed. Completing the
+// service lets the customer book again.
+export function CompleteStep({ booking }: { booking: AdminBooking }) {
   const completeBooking = useCompleteBooking();
 
   if (booking.status === BookingStatus.SERVICE_COMPLETE) {
     return <StepDone text="Service complete. The customer can book again." />;
   }
-
-  const paid = booking.payment?.status === "paid";
 
   const handleComplete = () => {
     completeBooking.mutate(booking.id, {
@@ -141,21 +114,17 @@ function CompleteService({ booking }: { booking: AdminBooking }) {
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-gray-200 p-4">
-      <div>
-        <p className="text-sm font-bold text-gray-900">Complete the service</p>
-        <p className="mt-0.5 text-xs text-gray-500">
-          {paid
-            ? "The customer can't book another service until this one is complete."
-            : "Record the payment as paid first."}
-        </p>
-      </div>
+    <div className="rounded-xl border border-gray-200 p-5">
+      <h3 className="text-base font-bold text-gray-900">Complete the service</h3>
+      <p className="mt-1 text-sm text-gray-500">
+        The customer can't book another service until this one is complete.
+      </p>
 
       <button
         type="button"
         onClick={handleComplete}
-        disabled={!paid || completeBooking.isPending}
-        className="h-10 shrink-0 rounded-lg bg-status-active px-4 text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
+        disabled={completeBooking.isPending}
+        className="mt-5 h-11 w-full rounded-lg bg-status-active text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
       >
         {completeBooking.isPending ? "Completing..." : "Mark Service Complete"}
       </button>

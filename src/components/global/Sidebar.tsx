@@ -46,8 +46,8 @@ const adminNavigation = [
     icon: Car,
   },
   {
-    label: "Relationship Managers",
-    path: "/admin/relationship-managers",
+    label: "Advisors",
+    path: "/admin/advisors",
     icon: Users,
   },
 ];

@@ -1,5 +1,5 @@
 import { StaffDirectory } from "@/components/features/staff/StaffDirectory";
 
-export function AdminRelationshipManagers() {
+export function AdminAdvisors() {
   return <StaffDirectory role="manager" />;
 }

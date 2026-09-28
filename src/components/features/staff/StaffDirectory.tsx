@@ -21,8 +21,9 @@ export function StaffDirectory({ role }: { role: StaffRole }) {
   useEffect(() => () => void dispatch(resetStaffModals()), [dispatch]);
 
   return (
-    <main className="min-h-0 h-full overflow-auto bg-[#f8f9fa] px-6 py-4 lg:px-10">
-      <div className="mx-auto space-y-3">
+    <main className="h-full min-h-0 overflow-hidden bg-[#f8f9fa] px-6 py-4 lg:px-10">
+      {/* Doesn't scroll: pages show 10 rows, and only the table scrolls on very short screens */}
+      <div className="flex h-full min-h-0 flex-col gap-3">
         {/* Page header */}
         <header className="flex flex-wrap items-baseline gap-x-3">
           <h1 className="text-xl font-bold tracking-tight text-gray-900">

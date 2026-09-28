@@ -58,8 +58,8 @@ export function getStatusDisplay(status: BookingStatus, etaMinutes?: number | nu
 // What the tracking page shows, driven by what the admin has done so far:
 //   waiting  - nothing assigned yet
 //   valet    - valet card + map
-//   manager  - relationship manager card + map (valet hidden)
-//   payment  - relationship manager card + bill (map hidden)
+//   manager  - advisor card + map (valet hidden)
+//   payment  - advisor card + bill (map hidden)
 //   complete - bill only
 export type TrackingStage = "waiting" | "valet" | "manager" | "payment" | "complete";
 

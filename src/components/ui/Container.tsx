@@ -12,7 +12,8 @@ export function Container({
   return (
     <div
       className={cn(
-        "mx-auto w-full max-w-7xl px-5 md:px-8 lg:px-0",
+        // Keeps a gutter at every width, including small laptops and zoomed-in browsers
+        "mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10",
         className
       )}
     >

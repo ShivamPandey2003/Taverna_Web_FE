@@ -4,8 +4,12 @@ import type { ServiceId } from "./service";
 export interface StaffMember {
   id: string;
   name: string;
+  email: string;
   phone: string;
   available: boolean;
+  // Unfinished bookings they're assigned to; only sent in staff list responses.
+  // Someone with any can't be deleted.
+  activeBookings?: number;
 }
 
 // Which kind of staff member a picker or the "add staff" modal deals with
@@ -90,7 +94,7 @@ export interface BookingListParams {
   serviceId: ServiceId | "all";
 }
 
-export type StaffSortField = "name" | "phone" | "available";
+export type StaffSortField = "name" | "email" | "phone" | "available";
 
 export type StaffAvailability = "all" | "available" | "busy";
 
@@ -102,6 +106,9 @@ export interface StaffListParams {
   search: string;
   availability: StaffAvailability;
 }
+
+// Rows per page in every admin table
+export const ADMIN_PAGE_SIZE = 10;
 
 export interface Paginated<T> {
   items: T[];
