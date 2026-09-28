@@ -88,7 +88,7 @@ function BookingHandling({ booking }: { booking: AdminBooking }) {
         : "Not assigned",
     },
     {
-      label: "Relationship manager",
+      label: "Advisor",
       value: booking.relationshipManager
         ? `${booking.relationshipManager.name} · ${booking.relationshipManager.phone}`
         : "Not assigned",
@@ -96,8 +96,10 @@ function BookingHandling({ booking }: { booking: AdminBooking }) {
     {
       label: "Payment",
       value: booking.payment
-        ? `${formatCurrency(booking.payment.amount)} · ${booking.payment.method} · ${booking.payment.status}`
-        : "Not recorded",
+        ? `${formatCurrency(booking.payment.amount)} · ${booking.payment.status}`
+        : booking.invoice
+          ? `${formatCurrency(booking.invoice.total)} · awaiting payment`
+          : "No bill yet",
     },
   ];
 

@@ -11,15 +11,34 @@ import {
   useStaffOptions,
 } from "@/services/queries/adminQueries";
 import { staffRoleLabels } from "@/components/features/staff/staff.utils";
+import { BookingStatus } from "@/types/booking";
+import { StepDone } from "./ConfirmStep";
 
 interface StepProps {
   booking: AdminBooking;
   onDone: () => void;
 }
 
+// Staff can't be changed once the service is complete; show who handled it instead
+function FinalStaff({ member, role }: { member: StaffMember | null; role: StaffRole }) {
+  return (
+    <StepDone
+      text={
+        member
+          ? `${member.name} was the ${staffRoleLabels[role]}. The service is complete, so this can't be changed.`
+          : `The service is complete, so no ${staffRoleLabels[role]} can be assigned.`
+      }
+    />
+  );
+}
+
 export function AssignValetStep({ booking, onDone }: StepProps) {
   const valets = useStaffOptions("valet");
   const assignValet = useAssignValet();
+
+  if (booking.status === BookingStatus.SERVICE_COMPLETE) {
+    return <FinalStaff member={booking.valet} role="valet" />;
+  }
 
   return (
     <StaffPicker
@@ -50,22 +69,26 @@ export function AssignManagerStep({ booking, onDone }: StepProps) {
   const managers = useStaffOptions("manager");
   const assignManager = useAssignRelationshipManager();
 
+  if (booking.status === BookingStatus.SERVICE_COMPLETE) {
+    return <FinalStaff member={booking.relationshipManager} role="manager" />;
+  }
+
   return (
     <StaffPicker
       role="manager"
-      title="Assign a relationship manager"
-      description="The relationship manager is the customer's point of contact until the service is complete."
+      title="Assign an advisor"
+      description="The advisor is the customer's point of contact until the service is complete."
       staff={managers.data?.items}
       loading={managers.isPending}
       assigned={booking.relationshipManager}
       saving={assignManager.isPending}
-      submitLabel="Assign Relationship Manager"
+      submitLabel="Assign Advisor"
       onSubmit={(managerId) =>
         assignManager.mutate(
           { id: booking.id, managerId },
           {
             onSuccess: (updated) => {
-              toast.success(`${updated.relationshipManager?.name} assigned as relationship manager`);
+              toast.success(`${updated.relationshipManager?.name} assigned as advisor`);
               onDone();
             },
           },
@@ -110,6 +133,7 @@ function StaffPicker({
     (member) =>
       !query ||
       member.name.toLowerCase().includes(query) ||
+      member.email.toLowerCase().includes(query) ||
       (digits !== "" && member.phone.replace(/\D/g, "").includes(digits)),
   );
   const hasAvailable = results?.some((member) => member.available) ?? false;
@@ -146,7 +170,7 @@ function StaffPicker({
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder={`Search ${roleLabel}s by name or phone`}
+          placeholder={`Search ${roleLabel}s by name, email or phone`}
           className="h-10 w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
         />
       </div>

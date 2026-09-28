@@ -2,7 +2,7 @@ import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
 import type { StaffMember } from "@/types/admin";
 
-// Modals on the staff pages (/admin/valets, /admin/relationship-managers)
+// Modals on the staff pages (/admin/valets, /admin/advisors)
 type StaffModalState = {
   formOpen: boolean;
   // Member being edited (a copy of the table row); null while adding

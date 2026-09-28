@@ -5,26 +5,30 @@ import { Modal } from "@/components/ui/Modal";
 import { FormField } from "@/components/ui/FormField";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
-  closeAddDealership,
+  closeDealershipForm,
   selectDealershipModal,
 } from "@/redux/modals/dealershipModal/dealershipModalSlice";
-import { useCreateDealership } from "@/services/queries/adminQueries";
+import { useCreateDealership, useUpdateDealership } from "@/services/queries/adminQueries";
 import { dealershipSchema, type DealershipFormData } from "@/schema/dealership.schema";
+import type { Dealership } from "@/types/dealership";
 
-export function AddDealershipModal() {
-  const { addDealershipOpen } = useAppSelector(selectDealershipModal);
+// Adds a dealership, or edits one when opened from a card
+export function DealershipFormModal() {
+  const { formOpen, editing } = useAppSelector(selectDealershipModal);
 
-  // Mount the form only while open so it starts empty every time
-  if (!addDealershipOpen) {
+  // Mount the form only while open so its values match the dealership being edited
+  if (!formOpen) {
     return null;
   }
 
-  return <AddDealershipForm />;
+  return <DealershipForm dealership={editing} />;
 }
 
-function AddDealershipForm() {
+function DealershipForm({ dealership }: { dealership: Dealership | null }) {
   const dispatch = useAppDispatch();
   const createDealership = useCreateDealership();
+  const updateDealership = useUpdateDealership();
+  const saving = createDealership.isPending || updateDealership.isPending;
 
   const {
     register,
@@ -33,27 +37,43 @@ function AddDealershipForm() {
   } = useForm<DealershipFormData>({
     resolver: zodResolver(dealershipSchema),
     defaultValues: {
-      name: "",
-      address: "",
-      image: "",
-      valetAvailable: true,
-      loanerAvailable: true,
+      name: dealership?.name ?? "",
+      address: dealership?.address ?? "",
+      image: dealership?.image ?? "",
+      valetAvailable: dealership?.valetAvailable ?? true,
+      loanerAvailable: dealership?.loanerAvailable ?? true,
     },
   });
 
-  const onClose = () => dispatch(closeAddDealership());
+  const onClose = () => dispatch(closeDealershipForm());
 
   const onSubmit = (data: DealershipFormData) => {
-    createDealership.mutate(data, {
-      onSuccess: (dealership) => {
-        toast.success(`${dealership.name} added`);
-        onClose();
-      },
-    });
+    if (dealership) {
+      updateDealership.mutate(
+        { id: dealership.id, input: data },
+        {
+          onSuccess: (updated) => {
+            toast.success(`${updated.name} updated`);
+            onClose();
+          },
+        },
+      );
+    } else {
+      createDealership.mutate(data, {
+        onSuccess: (created) => {
+          toast.success(`${created.name} added`);
+          onClose();
+        },
+      });
+    }
   };
 
   return (
-    <Modal title={<h2>Add Dealership</h2>} onClose={onClose} width="max-w-[520px]">
+    <Modal
+      title={<h2>{dealership ? "Edit Dealership" : "Add Dealership"}</h2>}
+      onClose={onClose}
+      width="max-w-[520px]"
+    >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <FormField label="Dealership name" htmlFor="dealership-name" error={errors.name?.message}>
           <input
@@ -108,10 +128,10 @@ function AddDealershipForm() {
 
           <button
             type="submit"
-            disabled={createDealership.isPending}
+            disabled={saving}
             className="h-10 rounded-lg bg-black px-5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {createDealership.isPending ? "Saving..." : "Add Dealership"}
+            {saving ? "Saving..." : dealership ? "Save Changes" : "Add Dealership"}
           </button>
         </div>
       </form>

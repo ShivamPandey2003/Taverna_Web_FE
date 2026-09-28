@@ -50,6 +50,7 @@ function StaffForm({
     resolver: zodResolver(staffSchema),
     defaultValues: {
       name: member?.name ?? defaultName,
+      email: member?.email ?? "",
       phone: member?.phone ?? "",
       available: member?.available ?? true,
     },
@@ -94,6 +95,16 @@ function StaffForm({
             autoFocus
             placeholder="Jane Doe"
             {...register("name")}
+            className="form-input"
+          />
+        </FormField>
+
+        <FormField label="Email" htmlFor="staff-email" error={errors.email?.message}>
+          <input
+            id="staff-email"
+            type="email"
+            placeholder="jane.doe@taverna.com"
+            {...register("email")}
             className="form-input"
           />
         </FormField>

@@ -7,6 +7,12 @@ export const staffSchema = z.object({
     .min(2, "Name must be at least 2 characters")
     .max(100, "Name is too long"),
 
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email is required")
+    .email("Enter a valid email address"),
+
   phone: z
     .string()
     .trim()

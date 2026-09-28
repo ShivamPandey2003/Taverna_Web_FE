@@ -17,17 +17,17 @@ export function ServiceCard({
   return (
     <article className="rounded-card border border-border bg-white p-5">
 
-      <div className="flex gap-5">
+      <div className="flex flex-col gap-5 sm:flex-row">
 
-        {/* Image */}
+        {/* Image; full width above the text on phones */}
         <img
           src={image}
           alt={title}
-          className="h-28 w-40 shrink-0 rounded-lg object-cover"
+          className="h-40 w-full shrink-0 rounded-lg object-cover sm:h-28 sm:w-40"
         />
 
         {/* Content */}
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
 
           <div className="flex items-start justify-between gap-3">
 

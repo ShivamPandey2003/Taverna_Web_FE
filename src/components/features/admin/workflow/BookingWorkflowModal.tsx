@@ -13,9 +13,9 @@ import { firstOpenStep } from "../admin.utils";
 import { WorkflowStepper } from "./WorkflowStepper";
 import { ConfirmStep } from "./ConfirmStep";
 import { AssignValetStep, AssignManagerStep } from "./AssignStaffSteps";
-import { PaymentStep } from "./PaymentStep";
+import { CompleteStep, PaymentStep } from "./PaymentStep";
 
-// Confirm → assign valet → assign relationship manager → payment.
+// Confirm → assign valet → assign advisor → payment → complete.
 // The booking's details are in BookingDetailsModal.
 export function BookingWorkflowModal() {
   const dispatch = useAppDispatch();
@@ -80,7 +80,10 @@ export function BookingWorkflowModal() {
             {step === "manager" && (
               <AssignManagerStep booking={booking} onDone={() => goToNextStep("manager")} />
             )}
-            {step === "payment" && <PaymentStep booking={booking} />}
+            {step === "payment" && (
+              <PaymentStep booking={booking} onDone={() => goToNextStep("payment")} />
+            )}
+            {step === "complete" && <CompleteStep booking={booking} />}
           </div>
         </>
       )}

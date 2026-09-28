@@ -47,7 +47,9 @@ export function isStepDone(booking: AdminBooking, step: WorkflowStep) {
     case "manager":
       return !!booking.relationshipManager;
     case "payment":
-      return !!booking.payment;
+      return booking.payment?.status === "paid";
+    case "complete":
+      return booking.status === BookingStatus.SERVICE_COMPLETE;
   }
 }
 
@@ -58,5 +60,5 @@ export function isStepUnlocked(booking: AdminBooking, step: WorkflowStep) {
 }
 
 export function firstOpenStep(booking: AdminBooking): WorkflowStep {
-  return WORKFLOW_STEPS.find((step) => !isStepDone(booking, step)) ?? "payment";
+  return WORKFLOW_STEPS.find((step) => !isStepDone(booking, step)) ?? "complete";
 }

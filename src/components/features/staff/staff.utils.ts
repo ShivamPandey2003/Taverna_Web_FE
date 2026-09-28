@@ -2,12 +2,12 @@ import type { StaffAvailability, StaffRole } from "@/types/admin";
 
 export const staffRoleLabels: Record<StaffRole, string> = {
   valet: "valet",
-  manager: "relationship manager",
+  manager: "advisor",
 };
 
 export const staffPageTitles: Record<StaffRole, string> = {
   valet: "Valets",
-  manager: "Relationship Managers",
+  manager: "Advisors",
 };
 
 export const availabilityOptions: { value: StaffAvailability; label: string }[] = [

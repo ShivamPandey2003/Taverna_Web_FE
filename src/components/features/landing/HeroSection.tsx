@@ -18,11 +18,11 @@ export function HeroSection() {
         </div>
 
         {/* Hero Content */}
-        <div className="mt-12 grid gap-10 lg:grid-cols-[1fr_1fr] lg:items-center">
+        <div className="mt-8 grid gap-8 md:mt-12 lg:grid-cols-2 lg:items-center lg:gap-10">
 
           {/* Text */}
           <div>
-            <h1 className="max-w-xl text-4xl font-bold leading-[1.05] tracking-tight md:text-5xl">
+            <h1 className="max-w-xl text-3xl font-bold leading-[1.1] tracking-tight sm:text-4xl lg:text-5xl">
               {siteConfig.hero.title}
             </h1>
 

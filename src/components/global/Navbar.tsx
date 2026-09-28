@@ -55,12 +55,6 @@ export function Navbar() {
             <span className="text-sm font-semibold text-gray-800">
               {user.name}
             </span>
-
-            {isAdmin && (
-              <span className="rounded-md bg-gray-900 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
-                Admin
-              </span>
-            )}
           </button>
 
         </div>

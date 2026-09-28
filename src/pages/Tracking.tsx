@@ -67,15 +67,15 @@ export function ServiceTracking() {
           advancing={simulateNextStatus.isPending}
         />
 
-        {/* One contact at a time: the valet until a relationship manager takes over */}
+        {/* One contact at a time: the valet until an advisor takes over */}
         {stage === "valet" && liveBooking?.valet && (
           <StaffContactCard member={liveBooking.valet} role="Valet" />
         )}
         {(stage === "manager" || stage === "payment") && liveBooking?.relationshipManager && (
-          <StaffContactCard member={liveBooking.relationshipManager} role="Relation Manager" />
+          <StaffContactCard member={liveBooking.relationshipManager} role="Advisor" />
         )}
 
-        {/* The bill, from the moment the admin records payment; a receipt once complete */}
+        {/* The bill, from the moment the admin generates it; a receipt once complete */}
         {(stage === "payment" || stage === "complete") && liveBooking?.invoice && (
           <InvoiceCard
             bookingId={liveBooking.id}

@@ -1,14 +1,16 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
-import type {
-  BookingListParams,
-  BookingSortField,
+import {
+  ADMIN_PAGE_SIZE,
+  type BookingListParams,
+  type BookingSortField,
 } from "@/types/admin";
 
-// Query sent to the admin bookings API; any change here triggers a refetch
+// Query sent to the admin bookings API; any change here triggers a refetch.
+// Admin tables always show ADMIN_PAGE_SIZE rows so the page never has to scroll.
 const initialState: BookingListParams = {
   page: 1,
-  pageSize: 12,
+  pageSize: ADMIN_PAGE_SIZE,
   sortBy: "createdAt",
   sortOrder: "desc",
   search: "",
@@ -22,10 +24,6 @@ const adminBookingsSlice = createSlice({
   reducers: {
     setPage: (state, action: PayloadAction<number>) => {
       state.page = action.payload;
-    },
-    setPageSize: (state, action: PayloadAction<number>) => {
-      state.pageSize = action.payload;
-      state.page = 1;
     },
     // Clicking the active column flips the order; a new column starts descending
     toggleSort: (state, action: PayloadAction<BookingSortField>) => {
@@ -55,7 +53,6 @@ const adminBookingsSlice = createSlice({
 
 export const {
   setPage,
-  setPageSize,
   toggleSort,
   setSearch,
   setStatusFilter,

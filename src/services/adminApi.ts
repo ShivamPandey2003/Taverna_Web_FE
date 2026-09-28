@@ -4,17 +4,16 @@ import type {
   AdminBooking,
   BookingListParams,
   Paginated,
-  PaymentInfo,
   StaffListParams,
   StaffMember,
   StaffRole,
 } from "@/types/admin";
 import type { Dealership } from "@/types/dealership";
 
-export type PaymentInput = Omit<PaymentInfo, "updatedAt">;
-export type StaffInput = Pick<StaffMember, "name" | "phone" | "available">;
+export type StaffInput = Pick<StaffMember, "name" | "email" | "phone" | "available">;
 
-// Valets and relationship managers share one API shape under different paths
+// Valets and advisors share one API shape under different paths
+// (advisors are still "relationship managers" in the API)
 const staffPaths: Record<StaffRole, string> = {
   valet: "/admin/valets",
   manager: "/admin/relationship-managers",
@@ -60,10 +59,18 @@ export const adminApi = {
         }),
     ),
 
-  updatePayment: (id: string, payment: PaymentInput) =>
+  // Sends the customer the bill; the server works out the amount
+  generateInvoice: (id: string) =>
     callApi(
-      () => mockServer.updatePayment(id, payment),
-      () => request<AdminBooking>("put", `/admin/bookings/${id}/payment`, payment),
+      () => mockServer.generateInvoice(id),
+      () => request<AdminBooking>("post", `/admin/bookings/${id}/invoice`),
+    ),
+
+  // Marks the bill as paid by the customer
+  confirmPayment: (id: string) =>
+    callApi(
+      () => mockServer.confirmPayment(id),
+      () => request<AdminBooking>("put", `/admin/bookings/${id}/payment/confirm`),
     ),
 
   completeBooking: (id: string) =>
@@ -110,5 +117,17 @@ export const adminApi = {
     callApi(
       () => mockServer.createDealership(input),
       () => request<Dealership>("post", "/admin/dealerships", input),
+    ),
+
+  updateDealership: (id: string, input: DealershipInput) =>
+    callApi(
+      () => mockServer.updateDealership(id, input),
+      () => request<Dealership>("put", `/admin/dealerships/${id}`, input),
+    ),
+
+  deleteDealership: (id: string) =>
+    callApi(
+      () => mockServer.deleteDealership(id),
+      () => request<{ id: string }>("delete", `/admin/dealerships/${id}`),
     ),
 };
