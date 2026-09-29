@@ -23,7 +23,7 @@ export function StaffToolbar({ role }: { role: StaffRole }) {
       <SearchInput
         value={search}
         onSearch={(value) => dispatch(setStaffSearch({ role, value }))}
-        placeholder={`Search ${roleLabel}s by name or phone`}
+        placeholder={`Search ${roleLabel}s by name, email or phone`}
       />
 
       {/* Availability */}

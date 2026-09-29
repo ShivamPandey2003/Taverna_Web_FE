@@ -17,7 +17,8 @@ export function DashboardLayout() {
       <Navbar />
 
       <div className="flex min-h-0 flex-1">
-        <Sidebar />
+        {/* Admins navigate from the Navbar */}
+        {!isAdmin && <Sidebar />}
 
         {/* Page Content */}
         <main className="min-h-0 min-w-0 flex-1 overflow-hidden">

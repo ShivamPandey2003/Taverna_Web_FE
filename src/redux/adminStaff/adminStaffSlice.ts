@@ -1,16 +1,17 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
-import type {
-  StaffAvailability,
-  StaffListParams,
-  StaffRole,
-  StaffSortField,
+import {
+  ADMIN_PAGE_SIZE,
+  type StaffAvailability,
+  type StaffListParams,
+  type StaffRole,
+  type StaffSortField,
 } from "@/types/admin";
 
 // Query sent to the staff list APIs, one per role; any change here triggers a refetch
 const initialParams: StaffListParams = {
   page: 1,
-  pageSize: 12,
+  pageSize: ADMIN_PAGE_SIZE,
   sortBy: "name",
   sortOrder: "asc",
   search: "",
@@ -32,11 +33,6 @@ const adminStaffSlice = createSlice({
   reducers: {
     setStaffPage: (state, action: RolePayload<number>) => {
       state[action.payload.role].page = action.payload.value;
-    },
-    setStaffPageSize: (state, action: RolePayload<number>) => {
-      const params = state[action.payload.role];
-      params.pageSize = action.payload.value;
-      params.page = 1;
     },
     // Clicking the active column flips the order; a new column starts ascending
     toggleStaffSort: (state, action: RolePayload<StaffSortField>) => {
@@ -67,7 +63,6 @@ const adminStaffSlice = createSlice({
 
 export const {
   setStaffPage,
-  setStaffPageSize,
   toggleStaffSort,
   setStaffSearch,
   setStaffAvailability,

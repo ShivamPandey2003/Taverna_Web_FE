@@ -67,27 +67,31 @@ export function ServiceTracking() {
           advancing={simulateNextStatus.isPending}
         />
 
-        {/* One contact at a time: the valet until a relationship manager takes over */}
+        {/* One contact at a time: pickup valet, then the advisor, then the delivery valet */}
         {stage === "valet" && liveBooking?.valet && (
           <StaffContactCard member={liveBooking.valet} role="Valet" />
         )}
         {(stage === "manager" || stage === "payment") && liveBooking?.relationshipManager && (
-          <StaffContactCard member={liveBooking.relationshipManager} role="Relation Manager" />
+          <StaffContactCard member={liveBooking.relationshipManager} role="Advisor" />
+        )}
+        {stage === "delivery" && liveBooking?.deliveryValet && (
+          <StaffContactCard member={liveBooking.deliveryValet} role="Valet" />
         )}
 
-        {/* The bill, from the moment the admin records payment; a receipt once complete */}
-        {(stage === "payment" || stage === "complete") && liveBooking?.invoice && (
-          <InvoiceCard
-            bookingId={liveBooking.id}
-            invoice={liveBooking.invoice}
-            payment={liveBooking.payment}
-          />
-        )}
+        {/* The bill, from the moment the advisor sends it; a receipt once paid */}
+        {(stage === "payment" || stage === "delivery" || stage === "complete") &&
+          liveBooking?.invoice && (
+            <InvoiceCard
+              bookingId={liveBooking.id}
+              invoice={liveBooking.invoice}
+              payment={liveBooking.payment}
+            />
+          )}
 
         <VehicleSummary vehicle={booking.vehicle} />
 
-        {/* Only while someone is moving the vehicle */}
-        {(stage === "valet" || stage === "manager") && <TrackingMap />}
+        {/* Only while a valet is moving the vehicle */}
+        {(stage === "valet" || stage === "delivery") && <TrackingMap />}
       </div>
     </div>
   );

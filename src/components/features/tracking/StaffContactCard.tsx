@@ -4,7 +4,7 @@ import type { StaffMember } from "@/types/admin";
 
 interface StaffContactCardProps {
   member: StaffMember;
-  // e.g. "Valet", "Relation Manager"
+  // e.g. "Valet", "Advisor"
   role: string;
 }
 

@@ -1,10 +1,13 @@
+import { useNavigate } from "react-router";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { setSelectedVehicle } from "@/redux/booking/bookingSlice";
 import { openVehicleDetails } from "@/redux/modals/dashboardModal/dashboardModalSlice";
 import { selectVehicles } from "@/redux/vehicle/vehicleSlice";
 import { VehicleCard } from "./VehicleCard";
 
 export function VehicleList() {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const vehicles = useAppSelector(selectVehicles);
 
   return (
@@ -14,6 +17,11 @@ export function VehicleList() {
           key={vehicle.id}
           vehicle={vehicle}
           onSelect={() => dispatch(openVehicleDetails(vehicle.id))}
+          // Book Service opens with this vehicle already chosen
+          onBook={() => {
+            dispatch(setSelectedVehicle(vehicle.id));
+            navigate("/dashboard/book-service");
+          }}
         />
       ))}
     </div>

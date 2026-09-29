@@ -14,8 +14,17 @@ import type { Vehicle } from "@/types/vehicle";
 
 export const TRACKING_PATH = "/dashboard/book-service/tracking";
 
-// "pending" = waiting on the dealership (orange); "active" = moving along (green)
+// Two colours only:
+//   pending (orange) - waiting on someone: the dealership to confirm, a valet to be
+//                      assigned, or the customer to pay the bill
+//   active  (green)  - the service is moving along, or done
 export type StatusTone = "pending" | "active";
+
+// Full class names so Tailwind generates them
+export const statusTones: Record<StatusTone, { bg: string; text: string }> = {
+  pending: { bg: "bg-status-pending", text: "text-status-pending" },
+  active: { bg: "bg-status-active", text: "text-status-active" },
+};
 
 export interface StatusDisplay {
   tone: StatusTone;
@@ -37,7 +46,7 @@ export function getStatusDisplay(status: BookingStatus, etaMinutes?: number | nu
     case BookingStatus.IN_QUEUE:
       return { tone: "pending", label: "Pending", message: "Waiting for confirmation" };
     case BookingStatus.BOOKED:
-      return { tone: "active", label: "Confirmed", message: "Your booking is confirmed" };
+      return { tone: "pending", label: "Confirmed", message: "Your booking is confirmed" };
     case BookingStatus.VALET_ASSIGNED:
       return { tone: "active", label: "Valet assigned", message: "Your valet is on the way", etaMinutes: eta };
     case BookingStatus.VEHICLE_PICKED_UP:
@@ -47,9 +56,9 @@ export function getStatusDisplay(status: BookingStatus, etaMinutes?: number | nu
     case BookingStatus.IN_SERVICE:
       return { tone: "active", label: "In service", message: "Your vehicle in service" };
     case BookingStatus.BILL_GENERATED:
-      return { tone: "active", label: "Pay now", message: "Bill generated", actionRequired: true };
+      return { tone: "pending", label: "Pay now", message: "Bill generated", actionRequired: true };
     case BookingStatus.VEHICLE_RETURN:
-      return { tone: "active", label: "On the way", message: "Your vehicle is on the way", etaMinutes: eta };
+      return { tone: "active", label: "Returning", message: "Your vehicle is coming back to you", etaMinutes: eta };
     case BookingStatus.SERVICE_COMPLETE:
       return { tone: "active", label: "Completed", message: "Your service is complete" };
   }
@@ -57,14 +66,16 @@ export function getStatusDisplay(status: BookingStatus, etaMinutes?: number | nu
 
 // What the tracking page shows, driven by what the admin has done so far:
 //   waiting  - nothing assigned yet
-//   valet    - valet card + map
-//   manager  - relationship manager card + map (valet hidden)
-//   payment  - relationship manager card + bill (map hidden)
+//   valet    - pickup valet card + map, until the vehicle reaches the dealership
+//   manager  - advisor card while the vehicle is serviced
+//   payment  - advisor card + bill
+//   delivery - delivery valet card + map + receipt, once the bill is paid
 //   complete - bill only
-export type TrackingStage = "waiting" | "valet" | "manager" | "payment" | "complete";
+export type TrackingStage = "waiting" | "valet" | "manager" | "payment" | "delivery" | "complete";
 
 export function getTrackingStage(booking: AdminBooking, status: BookingStatus): TrackingStage {
   if (status === BookingStatus.SERVICE_COMPLETE) return "complete";
+  if (booking.deliveryValet) return "delivery";
   if (booking.payment || booking.invoice) return "payment";
   if (booking.relationshipManager) return "manager";
   if (booking.valet) return "valet";

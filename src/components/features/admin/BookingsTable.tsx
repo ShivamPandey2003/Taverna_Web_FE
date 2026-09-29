@@ -2,15 +2,16 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   selectBookingListParams,
   setPage,
-  setPageSize,
   toggleSort,
 } from "@/redux/adminBookings/adminBookingsSlice";
 import {
   openBookingDetails,
   openBookingWorkflow,
+  selectAdminModal,
 } from "@/redux/modals/adminModal/adminModalSlice";
 import { useAdminBookings } from "@/services/queries/adminQueries";
 import type { BookingSortField } from "@/types/admin";
+import { cn } from "@/libs/utils";
 import { BookingStatusBadge } from "./BookingStatusBadge";
 import { SortButton } from "./SortButton";
 import { TablePagination } from "./TablePagination";
@@ -31,17 +32,20 @@ export function BookingsTable() {
   const dispatch = useAppDispatch();
   const params = useAppSelector(selectBookingListParams);
   const { data, isPending, isError, isFetching, refetch } = useAdminBookings(params);
+  // Booking open in the side drawer, if any
+  const { workflowBookingId } = useAppSelector(selectAdminModal);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-      <div className="relative overflow-x-auto">
+    <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white">
+      {/* Scrolls on its own only if the screen is too short for a full page */}
+      <div className="relative min-h-0 overflow-auto">
         {/* Thin bar while a new page / sort / search loads over the current rows */}
         {isFetching && !isPending && (
-          <div className="absolute inset-x-0 top-0 h-0.5 animate-pulse bg-emerald-500" />
+          <div className="absolute inset-x-0 top-0 z-10 h-0.5 animate-pulse bg-emerald-500" />
         )}
 
         <table className="w-full min-w-[960px] text-left text-[13px]">
-          <thead className="border-b border-gray-200 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
+          <thead className="sticky top-0 border-b border-gray-200 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
             <tr>
               {columns.map((column) => (
                 <th key={column.label} className="whitespace-nowrap px-4 py-2.5">
@@ -96,8 +100,18 @@ export function BookingsTable() {
             {data?.items.map((booking) => (
               <tr
                 key={booking.id}
-                onClick={() => dispatch(openBookingDetails(booking.id))}
-                className="cursor-pointer transition hover:bg-gray-50"
+                // While the drawer is open, a row click switches it to that booking
+                onClick={() =>
+                  dispatch(
+                    workflowBookingId
+                      ? openBookingWorkflow(booking.id)
+                      : openBookingDetails(booking.id),
+                  )
+                }
+                className={cn(
+                  "cursor-pointer transition",
+                  booking.id === workflowBookingId ? "bg-gray-100" : "hover:bg-gray-50",
+                )}
               >
                 {/* One line per row; the full details are in the booking modal */}
                 <td className="whitespace-nowrap px-4 py-2 font-semibold text-gray-900">
@@ -160,7 +174,6 @@ export function BookingsTable() {
           total={data.total}
           totalPages={data.totalPages}
           onPageChange={(page) => dispatch(setPage(page))}
-          onPageSizeChange={(size) => dispatch(setPageSize(size))}
         />
       )}
     </div>

@@ -6,10 +6,10 @@ export const siteConfig = {
       label: "Services",
       href: "#services",
     },
-    {
-      label: "About Us",
-      href: "#about",
-    },
+    // {
+    //   label: "About Us",
+    //   href: "#about",
+    // },
     {
       label: "How It Works",
       href: "#process",

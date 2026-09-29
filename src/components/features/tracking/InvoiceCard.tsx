@@ -30,7 +30,7 @@ export function InvoiceCard({ bookingId, invoice, payment }: InvoiceCardProps) {
 
   const handlePay = () => {
     payInvoice.mutate(bookingId, {
-      onSuccess: () => toast.success("Payment successful. Your vehicle is on its way back."),
+      onSuccess: () => toast.success("Payment successful. A valet will bring your vehicle back."),
     });
   };
 

@@ -3,18 +3,18 @@ import type { RootState } from "@/redux/store";
 import type { StaffRole } from "@/types/admin";
 
 // Steps of the admin booking workflow, in the order they must be completed
-export const WORKFLOW_STEPS = ["confirm", "valet", "manager", "payment"] as const;
+export const WORKFLOW_STEPS = ["confirm", "pickup", "advisor", "delivery", "complete"] as const;
 export type WorkflowStep = (typeof WORKFLOW_STEPS)[number];
 
 // Modals on the admin bookings page (/admin)
 type AdminModalState = {
   // Read-only booking details
   detailsBookingId: string | null;
-  // Workflow stepper (confirm, valet, manager, payment)
+  // Workflow drawer (confirm, pickup valet, advisor, delivery valet, complete)
   workflowBookingId: string | null;
   // null = open on the first step that isn't done yet
   activeStep: WorkflowStep | null;
-  // "Add valet / relationship manager" modal, opened from a workflow step
+  // "Add valet / advisor" modal, opened from a workflow step over the drawer
   addStaff: { role: StaffRole; name: string } | null;
 };
 
@@ -35,7 +35,7 @@ const adminModalSlice = createSlice({
     closeBookingDetails: (state) => {
       state.detailsBookingId = null;
     },
-    // Replaces the details modal so only one booking modal is open at a time
+    // Replaces the details modal so only one booking view is open at a time
     openBookingWorkflow: (state, action: PayloadAction<string>) => {
       state.detailsBookingId = null;
       state.workflowBookingId = action.payload;

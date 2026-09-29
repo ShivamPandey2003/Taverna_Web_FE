@@ -1,17 +1,17 @@
-import { useNavigate } from "react-router";
-import { NotificationDropdown } from "./Notification/NotificationDropdown";
+import { NavLink } from "react-router";
+import { cn } from "@/libs/utils";
 import { useAppSelector } from "@/redux/hooks";
-import { selectAccountUser } from "@/redux/account/accountSlice";
 import { selectIsAdmin } from "@/redux/auth/authSlice";
+import { NotificationDropdown } from "./Notification/NotificationDropdown";
+import { ProfileDropdown } from "./ProfileDropdown";
+import { adminNavigation, exactPaths } from "./navigation";
 
 export function Navbar() {
-  const navigate = useNavigate();
-  const user = useAppSelector(selectAccountUser);
   const isAdmin = useAppSelector(selectIsAdmin);
 
   return (
     <header className="h-[60px] border-b border-gray-200 bg-white">
-      <div className="flex h-full items-center justify-between px-6">
+      <div className="flex h-full items-center justify-between gap-4 px-6">
 
         {/* Logo */}
         <div className="flex items-center gap-4">
@@ -30,6 +30,9 @@ export function Navbar() {
           </span>
         </div>
 
+        {/* Admins have no sidebar, so their pages are linked here */}
+        {isAdmin && <AdminNav />}
+
         {/* Right side */}
         <div className="flex items-center gap-5">
 
@@ -42,29 +45,36 @@ export function Navbar() {
           </button> */}
           <NotificationDropdown/>
 
-          {/* User; admins have no account page */}
-          <button
-            type="button"
-            onClick={() => navigate(isAdmin ? "/admin" : "/dashboard/account")}
-            className="flex items-center gap-3"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-800">
-              {user.name.charAt(0).toUpperCase()}
-            </div>
-
-            <span className="text-sm font-semibold text-gray-800">
-              {user.name}
-            </span>
-
-            {isAdmin && (
-              <span className="rounded-md bg-gray-900 px-2 py-0.5 text-[10px] font-semibold uppercase text-white">
-                Admin
-              </span>
-            )}
-          </button>
+          {/* Profile and log out */}
+          <ProfileDropdown />
 
         </div>
       </div>
     </header>
+  );
+}
+
+// Icons only on small screens, icon + label from md up
+function AdminNav() {
+  return (
+    <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto md:justify-center">
+      {adminNavigation.map(({ label, path, icon: Icon }) => (
+        <NavLink
+          key={path}
+          to={path}
+          end={exactPaths.includes(path)}
+          title={label}
+          className={({ isActive }) =>
+            cn(
+              "flex h-10 shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-medium transition-colors",
+              isActive ? "bg-black text-white" : "text-gray-700 hover:bg-gray-100",
+            )
+          }
+        >
+          <Icon size={18} strokeWidth={2} />
+          <span className="hidden md:inline">{label}</span>
+        </NavLink>
+      ))}
+    </nav>
   );
 }

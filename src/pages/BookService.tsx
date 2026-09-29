@@ -44,8 +44,9 @@ export function BookService() {
   };
 
   return (
+    // Sized to fit a desktop screen; scrolls only on small screens
     <main className="min-h-0 h-full bg-[#f8f9fa] px-6 py-4 lg:px-10 overflow-auto">
-      <div className="mx-auto">
+      <div className="mx-auto max-w-[1400px]">
 
         {/* Page Header */}
         <header>
@@ -53,7 +54,7 @@ export function BookService() {
             Book Service
           </h1>
 
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-500">
             Choose a service that fits your needs. We'll take
             care of the rest.
           </p>
@@ -61,19 +62,19 @@ export function BookService() {
 
         {/* One service at a time: booking unlocks once the current one is complete */}
         {serviceInProgress && (
-          <div className="mt-6">
+          <div className="mt-4">
             <ServiceInProgressNotice />
           </div>
         )}
 
         {/* Vehicle */}
-        <section className="mt-8 sticky top-0 bg-[#f8f9fa] pb-4">
-          <h2 className="mb-4 text-base font-bold text-gray-900">
+        <section className="mt-5">
+          <h2 className="mb-3 text-base font-bold text-gray-900">
             My Vehicle
           </h2>
 
           {vehicles.length === 0 ? (
-            <div className="flex items-center justify-between gap-6 rounded-2xl border border-dashed border-gray-300 bg-white p-6">
+            <div className="flex items-center justify-between gap-6 rounded-2xl border border-dashed border-gray-300 bg-white p-4">
               <p className="text-sm text-gray-500">
                 Add a vehicle to book a service.
               </p>
@@ -94,8 +95,8 @@ export function BookService() {
         </section>
 
         {/* Services */}
-        <section className="mt-8">
-          <h2 className="mb-4 text-base font-bold text-gray-900">
+        <section className="mt-5">
+          <h2 className="mb-3 text-base font-bold text-gray-900">
             Services For You
           </h2>
 

@@ -10,7 +10,8 @@ export function EmptyVehicleState({
   onAddVehicle,
 }: EmptyVehicleStateProps) {
   return (
-    <section className="flex min-h-[710px] w-full items-center justify-center bg-white px-6">
+    // Fills whatever space the page has and centres in it, so it never forces a scrollbar
+    <section className="flex w-full flex-1 items-center justify-center bg-white px-6 py-8">
       <div className="flex w-full max-w-[710px] flex-col items-center text-center">
         {/* Welcome */}
         <h1 className="text-3xl font-bold tracking-tight text-[#080808]">

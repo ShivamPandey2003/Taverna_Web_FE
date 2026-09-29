@@ -1,15 +1,12 @@
 import { AngleLeft, AngleRight } from "reicon-react";
 import { cn } from "@/libs/utils";
 
-const PAGE_SIZES = [12, 24, 48];
-
 interface TablePaginationProps {
   page: number;
   pageSize: number;
   total: number;
   totalPages: number;
   onPageChange: (page: number) => void;
-  onPageSizeChange: (pageSize: number) => void;
 }
 
 // Up to five page numbers centred on the current page
@@ -25,32 +22,16 @@ export function TablePagination({
   total,
   totalPages,
   onPageChange,
-  onPageSizeChange,
 }: TablePaginationProps) {
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 border-t border-gray-200 px-4 py-2">
-      <div className="flex items-center gap-3 text-sm text-gray-500">
-        <span>
-          Showing <span className="font-semibold text-gray-900">{from}–{to}</span> of{" "}
-          <span className="font-semibold text-gray-900">{total}</span>
-        </span>
-
-        <select
-          value={pageSize}
-          onChange={(event) => onPageSizeChange(Number(event.target.value))}
-          className="h-8 rounded-md border border-gray-200 bg-white px-2 text-sm text-gray-700 outline-none"
-          aria-label="Rows per page"
-        >
-          {PAGE_SIZES.map((size) => (
-            <option key={size} value={size}>
-              {size} / page
-            </option>
-          ))}
-        </select>
-      </div>
+    <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-t border-gray-200 px-4 py-2">
+      <span className="text-sm text-gray-500">
+        Showing <span className="font-semibold text-gray-900">{from}–{to}</span> of{" "}
+        <span className="font-semibold text-gray-900">{total}</span>
+      </span>
 
       <div className="flex items-center gap-1">
         <button
