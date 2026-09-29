@@ -2,11 +2,14 @@ import { callApi, request, toQueryString } from "./apiClient";
 import { mockServer } from "./mock/mockServer";
 import type {
   AdminBooking,
+  AdvisorMilestone,
   BookingListParams,
   Paginated,
   StaffListParams,
   StaffMember,
   StaffRole,
+  ValetLeg,
+  ValetMilestone,
 } from "@/types/admin";
 import type { Dealership } from "@/types/dealership";
 
@@ -44,10 +47,22 @@ export const adminApi = {
       () => request<AdminBooking>("put", `/admin/bookings/${id}/confirm`),
     ),
 
-  assignValet: (id: string, valetId: string) =>
+  // Pickup or delivery valet; assigning someone new restarts that trip
+  assignValet: (id: string, leg: ValetLeg, valetId: string) =>
     callApi(
-      () => mockServer.assignValet(id, valetId),
-      () => request<AdminBooking>("put", `/admin/bookings/${id}/valet`, { valetId }),
+      () => mockServer.assignValet(id, leg, valetId),
+      () => request<AdminBooking>("put", `/admin/bookings/${id}/valet`, { leg, valetId }),
+    ),
+
+  // Marks the next milestone of a valet trip (milestones go in order)
+  updateValetProgress: (id: string, leg: ValetLeg, milestone: ValetMilestone) =>
+    callApi(
+      () => mockServer.updateValetProgress(id, leg, milestone),
+      () =>
+        request<AdminBooking>("put", `/admin/bookings/${id}/valet/progress`, {
+          leg,
+          milestone,
+        }),
     ),
 
   assignRelationshipManager: (id: string, managerId: string) =>
@@ -56,6 +71,16 @@ export const adminApi = {
       () =>
         request<AdminBooking>("put", `/admin/bookings/${id}/relationship-manager`, {
           managerId,
+        }),
+    ),
+
+  // Service updates the advisor shares with the customer (in order)
+  updateAdvisorProgress: (id: string, milestone: AdvisorMilestone) =>
+    callApi(
+      () => mockServer.updateAdvisorProgress(id, milestone),
+      () =>
+        request<AdminBooking>("put", `/admin/bookings/${id}/relationship-manager/progress`, {
+          milestone,
         }),
     ),
 

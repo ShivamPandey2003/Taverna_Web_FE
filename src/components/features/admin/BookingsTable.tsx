@@ -7,9 +7,11 @@ import {
 import {
   openBookingDetails,
   openBookingWorkflow,
+  selectAdminModal,
 } from "@/redux/modals/adminModal/adminModalSlice";
 import { useAdminBookings } from "@/services/queries/adminQueries";
 import type { BookingSortField } from "@/types/admin";
+import { cn } from "@/libs/utils";
 import { BookingStatusBadge } from "./BookingStatusBadge";
 import { SortButton } from "./SortButton";
 import { TablePagination } from "./TablePagination";
@@ -30,6 +32,8 @@ export function BookingsTable() {
   const dispatch = useAppDispatch();
   const params = useAppSelector(selectBookingListParams);
   const { data, isPending, isError, isFetching, refetch } = useAdminBookings(params);
+  // Booking open in the side drawer, if any
+  const { workflowBookingId } = useAppSelector(selectAdminModal);
 
   return (
     <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white">
@@ -96,8 +100,18 @@ export function BookingsTable() {
             {data?.items.map((booking) => (
               <tr
                 key={booking.id}
-                onClick={() => dispatch(openBookingDetails(booking.id))}
-                className="cursor-pointer transition hover:bg-gray-50"
+                // While the drawer is open, a row click switches it to that booking
+                onClick={() =>
+                  dispatch(
+                    workflowBookingId
+                      ? openBookingWorkflow(booking.id)
+                      : openBookingDetails(booking.id),
+                  )
+                }
+                className={cn(
+                  "cursor-pointer transition",
+                  booking.id === workflowBookingId ? "bg-gray-100" : "hover:bg-gray-50",
+                )}
               >
                 {/* One line per row; the full details are in the booking modal */}
                 <td className="whitespace-nowrap px-4 py-2 font-semibold text-gray-900">

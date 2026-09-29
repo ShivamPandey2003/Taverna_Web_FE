@@ -1,94 +1,30 @@
-import { HomeSmile, Calendar, Tag, UserCircle, ClipboardList, Building, Car, Users } from 'reicon-react';
-
 import { NavLink } from "react-router";
-import { useAppSelector } from "@/redux/hooks";
-import { selectIsAdmin } from "@/redux/auth/authSlice";
 import { ServiceStatusCard } from "@/components/features/tracking/ServiceStatusCard";
+import { customerNavigation, exactPaths, type NavItem } from "./navigation";
 
-const navigation = [
-  {
-    label: "Home",
-    path: "/dashboard",
-    icon: HomeSmile,
-  },
-  {
-    label: "Book Service",
-    path: "/dashboard/book-service",
-    icon: Calendar,
-  },
-  {
-    label: "Specials",
-    path: "/dashboard/specials",
-    icon: Tag,
-  },
-  {
-    label: "Account",
-    path: "/dashboard/account",
-    icon: UserCircle,
-  },
-];
-
-const adminNavigation = [
-  {
-    label: "Bookings",
-    path: "/admin",
-    icon: ClipboardList,
-  },
-  {
-    label: "Dealerships",
-    path: "/admin/dealerships",
-    icon: Building,
-  },
-  {
-    label: "Valets",
-    path: "/admin/valets",
-    icon: Car,
-  },
-  {
-    label: "Advisors",
-    path: "/admin/advisors",
-    icon: Users,
-  },
-];
-
-// Paths that must match exactly so child routes don't also highlight them
-const exactPaths = ["/dashboard", "/admin"];
-
+// Customers only; admins get their links in the Navbar
 export function Sidebar() {
-  const isAdmin = useAppSelector(selectIsAdmin);
-
   return (
     <aside className="hidden min-h-[calc(100vh-72px)] w-[260px] shrink-0 flex-col border-r border-gray-200 bg-white lg:flex">
 
       <nav className="flex-1 space-y-2 p-6">
 
-        {/* Admins can't open customer pages, so they only get the admin links */}
-        {(isAdmin ? adminNavigation : navigation).map((item) => (
+        {customerNavigation.map((item) => (
           <SidebarLink key={item.path} {...item} />
         ))}
 
       </nav>
 
-      {/* The customer's running service; can't be closed */}
-      {!isAdmin && (
-        <div className="px-6 pb-4">
-          <ServiceStatusCard />
-        </div>
-      )}
+      {/* The customer's running service; closable only once it's complete */}
+      <div className="px-6 pb-4">
+        <ServiceStatusCard />
+      </div>
 
     </aside>
   );
 }
 
-function SidebarLink({
-  label,
-  path,
-  icon: Icon,
-}: {
-  label: string;
-  path: string;
-  icon: typeof HomeSmile;
-}) {
+function SidebarLink({ label, path, icon: Icon }: NavItem) {
   return (
     <NavLink
       to={path}
