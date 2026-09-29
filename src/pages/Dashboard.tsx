@@ -4,6 +4,7 @@ import { SavedVehicleDetailsModal } from "@/components/features/dashboard/SavedV
 import { VehicleDetailsModal } from "@/components/features/dashboard/VehicleDetailsModal";
 import { VehicleList } from "@/components/features/dashboard/VehicleList";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { cn } from "@/libs/utils";
 import { selectAccountUser } from "@/redux/account/accountSlice";
 import { openRegisterVehicle } from "@/redux/modals/dashboardModal/dashboardModalSlice";
 import { selectVehicles } from "@/redux/vehicle/vehicleSlice";
@@ -14,7 +15,13 @@ export function Dashboard() {
   const user = useAppSelector(selectAccountUser);
 
   return (
-    <div className="flex h-full min-h-0 flex-col pb-10 overflow-y-auto">
+    // Bottom padding only under the vehicle list; the empty state fills the page exactly
+    <div
+      className={cn(
+        "flex h-full min-h-0 flex-col overflow-y-auto",
+        vehicles.length > 0 && "pb-10",
+      )}
+    >
       {vehicles.length === 0 ? (
         <EmptyVehicleState
           userName={user.name}

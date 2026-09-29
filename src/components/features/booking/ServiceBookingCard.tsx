@@ -17,14 +17,14 @@ export function ServiceBookingCard({
   return (
     <article
       className={cn(
-        "rounded-2xl border border-gray-200 bg-white px-6 py-6",
+        "flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-5",
         disabled && "opacity-50",
       )}
     >
       {/* Main content */}
-      <div className="flex gap-6">
+      <div className="flex flex-col gap-5 sm:flex-row">
         {/* Image */}
-        <div className="h-[120px] w-[180px] shrink-0 overflow-hidden rounded-xl">
+        <div className="h-[140px] w-full shrink-0 overflow-hidden rounded-xl sm:h-[120px] sm:w-[160px]">
           <img
             src={service.image}
             alt={service.title}
@@ -34,59 +34,45 @@ export function ServiceBookingCard({
 
         {/* Content */}
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-5">
-            <div>
-              <h3 className="text-lg font-bold text-gray-900">
-                {service.title}
-              </h3>
+          <h3 className="text-lg font-bold text-gray-900">
+            {service.title}
+          </h3>
 
-              <p className="mt-1 text-sm text-gray-500">
-                {service.description}
-              </p>
+          <p className="mt-1 text-sm text-gray-500">
+            {service.description}
+          </p>
 
-              <ul className="mt-3 space-y-1.5">
-                {service.features.map((feature) => (
-                  <li
-                    key={feature}
-                    className="flex items-center gap-2 text-sm text-gray-500"
-                  >
-                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-50">
-                      <Check
-                        size={11}
-                        strokeWidth={3}
-                        className="text-emerald-600"
-                      />
-                    </span>
+          <ul className="mt-3 space-y-1.5">
+            {service.features.map((feature) => (
+              <li
+                key={feature}
+                className="flex items-center gap-2 text-sm text-gray-500"
+              >
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-50">
+                  <Check
+                    size={11}
+                    strokeWidth={3}
+                    className="text-emerald-600"
+                  />
+                </span>
 
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Arrow */}
-            <button
-              type="button"
-              onClick={() => onSelect?.(service)}
-              disabled={disabled}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-900 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:hover:bg-gray-50"
-              aria-label={`Book ${service.title}`}
-            >
-              <ArrowRight size={18} />
-            </button>
-          </div>
+                {feature}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="mt-5 border-t border-gray-200 pt-5">
+      {/* Pinned to the bottom so both cards' buttons line up */}
+      <div className="mt-auto pt-5">
         <button
           type="button"
           onClick={() => onSelect?.(service)}
           disabled={disabled}
-          className="ml-auto block text-sm font-semibold text-gray-900 hover:text-emerald-600 disabled:cursor-not-allowed disabled:hover:text-gray-900"
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-black text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:hover:bg-black"
         >
-          Tap to book this service
+          Book this service
+          <ArrowRight size={16} />
         </button>
       </div>
     </article>

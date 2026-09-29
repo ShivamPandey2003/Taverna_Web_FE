@@ -1,12 +1,12 @@
 import { AngleRight } from "reicon-react";
 import { cn } from "@/libs/utils";
-import type { StatusTone } from "./serviceStatus";
+import { statusTones, type StatusTone } from "./serviceStatus";
 
 interface BookingStatusProps {
   dealership: string;
   time: string;
   status: string;
-  // Orange while waiting for confirmation, green after
+  // Colours the header by stage of the service
   tone: StatusTone;
   // Demo only (mock API): makes the status pill move the booking to its next status
   onAdvance?: () => void;
@@ -28,7 +28,7 @@ export function BookingStatus({
     <section
       className={cn(
         "flex min-h-[166px] flex-col items-center justify-center rounded-2xl px-6 text-center text-white transition-colors",
-        tone === "pending" ? "bg-status-pending" : "bg-status-active",
+        statusTones[tone].bg,
       )}
     >
       <p className="text-sm font-medium">

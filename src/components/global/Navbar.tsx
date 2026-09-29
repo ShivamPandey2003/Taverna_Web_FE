@@ -1,14 +1,7 @@
-import { useNavigate } from "react-router";
 import { NotificationDropdown } from "./Notification/NotificationDropdown";
-import { useAppSelector } from "@/redux/hooks";
-import { selectAccountUser } from "@/redux/account/accountSlice";
-import { selectIsAdmin } from "@/redux/auth/authSlice";
+import { ProfileDropdown } from "./ProfileDropdown";
 
 export function Navbar() {
-  const navigate = useNavigate();
-  const user = useAppSelector(selectAccountUser);
-  const isAdmin = useAppSelector(selectIsAdmin);
-
   return (
     <header className="h-[60px] border-b border-gray-200 bg-white">
       <div className="flex h-full items-center justify-between px-6">
@@ -42,20 +35,8 @@ export function Navbar() {
           </button> */}
           <NotificationDropdown/>
 
-          {/* User; admins have no account page */}
-          <button
-            type="button"
-            onClick={() => navigate(isAdmin ? "/admin" : "/dashboard/account")}
-            className="flex items-center gap-3"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-800">
-              {user.name.charAt(0).toUpperCase()}
-            </div>
-
-            <span className="text-sm font-semibold text-gray-800">
-              {user.name}
-            </span>
-          </button>
+          {/* Profile and log out */}
+          <ProfileDropdown />
 
         </div>
       </div>

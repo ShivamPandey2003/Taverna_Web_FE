@@ -43,7 +43,8 @@ export function ServicesList({ disabled = false }: ServicesListProps) {
   };
 
   return (
-    <div className="space-y-4">
+    // Side by side on wide screens so the whole page fits without scrolling
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
       {services.map((service) => (
         <ServiceBookingCard
           key={service.id}

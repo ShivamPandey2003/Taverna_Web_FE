@@ -14,8 +14,17 @@ import type { Vehicle } from "@/types/vehicle";
 
 export const TRACKING_PATH = "/dashboard/book-service/tracking";
 
-// "pending" = waiting on the dealership (orange); "active" = moving along (green)
+// Two colours only:
+//   pending (orange) - waiting on someone: the dealership to confirm, a valet to be
+//                      assigned, or the customer to pay the bill
+//   active  (green)  - the service is moving along, or done
 export type StatusTone = "pending" | "active";
+
+// Full class names so Tailwind generates them
+export const statusTones: Record<StatusTone, { bg: string; text: string }> = {
+  pending: { bg: "bg-status-pending", text: "text-status-pending" },
+  active: { bg: "bg-status-active", text: "text-status-active" },
+};
 
 export interface StatusDisplay {
   tone: StatusTone;
@@ -37,7 +46,7 @@ export function getStatusDisplay(status: BookingStatus, etaMinutes?: number | nu
     case BookingStatus.IN_QUEUE:
       return { tone: "pending", label: "Pending", message: "Waiting for confirmation" };
     case BookingStatus.BOOKED:
-      return { tone: "active", label: "Confirmed", message: "Your booking is confirmed" };
+      return { tone: "pending", label: "Confirmed", message: "Your booking is confirmed" };
     case BookingStatus.VALET_ASSIGNED:
       return { tone: "active", label: "Valet assigned", message: "Your valet is on the way", etaMinutes: eta };
     case BookingStatus.VEHICLE_PICKED_UP:
@@ -47,7 +56,7 @@ export function getStatusDisplay(status: BookingStatus, etaMinutes?: number | nu
     case BookingStatus.IN_SERVICE:
       return { tone: "active", label: "In service", message: "Your vehicle in service" };
     case BookingStatus.BILL_GENERATED:
-      return { tone: "active", label: "Pay now", message: "Bill generated", actionRequired: true };
+      return { tone: "pending", label: "Pay now", message: "Bill generated", actionRequired: true };
     case BookingStatus.VEHICLE_RETURN:
       return { tone: "active", label: "On the way", message: "Your vehicle is on the way", etaMinutes: eta };
     case BookingStatus.SERVICE_COMPLETE:
