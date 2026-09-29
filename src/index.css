@@ -14,7 +14,7 @@
 
   --color-border: #e5e7eb;
 
-  /* Service status: waiting on us vs. moving along */
+  /* Service status (see statusTones in serviceStatus.ts): waiting on someone vs. moving along */
   --color-status-pending: #f97316;
   --color-status-active: #06c167;
 
@@ -55,6 +55,21 @@ body {
   background: var(--color-background);
   color: var(--color-text);
   font-family: var(--font-sans);
+}
+
+/* Tailwind resets buttons to the default cursor; show a pointer on everything
+   clickable, customer and admin side alike */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  select:not(:disabled),
+  summary,
+  label:has(> input[type="checkbox"]:not(:disabled)),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    cursor: pointer;
+  }
 }
 
 @layer components {

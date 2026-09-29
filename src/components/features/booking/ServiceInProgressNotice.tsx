@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router";
 import { cn } from "@/libs/utils";
 import {
+  statusTones,
   TRACKING_PATH,
   useActiveService,
 } from "@/components/features/tracking/serviceStatus";
@@ -23,9 +24,7 @@ export function ServiceInProgressNotice() {
             <span
               className={cn(
                 "rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold",
-                service.display.tone === "pending"
-                  ? "text-status-pending"
-                  : "text-status-active",
+                statusTones[service.display.tone].text,
               )}
             >
               {service.display.label}

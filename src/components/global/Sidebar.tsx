@@ -1,9 +1,8 @@
-import { HomeSmile, Calendar, Tag, UserCircle, ClipboardList, Logout, Building, Car, Users } from 'reicon-react';
+import { HomeSmile, Calendar, Tag, UserCircle, ClipboardList, Building, Car, Users } from 'reicon-react';
 
 import { NavLink } from "react-router";
 import { useAppSelector } from "@/redux/hooks";
 import { selectIsAdmin } from "@/redux/auth/authSlice";
-import { useLogout } from "@/hooks/useLogout";
 import { ServiceStatusCard } from "@/components/features/tracking/ServiceStatusCard";
 
 const navigation = [
@@ -57,7 +56,6 @@ const exactPaths = ["/dashboard", "/admin"];
 
 export function Sidebar() {
   const isAdmin = useAppSelector(selectIsAdmin);
-  const handleLogout = useLogout();
 
   return (
     <aside className="hidden min-h-[calc(100vh-72px)] w-[260px] shrink-0 flex-col border-r border-gray-200 bg-white lg:flex">
@@ -77,17 +75,6 @@ export function Sidebar() {
           <ServiceStatusCard />
         </div>
       )}
-
-      <div className="border-t border-gray-200 p-6">
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="flex h-11 w-full items-center gap-4 rounded-lg px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100"
-        >
-          <Logout size={20} strokeWidth={2} />
-          <span>Log out</span>
-        </button>
-      </div>
 
     </aside>
   );

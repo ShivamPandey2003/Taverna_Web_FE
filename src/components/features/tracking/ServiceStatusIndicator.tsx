@@ -1,5 +1,5 @@
 import { cn } from "@/libs/utils";
-import type { StatusDisplay } from "./serviceStatus";
+import { statusTones, type StatusDisplay } from "./serviceStatus";
 
 interface ServiceStatusIndicatorProps {
   display: StatusDisplay;
@@ -9,8 +9,7 @@ interface ServiceStatusIndicatorProps {
 
 // Coloured status label, or an arrival countdown while the vehicle is on the way
 export function ServiceStatusIndicator({ display, size = "lg" }: ServiceStatusIndicatorProps) {
-  const color =
-    display.tone === "pending" ? "text-status-pending" : "text-status-active";
+  const color = statusTones[display.tone].text;
 
   if (display.etaMinutes !== undefined) {
     return size === "lg" ? (
