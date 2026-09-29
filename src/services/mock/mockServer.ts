@@ -1,15 +1,19 @@
 import { BookingStatus } from "@/types/booking";
 import type { AuthSession, AuthUser } from "@/types/auth";
-import type {
-  AdminBooking,
-  BookingListParams,
-  Invoice,
-  InvoiceLine,
-  Paginated,
-  PaymentInfo,
-  StaffListParams,
-  StaffMember,
-  StaffRole,
+import {
+  ADVISOR_MILESTONES,
+  VALET_MILESTONES,
+  type AdminBooking,
+  type AdvisorMilestone,
+  type BookingListParams,
+  type Invoice,
+  type InvoiceLine,
+  type Paginated,
+  type StaffListParams,
+  type StaffMember,
+  type StaffRole,
+  type ValetLeg,
+  type ValetMilestone,
 } from "@/types/admin";
 import type { Dealership } from "@/types/dealership";
 import type { ServiceId } from "@/types/service";
@@ -118,25 +122,12 @@ function seedBookings(): AdminBooking[] {
   const now = Date.now();
   const day = 24 * 60 * 60 * 1000;
 
-  const bookings = Array.from({ length: 42 }, (_, index): AdminBooking => {
+  return Array.from({ length: 42 }, (_, index): AdminBooking => {
     const [name, email, phone] = pick(customers);
     const [brand, model, year] = pick(vehicles);
     const createdAt = new Date(now - Math.floor(random() * 30 * day)).toISOString();
-    // 0 = new, 1 = confirmed, 2 = valet, 3 = manager, 4 = paid
-    const stage = Math.floor(random() * 5);
-    const valet = stage >= 2 ? pick(valets) : null;
-    const payment: PaymentInfo | null =
-      stage >= 4
-        ? {
-            amount: 80 + Math.floor(random() * 400),
-            method: pick(["card", "cash", "insurance", "warranty"] as const),
-            status: "paid",
-            transactionId: `TXN-${100000 + index}`,
-            updatedAt: createdAt,
-          }
-        : null;
 
-    return {
+    const booking: AdminBooking = {
       id: `PC-${String(482900 + index)}`,
       customer: {
         id: email === "alex@gmail.com" ? "u-alex" : `u-${index}`,
@@ -158,41 +149,38 @@ function seedBookings(): AdminBooking[] {
       scheduledAt:
         random() > 0.5 ? new Date(Date.parse(createdAt) + day).toISOString() : null,
       createdAt,
-      // Paid bookings are finished history, so their staff are free again
-      status:
-        stage === 0
-          ? BookingStatus.IN_QUEUE
-          : stage === 1
-            ? BookingStatus.BOOKED
-            : stage === 4
-              ? BookingStatus.SERVICE_COMPLETE
-              : BookingStatus.VALET_ASSIGNED,
-      confirmedAt: stage >= 1 ? createdAt : null,
-      valet,
-      relationshipManager: stage >= 3 ? pick(relationshipManagers) : null,
-      payment,
+      status: BookingStatus.IN_QUEUE,
+      confirmedAt: null,
+      valet: null,
+      relationshipManager: null,
+      payment: null,
     };
-  });
 
-  // The demo customer's seeded bookings are finished history, so they can book right away
-  return bookings.map((booking, index) =>
-    booking.customer.id !== "u-alex"
-      ? booking
-      : {
-          ...booking,
-          status: BookingStatus.SERVICE_COMPLETE,
-          confirmedAt: booking.createdAt,
-          valet: booking.valet ?? valets[0],
-          relationshipManager: booking.relationshipManager ?? relationshipManagers[0],
-          payment: booking.payment ?? {
-            amount: 180,
-            method: "card",
-            status: "paid",
-            transactionId: `TXN-${100000 + index}`,
-            updatedAt: booking.createdAt,
-          },
-        },
-  );
+    // Walk the booking some way through the workflow; 40% are finished history.
+    // The demo customer's are all finished, so they can book right away.
+    const finished = booking.customer.id === "u-alex" || random() < 0.4;
+    const actions = finished ? WORKFLOW_ACTIONS : Math.floor(random() * WORKFLOW_ACTIONS);
+    const pickStaff: StaffPicker = {
+      valet: () => pick(valets),
+      manager: () => pick(relationshipManagers),
+    };
+
+    // Each action happens 10-40 minutes after the previous one
+    let time = Date.parse(createdAt);
+    withClock(
+      () => new Date((time += (10 + Math.floor(random() * 30)) * 60 * 1000)).toISOString(),
+      () => {
+        for (let count = 0; count < actions; count++) {
+          // The seed pays bills itself instead of waiting for the customer
+          const action = nextAction(booking, pickStaff) ?? payAction(booking);
+          if (!action) break;
+          action();
+        }
+      },
+    );
+
+    return booking;
+  });
 }
 
 function loadDb(): MockDb {
@@ -219,6 +207,17 @@ function loadDb(): MockDb {
         if (booking.payment?.status === "paid" && booking.status === BookingStatus.VALET_ASSIGNED) {
           booking.status = BookingStatus.SERVICE_COMPLETE;
         }
+        // Bookings finished before valet and advisor milestones existed
+        if (booking.status === BookingStatus.SERVICE_COMPLETE && !booking.completedAt) {
+          const at = booking.payment?.updatedAt ?? booking.createdAt;
+          const all = <T extends string>(keys: readonly T[]) =>
+            Object.fromEntries(keys.map((key) => [key, at])) as Record<T, string>;
+          booking.pickupProgress = all(VALET_MILESTONES);
+          booking.advisorProgress = all(ADVISOR_MILESTONES);
+          booking.deliveryValet ??= booking.valet;
+          booking.deliveryProgress = all(VALET_MILESTONES);
+          booking.completedAt = at;
+        }
       });
       return saved;
     }
@@ -227,8 +226,6 @@ function loadDb(): MockDb {
   }
   return seed;
 }
-
-const db = loadDb();
 
 function persist() {
   try {
@@ -293,8 +290,12 @@ function assertContactFree(
 // Unfinished bookings the member is assigned to
 function activeAssignments(role: StaffRole, id: string) {
   return db.bookings.filter((booking) => {
-    const assigned = role === "valet" ? booking.valet : booking.relationshipManager;
-    return assigned?.id === id && booking.status !== BookingStatus.SERVICE_COMPLETE;
+    const assigned =
+      role === "valet" ? [booking.valet, booking.deliveryValet] : [booking.relationshipManager];
+    return (
+      assigned.some((member) => member?.id === id) &&
+      booking.status !== BookingStatus.SERVICE_COMPLETE
+    );
   });
 }
 
@@ -376,10 +377,16 @@ function activeDealershipBookings(name: string) {
   );
 }
 
-// Who handled a finished booking is part of its history
-function assertNotComplete(booking: AdminBooking) {
-  if (booking.status === BookingStatus.SERVICE_COMPLETE) {
-    throw new Error("This service is complete, so its staff can't be changed.");
+// Timestamps for workflow actions; the seed swaps in its own past times
+let clock = () => new Date().toISOString();
+
+function withClock(next: () => string, run: () => void) {
+  const previous = clock;
+  clock = next;
+  try {
+    run();
+  } finally {
+    clock = previous;
   }
 }
 
@@ -391,6 +398,184 @@ function advanceStatusTo(booking: AdminBooking, status: BookingStatus) {
     booking.status = status;
   }
 }
+
+// Who handled a finished booking is part of its history
+function assertNotComplete(booking: AdminBooking) {
+  if (booking.status === BookingStatus.SERVICE_COMPLETE) {
+    throw new Error("This service is complete, so it can't be changed.");
+  }
+}
+
+function legValet(booking: AdminBooking, leg: ValetLeg) {
+  return (leg === "pickup" ? booking.valet : booking.deliveryValet) ?? null;
+}
+
+function legProgress(booking: AdminBooking, leg: ValetLeg) {
+  return (leg === "pickup" ? booking.pickupProgress : booking.deliveryProgress) ?? {};
+}
+
+function nextMilestone<T extends string>(order: readonly T[], log: Partial<Record<T, string>>) {
+  return order.find((key) => !log[key]) ?? null;
+}
+
+const legDone = (booking: AdminBooking, leg: ValetLeg) =>
+  !!legValet(booking, leg) && !!legProgress(booking, leg).delivered;
+
+// Status the customer sees once a pickup milestone is reached; the whole
+// delivery trip reads as "Vehicle Return"
+const pickupStatuses: Record<ValetMilestone, BookingStatus> = {
+  dispatched: BookingStatus.VALET_ASSIGNED,
+  arrived: BookingStatus.VALET_ASSIGNED,
+  pickedUp: BookingStatus.VEHICLE_PICKED_UP,
+  enRoute: BookingStatus.VEHICLE_PICKED_UP,
+  reached: BookingStatus.VEHICLE_ARRIVED,
+  delivered: BookingStatus.VEHICLE_ARRIVED,
+};
+
+const advisorStatuses: Record<AdvisorMilestone, BookingStatus> = {
+  checkedIn: BookingStatus.VEHICLE_ARRIVED,
+  inService: BookingStatus.IN_SERVICE,
+  serviceDone: BookingStatus.IN_SERVICE,
+};
+
+// ---- Workflow actions, in order. Shared by the admin endpoints, the customer's
+// demo button and the seed; each one checks that the earlier steps are done. ----
+
+function confirm(booking: AdminBooking) {
+  assertNotComplete(booking);
+  booking.confirmedAt ??= clock();
+  advanceStatusTo(booking, BookingStatus.BOOKED);
+}
+
+function assignValet(booking: AdminBooking, leg: ValetLeg, valet: StaffMember) {
+  assertNotComplete(booking);
+  if (!booking.confirmedAt) throw new Error("Confirm the booking before assigning a valet.");
+  if (leg === "delivery" && booking.payment?.status !== "paid") {
+    throw new Error("The bill has to be paid before assigning the delivery valet.");
+  }
+  if (legProgress(booking, leg).pickedUp) {
+    throw new Error("This valet already has the vehicle, so they can't be changed.");
+  }
+
+  // A new valet starts the trip over
+  if (leg === "pickup") {
+    booking.valet = { ...valet };
+    booking.pickupProgress = {};
+    advanceStatusTo(booking, BookingStatus.VALET_ASSIGNED);
+    booking.etaMinutes = 45;
+  } else {
+    booking.deliveryValet = { ...valet };
+    booking.deliveryProgress = {};
+  }
+}
+
+function markValetMilestone(booking: AdminBooking, leg: ValetLeg, milestone: ValetMilestone) {
+  assertNotComplete(booking);
+  if (!legValet(booking, leg)) throw new Error("Assign a valet first.");
+  const log = legProgress(booking, leg);
+  if (nextMilestone(VALET_MILESTONES, log) !== milestone) {
+    throw new Error("Valet updates have to be made in order.");
+  }
+
+  const next = { ...log, [milestone]: clock() };
+  if (leg === "pickup") {
+    booking.pickupProgress = next;
+    advanceStatusTo(booking, pickupStatuses[milestone]);
+    // Countdown while the valet heads to the customer
+    booking.etaMinutes = milestone === "dispatched" ? 30 : null;
+  } else {
+    booking.deliveryProgress = next;
+    booking.etaMinutes = milestone === "enRoute" ? 30 : null;
+  }
+}
+
+function assignAdvisor(booking: AdminBooking, advisor: StaffMember) {
+  assertNotComplete(booking);
+  if (!legDone(booking, "pickup")) {
+    throw new Error("The vehicle has to reach the dealership before assigning an advisor.");
+  }
+  booking.relationshipManager = { ...advisor };
+}
+
+function markAdvisorMilestone(booking: AdminBooking, milestone: AdvisorMilestone) {
+  assertNotComplete(booking);
+  if (!booking.relationshipManager) throw new Error("Assign an advisor first.");
+  const log = booking.advisorProgress ?? {};
+  if (nextMilestone(ADVISOR_MILESTONES, log) !== milestone) {
+    throw new Error("Service updates have to be made in order.");
+  }
+  booking.advisorProgress = { ...log, [milestone]: clock() };
+  advanceStatusTo(booking, advisorStatuses[milestone]);
+}
+
+function generateBill(booking: AdminBooking) {
+  assertNotComplete(booking);
+  if (!booking.advisorProgress?.serviceDone) {
+    throw new Error("Finish the service before generating the bill.");
+  }
+  booking.invoice ??= { ...createInvoice(booking), issuedAt: clock() };
+  advanceStatusTo(booking, BookingStatus.BILL_GENERATED);
+}
+
+function markPaid(booking: AdminBooking) {
+  if (booking.payment?.status === "paid") throw new Error("This bill is already paid.");
+  if (!booking.invoice) throw new Error("There's no bill to pay yet.");
+  booking.payment = {
+    amount: booking.invoice.total,
+    method: "card",
+    status: "paid",
+    transactionId: `TXN-${Date.now().toString().slice(-6)}`,
+    updatedAt: clock(),
+  };
+  advanceStatusTo(booking, BookingStatus.VEHICLE_RETURN);
+}
+
+function complete(booking: AdminBooking) {
+  assertNotComplete(booking);
+  if (!legDone(booking, "delivery")) {
+    throw new Error("The vehicle has to be delivered back to the customer first.");
+  }
+  booking.status = BookingStatus.SERVICE_COMPLETE;
+  booking.etaMinutes = null;
+  booking.completedAt = clock();
+}
+
+// How many actions take a booking from new to complete (payment included)
+const WORKFLOW_ACTIONS =
+  1 + 2 * (1 + VALET_MILESTONES.length) + 1 + ADVISOR_MILESTONES.length + 2 + 1;
+
+type StaffPicker = Record<StaffRole, () => StaffMember>;
+
+// The next thing the admin (or a valet) would do; null while it's the customer's
+// turn to pay, and once the booking is complete
+function nextAction(booking: AdminBooking, pickStaff: StaffPicker): (() => void) | null {
+  if (booking.status === BookingStatus.SERVICE_COMPLETE) return null;
+  if (!booking.confirmedAt) return () => confirm(booking);
+
+  if (!booking.valet) return () => assignValet(booking, "pickup", pickStaff.valet());
+  const pickupStep = nextMilestone(VALET_MILESTONES, legProgress(booking, "pickup"));
+  if (pickupStep) return () => markValetMilestone(booking, "pickup", pickupStep);
+
+  if (!booking.relationshipManager) return () => assignAdvisor(booking, pickStaff.manager());
+  const advisorStep = nextMilestone(ADVISOR_MILESTONES, booking.advisorProgress ?? {});
+  if (advisorStep) return () => markAdvisorMilestone(booking, advisorStep);
+  if (!booking.invoice) return () => generateBill(booking);
+  if (booking.payment?.status !== "paid") return null;
+
+  if (!booking.deliveryValet) return () => assignValet(booking, "delivery", pickStaff.valet());
+  const deliveryStep = nextMilestone(VALET_MILESTONES, legProgress(booking, "delivery"));
+  if (deliveryStep) return () => markValetMilestone(booking, "delivery", deliveryStep);
+
+  return () => complete(booking);
+}
+
+const payAction = (booking: AdminBooking) =>
+  booking.invoice && booking.payment?.status !== "paid" ? () => markPaid(booking) : null;
+
+const firstAvailable = (list: StaffMember[]) => list.find((item) => item.available) ?? list[0];
+
+// Created after the workflow helpers above, which the seed uses
+const db = loadDb();
 
 export const mockServer = {
   // ---- Auth ----
@@ -461,66 +646,42 @@ export const mockServer = {
     return findMyBooking(id);
   },
 
-  // Pays the generated bill; the vehicle then heads back to the customer
+  // Pays the generated bill; the delivery valet can then bring the vehicle back
   payInvoice(id: string) {
     const booking = findMyBooking(id);
-    if (booking.payment?.status === "paid") throw new Error("This bill is already paid.");
-    if (!booking.invoice) throw new Error("There's no bill to pay yet.");
-    booking.payment = {
-      amount: booking.invoice.total,
-      method: "card",
-      status: "paid",
-      transactionId: `TXN-${Date.now().toString().slice(-6)}`,
-      updatedAt: new Date().toISOString(),
-    };
-    advanceStatusTo(booking, BookingStatus.VEHICLE_RETURN);
-    if (booking.status === BookingStatus.VEHICLE_RETURN) booking.etaMinutes = 30;
+    markPaid(booking);
     persist();
     return booking;
   },
 
-  // Demo only: moves the booking one status forward, filling in what the admin
-  // (or the valet app) would normally set on the way
+  // Demo only: does what the admin and valets would do next, until the customer
+  // can see a change (a new status, or a valet / advisor assigned)
   simulateNextStatus(id: string) {
     const booking = findMyBooking(id);
-    const now = new Date().toISOString();
+    if (booking.status === BookingStatus.SERVICE_COMPLETE) {
+      throw new Error("This service is already complete.");
+    }
 
-    switch (booking.status) {
-      case BookingStatus.IN_QUEUE:
-        booking.status = BookingStatus.BOOKED;
-        booking.confirmedAt ??= now;
+    const pickStaff: StaffPicker = {
+      valet: () => firstAvailable(db.valets),
+      manager: () => firstAvailable(db.relationshipManagers),
+    };
+    const staffOf = () => [booking.valet, booking.relationshipManager, booking.deliveryValet];
+    const statusBefore = booking.status;
+
+    for (let count = 0; count < WORKFLOW_ACTIONS; count++) {
+      const action = nextAction(booking, pickStaff);
+      if (!action) {
+        if (booking.status === statusBefore) {
+          throw new Error("Pay the bill to get your vehicle back.");
+        }
         break;
-      case BookingStatus.BOOKED:
-        booking.valet ??= { ...(db.valets.find((item) => item.available) ?? db.valets[0]) };
-        booking.status = BookingStatus.VALET_ASSIGNED;
-        booking.etaMinutes = 45;
-        break;
-      case BookingStatus.VALET_ASSIGNED:
-        booking.status = BookingStatus.VEHICLE_PICKED_UP;
-        booking.etaMinutes = null;
-        break;
-      case BookingStatus.VEHICLE_PICKED_UP:
-        booking.relationshipManager ??= {
-          ...(db.relationshipManagers.find((item) => item.available) ??
-            db.relationshipManagers[0]),
-        };
-        booking.status = BookingStatus.VEHICLE_ARRIVED;
-        break;
-      case BookingStatus.VEHICLE_ARRIVED:
-        booking.status = BookingStatus.IN_SERVICE;
-        break;
-      case BookingStatus.IN_SERVICE:
-        booking.invoice ??= createInvoice(booking);
-        booking.status = BookingStatus.BILL_GENERATED;
-        break;
-      case BookingStatus.BILL_GENERATED:
-        throw new Error("Pay the bill to get your vehicle back.");
-      case BookingStatus.VEHICLE_RETURN:
-        booking.status = BookingStatus.SERVICE_COMPLETE;
-        booking.etaMinutes = null;
-        break;
-      case BookingStatus.SERVICE_COMPLETE:
-        throw new Error("This service is already complete.");
+      }
+
+      const staffBefore = staffOf();
+      action();
+      const staffChanged = staffOf().some((member, index) => member !== staffBefore[index]);
+      if (booking.status !== statusBefore || staffChanged) break;
     }
 
     persist();
@@ -592,21 +753,24 @@ export const mockServer = {
   confirmBooking(id: string) {
     requireAdmin();
     const booking = findBooking(id);
-    booking.status = BookingStatus.BOOKED;
-    booking.confirmedAt = new Date().toISOString();
+    confirm(booking);
     persist();
     return booking;
   },
 
-  assignValet(id: string, valetId: string) {
+  assignValet(id: string, leg: ValetLeg, valetId: string) {
     requireAdmin();
     const booking = findBooking(id);
-    assertNotComplete(booking);
-    if (!booking.confirmedAt) throw new Error("Confirm the booking before assigning a valet.");
-    const valet = db.valets.find((item) => item.id === valetId);
-    if (!valet) throw new Error("We couldn't find this valet.");
-    booking.valet = valet;
-    booking.status = BookingStatus.VALET_ASSIGNED;
+    assignValet(booking, leg, findStaff("valet", valetId));
+    persist();
+    return booking;
+  },
+
+  // Normally posted by the valet from their link; the admin can post it too
+  updateValetProgress(id: string, leg: ValetLeg, milestone: ValetMilestone) {
+    requireAdmin();
+    const booking = findBooking(id);
+    markValetMilestone(booking, leg, milestone);
     persist();
     return booking;
   },
@@ -614,11 +778,16 @@ export const mockServer = {
   assignRelationshipManager(id: string, managerId: string) {
     requireAdmin();
     const booking = findBooking(id);
-    assertNotComplete(booking);
-    if (!booking.valet) throw new Error("Assign a valet before the advisor.");
-    const manager = db.relationshipManagers.find((item) => item.id === managerId);
-    if (!manager) throw new Error("We couldn't find this advisor.");
-    booking.relationshipManager = manager;
+    assignAdvisor(booking, findStaff("manager", managerId));
+    persist();
+    return booking;
+  },
+
+  // Service updates the advisor shares with the customer
+  updateAdvisorProgress(id: string, milestone: AdvisorMilestone) {
+    requireAdmin();
+    const booking = findBooking(id);
+    markAdvisorMilestone(booking, milestone);
     persist();
     return booking;
   },
@@ -627,11 +796,7 @@ export const mockServer = {
   generateInvoice(id: string) {
     requireAdmin();
     const booking = findBooking(id);
-    if (!booking.relationshipManager) {
-      throw new Error("Assign an advisor before generating the bill.");
-    }
-    booking.invoice ??= createInvoice(booking);
-    advanceStatusTo(booking, BookingStatus.BILL_GENERATED);
+    generateBill(booking);
     persist();
     return booking;
   },
@@ -640,16 +805,7 @@ export const mockServer = {
   confirmPayment(id: string) {
     requireAdmin();
     const booking = findBooking(id);
-    if (booking.payment?.status === "paid") throw new Error("This bill is already paid.");
-    if (!booking.invoice) throw new Error("Generate the bill before confirming payment.");
-    booking.payment = {
-      amount: booking.invoice.total,
-      method: "card",
-      status: "paid",
-      transactionId: `TXN-${Date.now().toString().slice(-6)}`,
-      updatedAt: new Date().toISOString(),
-    };
-    advanceStatusTo(booking, BookingStatus.VEHICLE_RETURN);
+    markPaid(booking);
     persist();
     return booking;
   },
@@ -657,11 +813,7 @@ export const mockServer = {
   completeBooking(id: string) {
     requireAdmin();
     const booking = findBooking(id);
-    if (booking.payment?.status !== "paid") {
-      throw new Error("Confirm the payment before completing the service.");
-    }
-    booking.status = BookingStatus.SERVICE_COMPLETE;
-    booking.etaMinutes = null;
+    complete(booking);
     persist();
     return booking;
   },
@@ -744,6 +896,9 @@ export const mockServer = {
     // Bookings keep a copy of the assigned member; keep their details current
     db.bookings.forEach((booking) => {
       if (role === "valet" && booking.valet?.id === id) booking.valet = { ...member };
+      if (role === "valet" && booking.deliveryValet?.id === id) {
+        booking.deliveryValet = { ...member };
+      }
       if (role === "manager" && booking.relationshipManager?.id === id) {
         booking.relationshipManager = { ...member };
       }

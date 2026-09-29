@@ -1,4 +1,4 @@
-import { Modal } from "@/components/ui/Modal";
+import { Drawer } from "@/components/ui/Drawer";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   closeBookingWorkflow,
@@ -9,15 +9,16 @@ import {
 } from "@/redux/modals/adminModal/adminModalSlice";
 import { useAdminBooking } from "@/services/queries/adminQueries";
 import { BookingStatusBadge } from "../BookingStatusBadge";
-import { firstOpenStep } from "../admin.utils";
+import { firstOpenStep, isStepUnlocked } from "../admin.utils";
 import { WorkflowStepper } from "./WorkflowStepper";
 import { ConfirmStep } from "./ConfirmStep";
-import { AssignValetStep, AssignManagerStep } from "./AssignStaffSteps";
-import { CompleteStep, PaymentStep } from "./PaymentStep";
+import { ValetStep } from "./ValetStep";
+import { AdvisorStep } from "./AdvisorStep";
+import { CompleteStep } from "./CompleteStep";
 
-// Confirm → assign valet → assign advisor → payment → complete.
-// The booking's details are in BookingDetailsModal.
-export function BookingWorkflowModal() {
+// Confirm → pickup valet → advisor → delivery valet → complete, in a drawer from
+// the right. Each step unlocks once the one before it is finished.
+export function BookingWorkflowDrawer() {
   const dispatch = useAppDispatch();
   const { workflowBookingId, activeStep } = useAppSelector(selectAdminModal);
   const { data: booking, isPending, isError } = useAdminBooking(workflowBookingId);
@@ -28,8 +29,12 @@ export function BookingWorkflowModal() {
 
   const onClose = () => dispatch(closeBookingWorkflow());
 
-  // Opens on the first unfinished step unless the admin picked one
-  const step = activeStep ?? (booking ? firstOpenStep(booking) : "confirm");
+  // Opens on the first unfinished step unless the admin picked one. A picked step
+  // that is locked (e.g. the service was just completed) falls back as well.
+  const step =
+    booking && (!activeStep || !isStepUnlocked(booking, activeStep))
+      ? firstOpenStep(booking)
+      : (activeStep ?? "confirm");
 
   const goToNextStep = (current: WorkflowStep) => {
     const next = WORKFLOW_STEPS[WORKFLOW_STEPS.indexOf(current) + 1];
@@ -37,7 +42,7 @@ export function BookingWorkflowModal() {
   };
 
   return (
-    <Modal
+    <Drawer
       title={
         <>
           <h2>Manage {workflowBookingId}</h2>
@@ -46,14 +51,14 @@ export function BookingWorkflowModal() {
       }
       subtitle={
         booking &&
-        `${booking.customer.name} · ${booking.vehicle.year} ${booking.vehicle.brand} ${booking.vehicle.model}`
+        `${booking.customer.name} - ${booking.vehicle.year} ${booking.vehicle.brand} ${booking.vehicle.model}`
       }
       onClose={onClose}
     >
       {isPending && (
         <div className="space-y-3">
-          <div className="h-12 animate-pulse rounded-xl bg-gray-100" />
-          <div className="h-40 animate-pulse rounded-xl bg-gray-100" />
+          <div className="h-20 animate-pulse rounded-xl bg-gray-100" />
+          <div className="h-60 animate-pulse rounded-xl bg-gray-100" />
         </div>
       )}
 
@@ -69,24 +74,28 @@ export function BookingWorkflowModal() {
             onSelect={(next) => dispatch(setWorkflowStep(next))}
           />
 
-          {/* Keyed so each step's local form state starts fresh */}
-          <div key={step} className="mt-5">
+          {/* Keyed so each step's local state starts fresh */}
+          <div key={step} className="mt-5 border-t border-gray-200 pt-5">
             {step === "confirm" && (
               <ConfirmStep booking={booking} onDone={() => goToNextStep("confirm")} />
             )}
-            {step === "valet" && (
-              <AssignValetStep booking={booking} onDone={() => goToNextStep("valet")} />
+            {step === "pickup" && (
+              <ValetStep booking={booking} leg="pickup" onDone={() => goToNextStep("pickup")} />
             )}
-            {step === "manager" && (
-              <AssignManagerStep booking={booking} onDone={() => goToNextStep("manager")} />
+            {step === "advisor" && (
+              <AdvisorStep booking={booking} onDone={() => goToNextStep("advisor")} />
             )}
-            {step === "payment" && (
-              <PaymentStep booking={booking} onDone={() => goToNextStep("payment")} />
+            {step === "delivery" && (
+              <ValetStep
+                booking={booking}
+                leg="delivery"
+                onDone={() => goToNextStep("delivery")}
+              />
             )}
             {step === "complete" && <CompleteStep booking={booking} />}
           </div>
         </>
       )}
-    </Modal>
+    </Drawer>
   );
 }

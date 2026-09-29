@@ -6,12 +6,12 @@ import {
   selectAdminModal,
 } from "@/redux/modals/adminModal/adminModalSlice";
 import { useAdminBooking } from "@/services/queries/adminQueries";
-import type { AdminBooking } from "@/types/admin";
+import type { AdminBooking, StaffMember } from "@/types/admin";
 import { BookingStatusBadge } from "../BookingStatusBadge";
 import { formatCurrency, formatDateTime } from "../admin.utils";
 import { BookingOverview } from "./BookingOverview";
 
-// Read-only view of a booking; the workflow steps live in BookingWorkflowModal
+// Read-only view of a booking; the workflow steps live in BookingWorkflowDrawer
 export function BookingDetailsModal() {
   const dispatch = useAppDispatch();
   const { detailsBookingId } = useAppSelector(selectAdminModal);
@@ -74,6 +74,9 @@ export function BookingDetailsModal() {
   );
 }
 
+const staffLine = (member: StaffMember | null) =>
+  member ? `${member.name} · ${member.phone}` : "Not assigned";
+
 // Who is handling the booking and where payment stands
 function BookingHandling({ booking }: { booking: AdminBooking }) {
   const rows: { label: string; value: string }[] = [
@@ -81,18 +84,9 @@ function BookingHandling({ booking }: { booking: AdminBooking }) {
       label: "Confirmed",
       value: booking.confirmedAt ? formatDateTime(booking.confirmedAt) : "Not confirmed yet",
     },
-    {
-      label: "Valet",
-      value: booking.valet
-        ? `${booking.valet.name} · ${booking.valet.phone}`
-        : "Not assigned",
-    },
-    {
-      label: "Advisor",
-      value: booking.relationshipManager
-        ? `${booking.relationshipManager.name} · ${booking.relationshipManager.phone}`
-        : "Not assigned",
-    },
+    { label: "Pickup valet", value: staffLine(booking.valet) },
+    { label: "Advisor", value: staffLine(booking.relationshipManager) },
+    { label: "Delivery valet", value: staffLine(booking.deliveryValet ?? null) },
     {
       label: "Payment",
       value: booking.payment

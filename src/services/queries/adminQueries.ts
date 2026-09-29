@@ -5,7 +5,14 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { adminApi, type DealershipInput, type StaffInput } from "@/services/adminApi";
-import type { BookingListParams, StaffListParams, StaffRole } from "@/types/admin";
+import type {
+  AdvisorMilestone,
+  BookingListParams,
+  StaffListParams,
+  StaffRole,
+  ValetLeg,
+  ValetMilestone,
+} from "@/types/admin";
 import type { Dealership } from "@/types/dealership";
 
 export const adminKeys = {
@@ -161,8 +168,19 @@ export const useConfirmBooking = () =>
   useBookingMutation((id: string) => adminApi.confirmBooking(id));
 
 export const useAssignValet = () =>
-  useBookingMutation(({ id, valetId }: { id: string; valetId: string }) =>
-    adminApi.assignValet(id, valetId),
+  useBookingMutation(({ id, leg, valetId }: { id: string; leg: ValetLeg; valetId: string }) =>
+    adminApi.assignValet(id, leg, valetId),
+  );
+
+export const useUpdateValetProgress = () =>
+  useBookingMutation(
+    ({ id, leg, milestone }: { id: string; leg: ValetLeg; milestone: ValetMilestone }) =>
+      adminApi.updateValetProgress(id, leg, milestone),
+  );
+
+export const useUpdateAdvisorProgress = () =>
+  useBookingMutation(({ id, milestone }: { id: string; milestone: AdvisorMilestone }) =>
+    adminApi.updateAdvisorProgress(id, milestone),
   );
 
 export const useAssignRelationshipManager = () =>
