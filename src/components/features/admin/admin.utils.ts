@@ -62,11 +62,13 @@ export const valetMilestoneLabels: Record<ValetLeg, Record<ValetMilestone, strin
   },
 };
 
-// Service updates the advisor shares with the customer
+// Updates the advisor shares with the customer
 export const advisorMilestoneLabels: Record<AdvisorMilestone, string> = {
-  checkedIn: "Vehicle checked in",
-  inService: "Service started",
-  serviceDone: "Service finished",
+  inspecting: "Inspecting car",
+  inspected: "Inspection done",
+  inService: "Service in progress",
+  serviceDone: "Service done",
+  readyForDispatch: "Ready to dispatch",
 };
 
 export const legTitles: Record<ValetLeg, string> = {
@@ -111,8 +113,8 @@ export function isStepDone(booking: AdminBooking, step: WorkflowStep) {
     case "pickup":
       return tripDone(booking, "pickup");
     case "advisor":
-      // The advisor's part ends with the customer paying the bill
-      return !!booking.relationshipManager && booking.payment?.status === "paid";
+      // The advisor's part ends with the paid-up vehicle ready for the delivery valet
+      return !!booking.relationshipManager && !!booking.advisorProgress?.readyForDispatch;
     case "delivery":
       return tripDone(booking, "delivery");
     case "complete":

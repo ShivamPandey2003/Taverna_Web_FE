@@ -1,6 +1,6 @@
-import { CheckCircle } from "reicon-react";
+// import { CheckCircle } from "reicon-react";
 import { toast } from "sonner";
-import { cn } from "@/libs/utils";
+// import { cn } from "@/libs/utils";
 import { useCompleteBooking } from "@/services/queries/adminQueries";
 import type { AdminBooking } from "@/types/admin";
 import { formatCurrency, formatDateTime, isComplete } from "../admin.utils";
@@ -28,7 +28,7 @@ export function CompleteStep({ booking }: { booking: AdminBooking }) {
     {
       label: "Advisor",
       value: booking.relationshipManager?.name ?? "—",
-      at: booking.advisorProgress?.serviceDone,
+      at: booking.advisorProgress?.readyForDispatch,
     },
     {
       label: "Payment",
@@ -44,7 +44,7 @@ export function CompleteStep({ booking }: { booking: AdminBooking }) {
 
   return (
     <div className="space-y-4">
-      <div
+      {/* <div
         className={cn(
           "flex items-center gap-3 rounded-xl p-4",
           complete ? "bg-status-active/10" : "bg-gray-50",
@@ -64,7 +64,7 @@ export function CompleteStep({ booking }: { booking: AdminBooking }) {
               : "The vehicle is back with the customer. Completing the service lets them book again."}
           </p>
         </div>
-      </div>
+      </div> */}
 
       <SectionCard>
         <h3 className="mb-3 text-sm font-bold text-gray-900">Summary</h3>

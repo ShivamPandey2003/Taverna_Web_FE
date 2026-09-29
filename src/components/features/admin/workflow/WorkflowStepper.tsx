@@ -4,12 +4,22 @@ import { WORKFLOW_STEPS, type WorkflowStep } from "@/redux/modals/adminModal/adm
 import type { AdminBooking } from "@/types/admin";
 import { isComplete, isStepDone, isStepUnlocked } from "../admin.utils";
 
+// What's left to do on each step
 const stepLabels: Record<WorkflowStep, string> = {
-  confirm: "Confirm booking",
-  pickup: "Assign pickup valet",
-  advisor: "Assign advisor",
-  delivery: "Assign delivery valet",
-  complete: "Service complete",
+  confirm: "Confirm Booking",
+  pickup: "Assign Pickup Valet",
+  advisor: "Assign Advisor",
+  delivery: "Assign Delivery Valet",
+  complete: "Service Complete",
+};
+
+// What a finished step holds once there's nothing left to do on it
+const doneLabels: Record<WorkflowStep, string> = {
+  confirm: "Booking Details",
+  pickup: "Pickup Valet",
+  advisor: "Advisor",
+  delivery: "Delivery Valet",
+  complete: "Service Completed",
 };
 
 interface WorkflowStepperProps {
@@ -44,11 +54,12 @@ export function WorkflowStepper({ booking, activeStep, onSelect }: WorkflowStepp
                     : "Finish the previous step first"
               }
               className={cn(
-                "flex h-full w-full flex-col items-start gap-2 rounded-xl border-2 p-3 text-left transition",
-                active
-                  ? "border-gray-900 bg-white"
-                  : done
-                    ? "border-emerald-200 bg-emerald-50/60 hover:border-emerald-300"
+                "flex h-full w-full flex-col items-center justify-center gap-2 rounded-xl border-2 p-3 text-center transition",
+                // A finished step stays green even while it's open, like the others
+                done
+                  ? "border-emerald-200 bg-emerald-50/60 hover:border-emerald-300"
+                  : active
+                    ? "border-gray-900 bg-white"
                     : "border-gray-200 bg-gray-50 hover:border-gray-300",
                 !unlocked && "cursor-not-allowed opacity-60 hover:border-gray-200",
               )}
@@ -73,7 +84,7 @@ export function WorkflowStepper({ booking, activeStep, onSelect }: WorkflowStepp
               </span>
 
               <span className="text-xs font-semibold leading-4 text-gray-900">
-                {stepLabels[step]}
+                {done ? doneLabels[step] : stepLabels[step]}
               </span>
             </button>
           </li>

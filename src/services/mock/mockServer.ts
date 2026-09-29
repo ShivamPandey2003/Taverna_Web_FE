@@ -1,6 +1,7 @@
 import { BookingStatus } from "@/types/booking";
 import type { AuthSession, AuthUser } from "@/types/auth";
 import {
+  ADVISOR_HANDOVER,
   ADVISOR_MILESTONES,
   VALET_MILESTONES,
   type AdminBooking,
@@ -213,10 +214,21 @@ function loadDb(): MockDb {
           const all = <T extends string>(keys: readonly T[]) =>
             Object.fromEntries(keys.map((key) => [key, at])) as Record<T, string>;
           booking.pickupProgress = all(VALET_MILESTONES);
-          booking.advisorProgress = all(ADVISOR_MILESTONES);
+          booking.advisorProgress = all([...ADVISOR_MILESTONES, ADVISOR_HANDOVER]);
           booking.deliveryValet ??= booking.valet;
           booking.deliveryProgress = all(VALET_MILESTONES);
           booking.completedAt = at;
+        }
+        // The advisor's single "checked in" update became inspecting + inspection done,
+        // and they now hand the vehicle over before the delivery valet takes it
+        const advisorLog = booking.advisorProgress as Record<string, string> | undefined;
+        if (advisorLog?.checkedIn) {
+          advisorLog.inspecting ??= advisorLog.checkedIn;
+          advisorLog.inspected ??= advisorLog.checkedIn;
+          delete advisorLog.checkedIn;
+        }
+        if (advisorLog && !advisorLog.readyForDispatch && booking.deliveryValet) {
+          advisorLog.readyForDispatch = booking.payment?.updatedAt ?? booking.createdAt;
         }
       });
       return saved;
@@ -433,9 +445,11 @@ const pickupStatuses: Record<ValetMilestone, BookingStatus> = {
 };
 
 const advisorStatuses: Record<AdvisorMilestone, BookingStatus> = {
-  checkedIn: BookingStatus.VEHICLE_ARRIVED,
+  inspecting: BookingStatus.VEHICLE_ARRIVED,
+  inspected: BookingStatus.VEHICLE_ARRIVED,
   inService: BookingStatus.IN_SERVICE,
   serviceDone: BookingStatus.IN_SERVICE,
+  readyForDispatch: BookingStatus.VEHICLE_RETURN,
 };
 
 // ---- Workflow actions, in order. Shared by the admin endpoints, the customer's
@@ -450,8 +464,8 @@ function confirm(booking: AdminBooking) {
 function assignValet(booking: AdminBooking, leg: ValetLeg, valet: StaffMember) {
   assertNotComplete(booking);
   if (!booking.confirmedAt) throw new Error("Confirm the booking before assigning a valet.");
-  if (leg === "delivery" && booking.payment?.status !== "paid") {
-    throw new Error("The bill has to be paid before assigning the delivery valet.");
+  if (leg === "delivery" && !booking.advisorProgress?.[ADVISOR_HANDOVER]) {
+    throw new Error("The advisor has to mark the vehicle ready to dispatch first.");
   }
   if (legProgress(booking, leg).pickedUp) {
     throw new Error("This valet already has the vehicle, so they can't be changed.");
@@ -501,7 +515,13 @@ function markAdvisorMilestone(booking: AdminBooking, milestone: AdvisorMilestone
   assertNotComplete(booking);
   if (!booking.relationshipManager) throw new Error("Assign an advisor first.");
   const log = booking.advisorProgress ?? {};
-  if (nextMilestone(ADVISOR_MILESTONES, log) !== milestone) {
+  if (milestone === ADVISOR_HANDOVER) {
+    // Handing the vehicle over is the advisor's last update, once the bill is paid
+    if (booking.payment?.status !== "paid") {
+      throw new Error("The bill has to be paid before the vehicle is ready to dispatch.");
+    }
+    if (log[ADVISOR_HANDOVER]) throw new Error("The vehicle is already ready to dispatch.");
+  } else if (nextMilestone(ADVISOR_MILESTONES, log) !== milestone) {
     throw new Error("Service updates have to be made in order.");
   }
   booking.advisorProgress = { ...log, [milestone]: clock() };
@@ -540,9 +560,9 @@ function complete(booking: AdminBooking) {
   booking.completedAt = clock();
 }
 
-// How many actions take a booking from new to complete (payment included)
+// How many actions take a booking from new to complete (bill, payment and handover included)
 const WORKFLOW_ACTIONS =
-  1 + 2 * (1 + VALET_MILESTONES.length) + 1 + ADVISOR_MILESTONES.length + 2 + 1;
+  1 + 2 * (1 + VALET_MILESTONES.length) + 1 + ADVISOR_MILESTONES.length + 3 + 1;
 
 type StaffPicker = Record<StaffRole, () => StaffMember>;
 
@@ -561,6 +581,9 @@ function nextAction(booking: AdminBooking, pickStaff: StaffPicker): (() => void)
   if (advisorStep) return () => markAdvisorMilestone(booking, advisorStep);
   if (!booking.invoice) return () => generateBill(booking);
   if (booking.payment?.status !== "paid") return null;
+  if (!booking.advisorProgress?.[ADVISOR_HANDOVER]) {
+    return () => markAdvisorMilestone(booking, ADVISOR_HANDOVER);
+  }
 
   if (!booking.deliveryValet) return () => assignValet(booking, "delivery", pickStaff.valet());
   const deliveryStep = nextMilestone(VALET_MILESTONES, legProgress(booking, "delivery"));

@@ -8,6 +8,9 @@ import { useStaffOptions } from "@/services/queries/adminQueries";
 import { staffRoleLabels } from "@/components/features/staff/staff.utils";
 import type { StaffMember, StaffRole } from "@/types/admin";
 
+// "a valet", "an advisor"
+const withArticle = (word: string) => `${/^[aeiou]/i.test(word) ? "an" : "a"} ${word}`;
+
 // Green banner for a finished step, with an optional button to move on
 export function StepDone({
   text,
@@ -110,22 +113,49 @@ export function AssignmentRow({
   );
 }
 
-// Personal link the valet / advisor opens to post updates for this booking
-function StaffLinkCard({ role, link }: { role: StaffRole; link: string | null }) {
+// Copies `value` to the clipboard; the icon turns into a tick for a moment
+export function CopyButton({
+  value,
+  label,
+  className,
+}: {
+  value: string;
+  // What's being copied, for the toast and screen readers, e.g. "link"
+  label: string;
+  className?: string;
+}) {
   const [copied, setCopied] = useState(false);
-  const roleLabel = staffRoleLabels[role];
 
   const handleCopy = async () => {
-    if (!link) return;
     try {
-      await navigator.clipboard.writeText(link);
+      await navigator.clipboard.writeText(value);
       setCopied(true);
-      toast.success("Link copied");
+      toast.success(`${label.charAt(0).toUpperCase()}${label.slice(1)} copied`);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error("Couldn't copy the link");
+      toast.error(`Couldn't copy the ${label}`);
     }
   };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      title={`Copy ${label}`}
+      aria-label={`Copy ${label}`}
+      className={cn(
+        "flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-500 transition hover:bg-gray-100 hover:text-gray-900",
+        className,
+      )}
+    >
+      {copied ? <CopySuccess size={15} className="text-status-active" /> : <Copy size={15} />}
+    </button>
+  );
+}
+
+// Personal link the valet / advisor opens to post updates for this booking
+function StaffLinkCard({ role, link }: { role: StaffRole; link: string | null }) {
+  const roleLabel = staffRoleLabels[role];
 
   return (
     <SectionCard className="flex min-w-0 flex-col gap-2">
@@ -138,18 +168,11 @@ function StaffLinkCard({ role, link }: { role: StaffRole; link: string | null })
           <span className="min-w-0 flex-1 truncate text-sm text-blue-700" title={link}>
             {link}
           </span>
-          <button
-            type="button"
-            onClick={handleCopy}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-600 transition hover:bg-white hover:text-gray-900"
-            aria-label="Copy link"
-          >
-            {copied ? <CopySuccess size={16} /> : <Copy size={16} />}
-          </button>
+          <CopyButton value={link} label="link" className="h-8 w-8 hover:bg-white" />
         </div>
       ) : (
         <p className="flex h-10 items-center text-sm text-gray-400">
-          Shows up once a {roleLabel} is assigned
+          Shows up once {withArticle(roleLabel)} is assigned
         </p>
       )}
     </SectionCard>
@@ -251,7 +274,7 @@ function StaffSelect({
             value ? "font-semibold text-gray-900" : "text-gray-400",
           )}
         >
-          {saving ? "Saving..." : (value?.name ?? `Select a ${roleLabel}`)}
+          {saving ? "Saving..." : (value?.name ?? `Select ${withArticle(roleLabel)}`)}
         </span>
         <AngleDown
           size={16}

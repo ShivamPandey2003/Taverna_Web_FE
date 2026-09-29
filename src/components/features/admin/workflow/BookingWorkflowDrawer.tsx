@@ -15,6 +15,7 @@ import { ConfirmStep } from "./ConfirmStep";
 import { ValetStep } from "./ValetStep";
 import { AdvisorStep } from "./AdvisorStep";
 import { CompleteStep } from "./CompleteStep";
+import { CopyButton } from "./StepParts";
 
 // Confirm → pickup valet → advisor → delivery valet → complete, in a drawer from
 // the right. Each step unlocks once the one before it is finished.
@@ -45,13 +46,21 @@ export function BookingWorkflowDrawer() {
     <Drawer
       title={
         <>
-          <h2>Manage {workflowBookingId}</h2>
+          <h2>Manage Booking</h2>
           {booking && <BookingStatusBadge status={booking.status} />}
         </>
       }
       subtitle={
-        booking &&
-        `${booking.customer.name} - ${booking.vehicle.year} ${booking.vehicle.brand} ${booking.vehicle.model}`
+        <>
+          <span className="shrink-0 font-semibold text-gray-900">{workflowBookingId}</span>
+          <CopyButton value={workflowBookingId} label="booking ID" />
+          {booking && (
+            <span className="truncate">
+              · {booking.customer.name} - {booking.vehicle.year} {booking.vehicle.brand}{" "}
+              {booking.vehicle.model}
+            </span>
+          )}
+        </>
       }
       onClose={onClose}
     >

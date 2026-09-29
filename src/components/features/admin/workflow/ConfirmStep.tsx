@@ -35,9 +35,9 @@ export function ConfirmStep({ booking, onDone }: ConfirmStepProps) {
         />
       ) : (
         <>
-          <p className="text-sm text-gray-500">
+          {/* <p className="text-sm text-gray-500">
             Confirming lets the customer know their booking was accepted.
-          </p>
+          </p> */}
           <ActionButton
             pending={confirmBooking.isPending}
             pendingLabel="Confirming..."
