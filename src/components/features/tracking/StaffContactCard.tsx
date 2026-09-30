@@ -1,4 +1,4 @@
-import { MessageText2, Phone } from "reicon-react";
+import { /* MessageText2, */ Phone } from "reicon-react";
 import { shortName } from "@/libs/utils";
 import type { StaffMember } from "@/types/admin";
 
@@ -37,13 +37,14 @@ export function StaffContactCard({ member, role }: StaffContactCardProps) {
         >
           <Phone size={18} />
         </a>
-        <a
+        {/* Message button hidden for now */}
+        {/* <a
           href={`sms:${phone}`}
           className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-900 transition hover:bg-gray-200"
           aria-label={`Message ${member.name}`}
         >
           <MessageText2 size={18} />
-        </a>
+        </a> */}
       </div>
     </section>
   );
