@@ -85,7 +85,7 @@ export function NotificationDropdown() {
                 type="button"
                 onClick={() => dispatch(markAllAsRead())}
                 disabled={unreadCount === 0}
-                className="text-sm font-medium text-emerald-600 transition hover:text-emerald-700 disabled:cursor-default disabled:opacity-40"
+                className="text-sm font-medium text-gray-900 underline underline-offset-4 transition hover:text-black disabled:cursor-default disabled:opacity-40"
               >
                 Mark all read
               </button>

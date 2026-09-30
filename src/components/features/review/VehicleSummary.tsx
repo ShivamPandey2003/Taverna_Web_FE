@@ -4,6 +4,8 @@ import {
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectBookingVehicle } from "@/redux/booking/bookingSlice";
 import { openReviewModal } from "@/redux/modals/reviewModal/reviewModalSlice";
+import { VehicleTitle } from "@/components/features/dashboard/VehicleTitle";
+import { maskedVin } from "@/libs/utils";
 
 export function VehicleSummary() {
   const dispatch = useAppDispatch();
@@ -31,22 +33,15 @@ export function VehicleSummary() {
 
         {/* Vehicle details */}
         <div className="min-w-0">
-          <h3 className="text-base font-bold text-gray-900">
-            {vehicle.brand} {vehicle.model}
+          <h3 className="text-base font-bold leading-tight text-gray-900">
+            <VehicleTitle vehicle={vehicle} />
           </h3>
 
-          <div className="mt-1 flex flex-wrap items-center gap-x-7 gap-y-1 text-sm text-gray-500">
+          <div className="mt-1 flex flex-wrap items-center gap-x-7 gap-y-1 text-sm text-gray-800">
             <p>
               VIN:{" "}
-              <span className="font-semibold text-gray-900">
-                {vehicle.vin}
-              </span>
-            </p>
-
-            <p>
-              Year:{" "}
-              <span className="font-semibold text-gray-900">
-                {vehicle.year}
+              <span className="font-semibold text-gray-900" title={vehicle.vin}>
+                {maskedVin(vehicle.vin)}
               </span>
             </p>
 

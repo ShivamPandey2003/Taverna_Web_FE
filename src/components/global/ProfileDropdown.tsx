@@ -61,7 +61,7 @@ export function ProfileDropdown() {
         aria-haspopup="menu"
         aria-expanded={open}
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-sm font-semibold text-emerald-800">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-900">
           {user.name.charAt(0).toUpperCase()}
         </div>
 

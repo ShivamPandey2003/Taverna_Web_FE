@@ -189,7 +189,7 @@ function BillSummary({ invoice, paid }: { invoice: Invoice; paid: boolean }) {
         <span
           className={
             paid
-              ? "rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700"
+              ? "rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-900"
               : "rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-status-pending"
           }
         >

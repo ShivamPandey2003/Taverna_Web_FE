@@ -3,8 +3,8 @@
 @theme {
   --font-sans: "Inter", sans-serif;
 
-  --color-primary: #008f6b;
-  --color-primary-dark: #00745a;
+  --color-primary: #111827;
+  --color-primary-dark: #000000;
 
   --color-text: #111827;
   --color-text-secondary: #667085;
@@ -14,7 +14,7 @@
 
   --color-border: #e5e7eb;
 
-  /* Service status (see statusTones in serviceStatus.ts): waiting on someone vs. moving along */
+  /* Workflow accents (pending milestones, paid, online). Booking status colours are in libs/statusColors.ts */
   --color-status-pending: #f97316;
   --color-status-active: #06c167;
 

@@ -22,9 +22,9 @@ export function StepDone({
   onAction?: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-      <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
-        <CheckCircle size={18} className="shrink-0 text-emerald-600" />
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-300 bg-gray-100 p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+        <CheckCircle size={18} className="shrink-0 text-black" />
         {text}
       </div>
 
@@ -62,7 +62,7 @@ export function ActionButton({
       disabled={pending}
       className={cn(
         "h-11 w-full rounded-lg text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50",
-        tone === "dark" ? "bg-black hover:bg-gray-800" : "bg-status-active hover:brightness-95",
+        tone === "dark" ? "bg-black hover:bg-gray-800" : "bg-black hover:bg-gray-800",
       )}
     >
       {pending ? pendingLabel : children}
@@ -148,7 +148,7 @@ export function CopyButton({
         className,
       )}
     >
-      {copied ? <CopySuccess size={15} className="text-status-active" /> : <Copy size={15} />}
+      {copied ? <CopySuccess size={15} className="text-black" /> : <Copy size={15} />}
     </button>
   );
 }
@@ -326,7 +326,7 @@ function StaffSelect({
                       disabled && "cursor-not-allowed opacity-50 hover:bg-transparent",
                     )}
                   >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-800">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-900">
                       {member.name.charAt(0)}
                     </span>
                     <span className="min-w-0 flex-1">
@@ -341,7 +341,7 @@ function StaffSelect({
                         current
                           ? "bg-gray-900 text-white"
                           : member.available
-                            ? "bg-emerald-50 text-emerald-700"
+                            ? "bg-gray-100 text-gray-900"
                             : "bg-gray-100 text-gray-500",
                       )}
                     >

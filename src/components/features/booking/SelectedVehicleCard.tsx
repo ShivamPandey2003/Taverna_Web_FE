@@ -1,6 +1,7 @@
 import { useAppSelector } from "@/redux/hooks";
 import { selectBookingVehicle } from "@/redux/booking/bookingSlice";
-import { brandName } from "@/libs/utils";
+import { VehicleTitle } from "@/components/features/dashboard/VehicleTitle";
+import { maskedVin } from "@/libs/utils";
 
 interface SelectedVehicleCardProps {
   onChange?: () => void;
@@ -43,17 +44,17 @@ export function SelectedVehicleCard({
 
         {/* Information */}
         <div className="min-w-0">
-          <h3 className="truncate text-lg font-bold text-gray-900">
-            {brandName(vehicle.brand)} {vehicle.model}
+          <h3 className="text-lg font-bold leading-tight text-gray-900">
+            <VehicleTitle vehicle={vehicle} />
           </h3>
 
-          <div className="mt-1 flex flex-wrap gap-x-5 gap-y-0.5 text-sm text-gray-500">
-            <p>
+          <div className="mt-1 flex flex-wrap gap-x-5 gap-y-0.5 text-sm text-gray-800">
+            {/* <p>
               Year: <span className="text-gray-900">{vehicle.year}</span>
-            </p>
+            </p> */}
 
             <p className="min-w-0 truncate">
-              VIN: <span className="text-gray-900">{vehicle.vin}</span>
+              VIN: <span className="text-gray-900" title={vehicle.vin}>{maskedVin(vehicle.vin)}</span>
             </p>
 
             <p>

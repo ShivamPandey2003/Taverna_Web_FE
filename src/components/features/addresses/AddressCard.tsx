@@ -48,7 +48,7 @@ export function AddressCard({
         </div>
 
         {address.isDefault && (
-          <span className="rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-600">
+          <span className="rounded-md bg-gray-100 px-2 py-1 text-[10px] font-semibold text-black">
             Default
           </span>
         )}
@@ -89,7 +89,7 @@ export function AddressCard({
           <button
             type="button"
             onClick={() => onSetDefault?.(address)}
-            className="flex items-center gap-1 text-[11px] font-medium text-emerald-600 transition hover:text-emerald-700"
+            className="flex items-center gap-1 text-[11px] font-medium text-gray-900 underline underline-offset-4 transition hover:text-black"
           >
             <Star size={13} />
             Set as Default

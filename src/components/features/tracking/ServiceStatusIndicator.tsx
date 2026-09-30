@@ -1,15 +1,15 @@
 import { cn } from "@/libs/utils";
-import { statusTones, type StatusDisplay } from "./serviceStatus";
+import type { StatusDisplay } from "./serviceStatus";
 
 interface ServiceStatusIndicatorProps {
   display: StatusDisplay;
-  // "lg" for the toast, "sm" for the sidebar card
+  // "lg" for the toast, "sm" for compact spots
   size?: "lg" | "sm";
 }
 
 // Coloured status label, or an arrival countdown while the vehicle is on the way
 export function ServiceStatusIndicator({ display, size = "lg" }: ServiceStatusIndicatorProps) {
-  const color = statusTones[display.tone].text;
+  const color = display.color.text;
 
   if (display.etaMinutes !== undefined) {
     return size === "lg" ? (

@@ -57,10 +57,10 @@ export function WorkflowStepper({ booking, activeStep, onSelect }: WorkflowStepp
                 "flex h-full w-full flex-col items-center justify-center gap-2 rounded-xl border-2 p-3 text-center transition",
                 // A finished step stays green even while it's open, like the others
                 done
-                  ? "border-emerald-200 bg-emerald-50/60 hover:border-emerald-300"
+                  ? "border-gray-300 bg-gray-100 hover:border-gray-400"
                   : active
                     ? "border-gray-900 bg-white"
-                    : "border-gray-200 bg-gray-50 hover:border-gray-300",
+                    : "border-gray-200 bg-gray-50 hover:border-gray-400",
                 !unlocked && "cursor-not-allowed opacity-60 hover:border-gray-200",
               )}
             >
@@ -68,7 +68,7 @@ export function WorkflowStepper({ booking, activeStep, onSelect }: WorkflowStepp
                 className={cn(
                   "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold",
                   done
-                    ? "bg-status-active text-white"
+                    ? "bg-black text-white"
                     : active
                       ? "bg-gray-900 text-white"
                       : "bg-gray-200 text-gray-600",

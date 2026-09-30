@@ -1,3 +1,4 @@
+import { vehicleName } from "@/libs/utils";
 import { Drawer } from "@/components/ui/Drawer";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
@@ -56,8 +57,7 @@ export function BookingWorkflowDrawer() {
           <CopyButton value={workflowBookingId} label="booking ID" />
           {booking && (
             <span className="truncate">
-              · {booking.customer.name} - {booking.vehicle.year} {booking.vehicle.brand}{" "}
-              {booking.vehicle.model}
+              · {booking.customer.name} - {vehicleName(booking.vehicle)}
             </span>
           )}
         </>

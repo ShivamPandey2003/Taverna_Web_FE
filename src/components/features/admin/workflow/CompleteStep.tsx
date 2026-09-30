@@ -47,12 +47,12 @@ export function CompleteStep({ booking }: { booking: AdminBooking }) {
       {/* <div
         className={cn(
           "flex items-center gap-3 rounded-xl p-4",
-          complete ? "bg-status-active/10" : "bg-gray-50",
+          complete ? "bg-gray-100" : "bg-gray-50",
         )}
       >
         <CheckCircle
           size={28}
-          className={cn("shrink-0", complete ? "text-status-active" : "text-gray-400")}
+          className={cn("shrink-0", complete ? "text-black" : "text-gray-400")}
         />
         <div>
           <p className="text-base font-bold text-gray-900">

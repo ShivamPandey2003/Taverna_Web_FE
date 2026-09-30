@@ -4,7 +4,7 @@ import { useAppSelector } from "@/redux/hooks";
 import { selectIsAdmin } from "@/redux/auth/authSlice";
 import { NotificationDropdown } from "./Notification/NotificationDropdown";
 import { ProfileDropdown } from "./ProfileDropdown";
-import { adminNavigation, exactPaths } from "./navigation";
+import { adminNavigation, customerNavigation, exactPaths, type NavItem } from "./navigation";
 
 export function Navbar() {
   const isAdmin = useAppSelector(selectIsAdmin);
@@ -30,8 +30,8 @@ export function Navbar() {
           </span>
         </div>
 
-        {/* Admins have no sidebar, so their pages are linked here */}
-        {isAdmin && <AdminNav />}
+        {/* Page links for the logged-in role (there is no sidebar) */}
+        <NavLinks items={isAdmin ? adminNavigation : customerNavigation} />
 
         {/* Right side */}
         <div className="flex items-center gap-5">
@@ -55,10 +55,10 @@ export function Navbar() {
 }
 
 // Icons only on small screens, icon + label from md up
-function AdminNav() {
+function NavLinks({ items }: { items: NavItem[] }) {
   return (
     <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto md:justify-center">
-      {adminNavigation.map(({ label, path, icon: Icon }) => (
+      {items.map(({ label, path, icon: Icon }) => (
         <NavLink
           key={path}
           to={path}

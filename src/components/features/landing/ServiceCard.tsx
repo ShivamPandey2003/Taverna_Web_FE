@@ -36,7 +36,7 @@ export function ServiceCard({
             </h3>
 
             {badge && (
-              <span className="rounded-md bg-green-50 px-2 py-1 text-[10px] font-bold text-primary">
+              <span className="rounded-md bg-gray-100 px-2 py-1 text-[10px] font-bold text-primary">
                 {badge}
               </span>
             )}

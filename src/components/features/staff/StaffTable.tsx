@@ -35,7 +35,7 @@ export function StaffTable({ role }: { role: StaffRole }) {
       <div className="relative min-h-0 overflow-auto">
         {/* Thin bar while a new page / sort / search loads over the current rows */}
         {isFetching && !isPending && (
-          <div className="absolute inset-x-0 top-0 z-10 h-0.5 animate-pulse bg-emerald-500" />
+          <div className="absolute inset-x-0 top-0 z-10 h-0.5 animate-pulse bg-black" />
         )}
 
         <table className="w-full min-w-[880px] text-left text-[13px]">
@@ -82,7 +82,7 @@ export function StaffTable({ role }: { role: StaffRole }) {
                   <button
                     type="button"
                     onClick={() => refetch()}
-                    className="mt-3 text-sm font-semibold text-emerald-600 hover:text-emerald-700"
+                    className="mt-3 text-sm font-semibold text-gray-900 underline underline-offset-4 hover:text-black"
                   >
                     Try again
                   </button>
@@ -106,7 +106,7 @@ export function StaffTable({ role }: { role: StaffRole }) {
                 <tr key={member.id} className="transition hover:bg-gray-50">
                   <td className="px-4 py-2">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-semibold text-emerald-800">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-900">
                         {member.name.charAt(0).toUpperCase()}
                       </div>
                       <span className="truncate font-semibold text-gray-900">{member.name}</span>
@@ -124,7 +124,7 @@ export function StaffTable({ role }: { role: StaffRole }) {
                       className={cn(
                         "inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold",
                         member.available
-                          ? "bg-emerald-50 text-emerald-700"
+                          ? "bg-gray-100 text-gray-900"
                           : "bg-gray-100 text-gray-500",
                       )}
                     >

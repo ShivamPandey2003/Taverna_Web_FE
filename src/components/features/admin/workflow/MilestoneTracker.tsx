@@ -33,7 +33,7 @@ export function MilestoneTracker({ milestones }: MilestoneTrackerProps) {
                   strokeWidth={2.5}
                   className={cn(
                     "mx-1 mt-3 shrink-0",
-                    milestone.done ? "text-status-active" : "text-gray-300",
+                    milestone.done ? "text-black" : "text-gray-300",
                   )}
                 />
               )}
@@ -43,7 +43,7 @@ export function MilestoneTracker({ milestones }: MilestoneTrackerProps) {
                   className={cn(
                     "flex h-11 w-11 items-center justify-center rounded-full border-2 text-sm font-bold transition",
                     milestone.done
-                      ? "border-status-active bg-status-active/15 text-status-active"
+                      ? "border-black bg-gray-100 text-black"
                       : isNext
                         ? "border-status-pending bg-status-pending/10 text-status-pending ring-4 ring-status-pending/15"
                         : "border-gray-200 bg-gray-50 text-gray-400",

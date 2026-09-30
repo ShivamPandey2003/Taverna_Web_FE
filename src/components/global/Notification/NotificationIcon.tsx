@@ -14,7 +14,7 @@ export function NotificationIcon({
 
     pickup: {
       icon: Car,
-      className: "bg-emerald-500 text-white",
+      className: "bg-black text-white",
     },
 
     booking: {
@@ -24,7 +24,7 @@ export function NotificationIcon({
 
     offer: {
       icon: Tag,
-      className: "bg-emerald-500 text-white",
+      className: "bg-black text-white",
     },
 
     payment: {

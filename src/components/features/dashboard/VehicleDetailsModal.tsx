@@ -1,3 +1,4 @@
+import { vehicleName, maskedVin } from "@/libs/utils";
 import { X } from "reicon-react";
 import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -7,6 +8,7 @@ import {
   rejectVerifiedVehicle,
   selectDashboardModal,
 } from "@/redux/modals/dashboardModal/dashboardModalSlice";
+import { VehicleTitle } from "@/components/features/dashboard/VehicleTitle";
 
 // Shows the VIN lookup result so the user can confirm it before it is saved
 export function VehicleDetailsModal() {
@@ -21,7 +23,7 @@ export function VehicleDetailsModal() {
 
   const onAddVehicle = () => {
     dispatch(addVehicle(vehicle));
-    toast.success(`${vehicle.brand} ${vehicle.model} added`);
+    toast.success(`${vehicleName(vehicle)} added`);
   };
 
   const onNotMyVehicle = () => dispatch(rejectVerifiedVehicle());
@@ -69,8 +71,8 @@ export function VehicleDetailsModal() {
             <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent" />
 
             {/* Vehicle name */}
-            <h3 className="absolute bottom-4 left-4 text-lg font-bold text-white">
-              {vehicle.brand} {vehicle.model}
+            <h3 className="absolute bottom-4 left-4 right-4 text-lg font-bold leading-tight text-white">
+              <VehicleTitle vehicle={vehicle} />
             </h3>
           </div>
 
@@ -82,8 +84,8 @@ export function VehicleDetailsModal() {
                 VIN
               </p>
 
-              <p className="mt-1 text-sm font-bold tracking-wide text-gray-900">
-                {vehicle.vin}
+              <p className="mt-1 text-sm font-bold tracking-wide text-gray-900" title={vehicle.vin}>
+                {maskedVin(vehicle.vin)}
               </p>
             </div>
 

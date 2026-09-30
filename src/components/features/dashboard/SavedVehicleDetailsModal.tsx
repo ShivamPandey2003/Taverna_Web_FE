@@ -9,6 +9,8 @@ import {
   closeVehicleDetails,
   selectDashboardModal,
 } from "@/redux/modals/dashboardModal/dashboardModalSlice";
+import { VehicleTitle } from "@/components/features/dashboard/VehicleTitle";
+import { maskedVin } from "@/libs/utils";
 
 interface ServiceHistory {
   id: string;
@@ -139,8 +141,8 @@ function VehicleHero({ vehicle }: VehicleHeroProps) {
       <div className="absolute inset-x-0 bottom-0 h-[85px] bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
 
       {/* Vehicle name */}
-      <h3 className="absolute bottom-4 left-4 text-lg font-bold text-white">
-        {vehicle.year} {vehicle.brand} {vehicle.model}
+      <h3 className="absolute bottom-4 left-4 right-4 text-lg font-bold leading-tight text-white">
+        <VehicleTitle vehicle={vehicle} />
       </h3>
     </div>
   );
@@ -161,8 +163,8 @@ function VehicleInformation({
           VIN
         </p>
 
-        <p className="mt-1 text-sm font-bold tracking-wide text-gray-900">
-          {vehicle.vin}
+        <p className="mt-1 text-sm font-bold tracking-wide text-gray-900" title={vehicle.vin}>
+          {maskedVin(vehicle.vin)}
         </p>
       </div>
 
@@ -282,7 +284,7 @@ function ServiceHistoryCard({
             "rounded-full px-3 py-1",
             "text-[10px] font-bold",
             service.status === "COMPLETED"
-              ? "bg-emerald-500 text-white"
+              ? "bg-black text-white"
               : "bg-red-100 text-red-600",
           ].join(" ")}
         >

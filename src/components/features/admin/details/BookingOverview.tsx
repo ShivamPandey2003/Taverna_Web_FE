@@ -1,3 +1,4 @@
+import { vehicleName } from "@/libs/utils";
 import type { AdminBooking } from "@/types/admin";
 import { formatDateTime, serviceLabels } from "../admin.utils";
 
@@ -11,7 +12,7 @@ export function BookingOverview({ booking }: { booking: AdminBooking }) {
     { label: "Service", value: serviceLabels[booking.serviceId] },
     {
       label: "Vehicle",
-      value: `${booking.vehicle.year} ${booking.vehicle.brand} ${booking.vehicle.model}`,
+      value: vehicleName(booking.vehicle),
     },
     { label: "VIN", value: booking.vehicle.vin },
     { label: "Pickup", value: booking.pickup },
