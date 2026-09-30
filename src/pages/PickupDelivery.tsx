@@ -32,12 +32,12 @@ import {
   openReviewModal,
   selectReviewModal,
 } from "@/redux/modals/reviewModal/reviewModalSlice";
-import type { ServiceId } from "@/types/service";
+// import type { ServiceId } from "@/types/service";
 
-const serviceSubtitle: Record<ServiceId, string> = {
-  "pickup-delivery": "We pickup & deliver",
-  "loaner-only": "Drive in and swap vehicles",
-};
+// const serviceSubtitle: Record<ServiceId, string> = {
+//   "pickup-delivery": "We pickup & deliver",
+//   "loaner-only": "Drive in and swap vehicles",
+// };
 
 export function PickupDelivery() {
   const navigate = useNavigate();
