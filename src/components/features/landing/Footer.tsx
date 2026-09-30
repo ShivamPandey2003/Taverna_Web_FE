@@ -35,7 +35,7 @@ export function Footer() {
           </div>
 
           {/* Services */}
-          <FooterColumn
+          {/* <FooterColumn
             title="OUR SERVICES"
             links={[
               "Valet Detail Packages",
@@ -43,16 +43,16 @@ export function Footer() {
               "Custom Ceramic Coatings",
               "Corporate Fleet Programs",
             ]}
-          />
+          /> */}
 
           {/* Company */}
           <FooterColumn
             title="COMPANY"
             links={[
-              "About Us",
-              "Careers",
-              "Become a Partner",
-              "Contact Support",
+              "Services",
+              "How It Works",
+              // "Become a Partner",
+              // "Contact Support",
             ]}
           />
 
@@ -77,10 +77,10 @@ export function Footer() {
             © 2026 Taverna Valet. All rights reserved.
           </p>
 
-          <div className="flex gap-6">
+          {/* <div className="flex gap-6">
             <a href="#">Privacy Policy</a>
             <a href="#">Terms of Service</a>
-          </div>
+          </div> */}
         </div>
 
       </Container>
