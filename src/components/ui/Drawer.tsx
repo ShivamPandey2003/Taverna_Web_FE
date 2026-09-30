@@ -21,7 +21,11 @@ export function Drawer({ title, subtitle, onClose, children }: DrawerProps) {
           <div className="flex flex-wrap items-center gap-3 text-xl font-bold tracking-tight text-gray-900">
             {title}
           </div>
-          {subtitle && <p className="mt-0.5 truncate text-sm text-gray-500">{subtitle}</p>}
+          {subtitle && (
+            <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-sm text-gray-500">
+              {subtitle}
+            </div>
+          )}
         </div>
 
         <button

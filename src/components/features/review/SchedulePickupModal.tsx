@@ -1,11 +1,23 @@
-import { useMemo, useState } from "react";
-import { X } from "reicon-react";
+import { useState } from "react";
+import { Calendar, X } from "reicon-react";
+import { cn, formatPickupTime } from "@/libs/utils";
+import { useAppSelector } from "@/redux/hooks";
+import { selectBooking } from "@/redux/booking/bookingSlice";
 
 interface SchedulePickupModalProps {
   open: boolean;
   onClose: () => void;
   onConfirm: (date: Date) => void;
 }
+
+// How many days ahead a pickup can be booked, including today
+const DAYS_AHEAD = 7;
+// Pickup slots run from 8:00 AM to 6:00 PM, every 30 minutes
+const FIRST_SLOT_HOUR = 8;
+const LAST_SLOT_HOUR = 18;
+const SLOT_MINUTES = 30;
+// A valet needs at least this long to get to the customer
+const MIN_LEAD_MINUTES = 60;
 
 export function SchedulePickupModal({
   open,
@@ -29,30 +41,36 @@ function SchedulePickupContent({
   onClose,
   onConfirm,
 }: Omit<SchedulePickupModalProps, "open">) {
-  const [today] = useState(() => new Date());
+  const { scheduledAt } = useAppSelector(selectBooking);
 
-  const [selectedDate, setSelectedDate] =
-    useState<Date>(today);
+  const [now] = useState(() => new Date());
+  const days = getDays(now);
 
-  const [selectedHour, setSelectedHour] =
-    useState(today.getHours());
+  // Start from the time already scheduled if it's still bookable, else the first open slot
+  const [selected, setSelected] = useState<Date | null>(() => {
+    const current = scheduledAt ? new Date(scheduledAt) : null;
+    if (current && isBookable(current, now)) return current;
+    return days.flatMap((day) => getSlots(day)).find((slot) => isBookable(slot, now)) ?? null;
+  });
 
-  const [selectedMinute, setSelectedMinute] =
-    useState(today.getMinutes());
+  const [selectedDay, setSelectedDay] = useState<Date>(() =>
+    selected ? startOfDay(selected) : days[0],
+  );
 
-  const handleConfirm = () => {
-    const date = new Date(selectedDate);
+  const slots = getSlots(selectedDay);
 
-    date.setHours(selectedHour);
-    date.setMinutes(selectedMinute);
-    date.setSeconds(0);
-    date.setMilliseconds(0);
-
-    onConfirm(date);
+  const handleDayChange = (day: Date) => {
+    setSelectedDay(day);
+    // Keep the same time of day when it's open on the new day
+    const sameTime = selected && getSlots(day).find(
+      (slot) => slot.getHours() === selected.getHours() && slot.getMinutes() === selected.getMinutes(),
+    );
+    setSelected(sameTime && isBookable(sameTime, now) ? sameTime : null);
   };
 
   return (
-    <div className="absolute inset-0 z-50">
+    // Fixed to the screen so the page behind never scrolls or shows past the backdrop
+    <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40"
@@ -60,17 +78,15 @@ function SchedulePickupContent({
       />
 
       {/* Modal wrapper */}
-      <div className="relative flex min-h-full items-center justify-center overflow-y-auto p-6">
-        {/* Modal */}
+      <div className="relative flex h-full items-center justify-center p-4">
+        {/* Modal; scrolls inside itself only on very short screens */}
         <div
-          className="relative w-full max-w-[520px] rounded-2xl bg-white p-8 shadow-2xl"
-          onClick={(event) =>
-            event.stopPropagation()
-          }
+          className="relative max-h-full w-full max-w-[600px] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"
+          onClick={(event) => event.stopPropagation()}
         >
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold tracking-tight text-[#111827]">
+            <h2 className="text-xl font-bold tracking-tight text-gray-900">
               Schedule Your Pickup
             </h2>
 
@@ -78,39 +94,92 @@ function SchedulePickupContent({
               type="button"
               onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
+              aria-label="Close"
             >
               <X size={17} />
             </button>
           </div>
 
-          {/* Description */}
-          <p className="mt-7 max-w-[450px] text-sm leading-5 text-gray-500">
-            Choose which date and exact time slot you want
-            Taverna drivers to pick up your vehicle.
+          <p className="mt-2 text-sm text-gray-500">
+            Pick a day and time for your valet to collect your vehicle.
           </p>
 
-          {/* Picker */}
-          <SchedulePicker
-            selectedDate={selectedDate}
-            selectedHour={selectedHour}
-            selectedMinute={selectedMinute}
-            onDateChange={setSelectedDate}
-            onHourChange={setSelectedHour}
-            onMinuteChange={setSelectedMinute}
-          />
+          {/* Days */}
+          <p className="mt-5 text-sm font-bold text-gray-900">Date</p>
+          <div className="mt-2 grid grid-cols-7 gap-1.5 sm:gap-2">
+            {days.map((day) => {
+              const isSelected = isSameDay(day, selectedDay);
+              const available = getSlots(day).some((slot) => isBookable(slot, now));
 
-          {/* Pickup information */}
-          <PickupSummary
-            date={selectedDate}
-            hour={selectedHour}
-            minute={selectedMinute}
-          />
+              return (
+                <button
+                  key={day.toISOString()}
+                  type="button"
+                  disabled={!available}
+                  onClick={() => handleDayChange(day)}
+                  className={cn(
+                    "flex min-w-0 flex-col items-center rounded-xl border py-1.5 transition",
+                    isSelected
+                      ? "border-black bg-black text-white"
+                      : "border-gray-200 text-gray-900 hover:border-gray-400",
+                    "disabled:cursor-not-allowed disabled:border-gray-100 disabled:text-gray-300 disabled:hover:border-gray-100",
+                  )}
+                >
+                  <span className={cn("text-[11px] font-medium", !isSelected && "text-gray-500")}>
+                    {dayLabel(day, now)}
+                  </span>
+                  <span className="text-lg font-bold leading-tight">{day.getDate()}</span>
+                  <span className={cn("text-[11px]", !isSelected && "text-gray-500")}>
+                    {day.toLocaleDateString("en-US", { month: "short" })}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-          {/* Divider */}
-          <div className="my-6 h-px bg-gray-200" />
+          {/* Times */}
+          <p className="mt-5 text-sm font-bold text-gray-900">Time</p>
+          <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-6">
+            {slots.map((slot) => {
+              const isSelected = selected?.getTime() === slot.getTime();
+
+              return (
+                <button
+                  key={slot.toISOString()}
+                  type="button"
+                  disabled={!isBookable(slot, now)}
+                  onClick={() => setSelected(slot)}
+                  className={cn(
+                    "h-9 whitespace-nowrap rounded-lg border text-[13px] font-medium transition",
+                    isSelected
+                      ? "border-black bg-black text-white"
+                      : "border-gray-200 text-gray-900 hover:border-gray-400",
+                    "disabled:cursor-not-allowed disabled:border-gray-100 disabled:text-gray-300 disabled:hover:border-gray-100",
+                  )}
+                >
+                  {slot.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Summary */}
+          <div className="mt-5 flex items-center gap-3 rounded-xl bg-gray-50 px-4 py-3">
+            <Calendar size={18} className="shrink-0 text-gray-700" />
+            <p className="text-sm text-gray-700">
+              {selected ? (
+                <>
+                  Pickup on{" "}
+                  <span className="font-bold text-gray-900">{formatPickupTime(selected)}</span>
+                </>
+              ) : (
+                "Select a time"
+              )}
+            </p>
+          </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-6">
+          <div className="mt-5 flex items-center gap-6">
             <button
               type="button"
               onClick={onClose}
@@ -121,8 +190,9 @@ function SchedulePickupContent({
 
             <button
               type="button"
-              onClick={handleConfirm}
-              className="h-12 flex-1 rounded-lg bg-[#1f2937] text-sm font-semibold text-white transition hover:bg-[#111827]"
+              disabled={!selected}
+              onClick={() => selected && onConfirm(selected)}
+              className="h-12 flex-1 rounded-lg bg-black text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Confirm
             </button>
@@ -133,233 +203,44 @@ function SchedulePickupContent({
   );
 }
 
-function getDateOptions(selectedDate: Date) {
-  return [-2, -1, 0, 1, 2].map((offset) => {
-    const date = new Date(selectedDate);
+function startOfDay(date: Date) {
+  const day = new Date(date);
+  day.setHours(0, 0, 0, 0);
+  return day;
+}
 
-    date.setDate(
-      selectedDate.getDate() + offset
-    );
-
-    return date;
+function getDays(now: Date) {
+  return Array.from({ length: DAYS_AHEAD }, (_, offset) => {
+    const day = startOfDay(now);
+    day.setDate(day.getDate() + offset);
+    return day;
   });
 }
 
-function formatDateOption(
-  date: Date,
-  selectedDate: Date
-) {
-  if (isSameDay(date, selectedDate)) {
-    return "Today";
+function getSlots(day: Date) {
+  const slots: Date[] = [];
+  for (let minutes = FIRST_SLOT_HOUR * 60; minutes <= LAST_SLOT_HOUR * 60; minutes += SLOT_MINUTES) {
+    const slot = new Date(day);
+    slot.setHours(0, minutes, 0, 0);
+    slots.push(slot);
   }
-
-  const diff =
-    Math.round(
-      (date.getTime() -
-        selectedDate.getTime()) /
-        (1000 * 60 * 60 * 24)
-    );
-
-  if (diff === -1) {
-    return "Yesterday";
-  }
-
-  if (diff === 1) {
-    return "Tomorrow";
-  }
-
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
+  return slots;
 }
 
-function isSameDay(
-  first: Date,
-  second: Date
-) {
-  return (
-    first.getFullYear() ===
-      second.getFullYear() &&
-    first.getMonth() === second.getMonth() &&
-    first.getDate() === second.getDate()
-  );
+// Open slots are at least MIN_LEAD_MINUTES away and within the booking window
+function isBookable(slot: Date, now: Date) {
+  const lastDay = startOfDay(now);
+  lastDay.setDate(lastDay.getDate() + DAYS_AHEAD);
+  return slot.getTime() >= now.getTime() + MIN_LEAD_MINUTES * 60_000 && slot < lastDay;
 }
 
-function getHourOptions(hour: number) {
-  return [
-    hour - 2,
-    hour - 1,
-    hour,
-    hour + 1,
-    hour + 2,
-  ].map((value) => {
-    if (value < 0) {
-      return value + 24;
-    }
-
-    if (value >= 24) {
-      return value - 24;
-    }
-
-    return value;
-  });
+function isSameDay(first: Date, second: Date) {
+  return first.toDateString() === second.toDateString();
 }
 
-function getMinuteOptions(minute: number) {
-  return [
-    minute - 2,
-    minute - 1,
-    minute,
-    minute + 1,
-    minute + 2,
-  ].map((value) => {
-    if (value < 0) {
-      return value + 60;
-    }
-
-    if (value >= 60) {
-      return value - 60;
-    }
-
-    return value;
-  });
-}
-
-interface PickupSummaryProps {
-  date: Date;
-  hour: number;
-  minute: number;
-}
-
-function PickupSummary({
-  hour,
-  minute,
-}: PickupSummaryProps) {
-  const formattedTime =
-    `${String(hour).padStart(2, "0")}:` +
-    `${String(minute).padStart(2, "0")}`;
-
-  return (
-    <div className="mt-5 text-center">
-      <p className="text-base font-bold text-gray-900">
-        {formattedTime} IST pickup time
-      </p>
-
-      <p className="mt-1 text-sm text-gray-500">
-        About 10 min ride to the hub
-      </p>
-    </div>
-  );
-}
-
-interface SchedulePickerProps {
-  selectedDate: Date;
-  selectedHour: number;
-  selectedMinute: number;
-
-  onDateChange: (date: Date) => void;
-  onHourChange: (hour: number) => void;
-  onMinuteChange: (minute: number) => void;
-}
-
-function SchedulePicker({
-  selectedDate,
-  selectedHour,
-  selectedMinute,
-  onDateChange,
-  onHourChange,
-  onMinuteChange,
-}: SchedulePickerProps) {
-  const dates = useMemo(() => {
-    return getDateOptions(selectedDate);
-  }, [selectedDate]);
-
-  const hours = getHourOptions(selectedHour);
-  const minutes = getMinuteOptions(selectedMinute);
-
-  return (
-    <div className="mt-7 grid grid-cols-[1.4fr_0.8fr_0.8fr] gap-3">
-      {/* Dates */}
-      <div className="flex flex-col items-center">
-        {dates.map((date) => {
-          const selected =
-            isSameDay(date, selectedDate);
-
-          return (
-            <button
-              key={date.toISOString()}
-              type="button"
-              onClick={() => onDateChange(date)}
-              className={[
-                "flex h-9 w-full items-center justify-center",
-                "rounded-full text-sm transition",
-                selected
-                  ? "bg-[#1f2937] font-bold text-white"
-                  : "text-gray-300 hover:text-gray-500",
-              ].join(" ")}
-            >
-              {formatDateOption(
-                date,
-                selectedDate
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Hours */}
-      <div className="flex flex-col items-center">
-        {hours.map((hour) => {
-          const selected =
-            hour === selectedHour;
-
-          return (
-            <button
-              key={hour}
-              type="button"
-              onClick={() => onHourChange(hour)}
-              className={[
-                "flex h-9 w-14 items-center justify-center",
-                "rounded-full text-sm transition",
-                selected
-                  ? "bg-gray-100 font-bold text-gray-900"
-                  : "text-gray-300 hover:text-gray-500",
-              ].join(" ")}
-            >
-              {String(hour).padStart(2, "0")}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Minutes */}
-      <div className="flex flex-col items-center">
-        {minutes.map((minute) => {
-          const selected =
-            minute === selectedMinute;
-
-          return (
-            <button
-              key={minute}
-              type="button"
-              onClick={() =>
-                onMinuteChange(minute)
-              }
-              className={[
-                "flex h-9 w-14 items-center justify-center",
-                "rounded-full text-sm transition",
-                selected
-                  ? "bg-gray-100 font-bold text-gray-900"
-                  : "text-gray-300 hover:text-gray-500",
-              ].join(" ")}
-            >
-              {String(minute).padStart(2, "0")}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
+function dayLabel(day: Date, now: Date) {
+  const diff = Math.round((day.getTime() - startOfDay(now).getTime()) / 86_400_000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tmrw";
+  return day.toLocaleDateString("en-US", { weekday: "short" });
 }

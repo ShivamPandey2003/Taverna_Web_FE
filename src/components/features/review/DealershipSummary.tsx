@@ -32,7 +32,7 @@ export function DealershipSummary() {
             {dealership.name}
           </h3>
 
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-800">
             {dealership.address}
           </p>
         </div>

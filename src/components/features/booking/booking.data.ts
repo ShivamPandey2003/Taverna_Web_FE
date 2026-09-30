@@ -14,6 +14,7 @@ export const services: Service[] = [
       "Free loaner while we work",
       "Return drop-off included",
     ],
+    buttonText: "Book Pickup & Delivery"
   },
 
   {
@@ -26,5 +27,6 @@ export const services: Service[] = [
       "Swap vehicles at the shop",
       "Keep the loaner until service is done",
     ],
+    buttonText: "Book Loaner Service"
   },
 ];

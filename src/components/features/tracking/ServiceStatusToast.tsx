@@ -1,23 +1,19 @@
-import { X } from "reicon-react";
 import { useMatch, useNavigate } from "react-router";
-import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import {
-  selectDismissedStatus,
-  statusToastDismissed,
-} from "@/redux/tracking/trackingSlice";
+import { BookingStatus } from "@/types/booking";
 import { ServiceStatusIndicator } from "./ServiceStatusIndicator";
 import { TRACKING_PATH, useActiveService } from "./serviceStatus";
+import { VehicleTitle } from "@/components/features/dashboard/VehicleTitle";
+import { maskedVin } from "@/libs/utils";
 
-// Floating card with the customer's service status. Closing it hides it until
-// the status changes; it stays out of the way on the tracking page itself.
+// Floating card with the customer's service status. It can't be closed: it shows
+// while the service runs and goes away once it's complete. It stays out of the way
+// on the tracking page itself.
 export function ServiceStatusToast() {
-  const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const service = useActiveService();
-  const dismissedStatus = useAppSelector(selectDismissedStatus);
   const onTrackingPage = useMatch(TRACKING_PATH) !== null;
 
-  if (!service || onTrackingPage || service.status === dismissedStatus) {
+  if (!service || onTrackingPage || service.status === BookingStatus.SERVICE_COMPLETE) {
     return null;
   }
 
@@ -32,7 +28,7 @@ export function ServiceStatusToast() {
       aria-live="polite"
       className="fixed right-4 bottom-4 z-40 w-[400px] max-w-[calc(100vw-32px)] animate-toast-in sm:right-6"
     >
-      <div className="flex items-center gap-2 rounded-[40px] border border-gray-100 bg-white py-2 pl-2 pr-3 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
+      <div className="flex items-center rounded-[40px] border border-gray-100 bg-white py-2 pl-2 pr-4 shadow-[0_8px_30px_rgba(0,0,0,0.12)]">
         <button
           type="button"
           onClick={() => navigate(TRACKING_PATH)}
@@ -46,23 +42,14 @@ export function ServiceStatusToast() {
           />
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-bold text-gray-900">
-              {vehicle.brand} {vehicle.model}
+            <p className="text-[15px] font-bold leading-tight text-gray-900">
+              <VehicleTitle vehicle={vehicle} />
             </p>
-            <p className="truncate text-[11px] text-gray-500">VIN: {vehicle.vin}</p>
+            <p className="truncate text-[11px] text-gray-500">VIN: {maskedVin(vehicle.vin)}</p>
             <p className="mt-1.5 truncate text-sm text-gray-700">{display.message}</p>
           </div>
 
           <ServiceStatusIndicator display={display} />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => dispatch(statusToastDismissed(status))}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 hover:text-gray-900"
-          aria-label="Close"
-        >
-          <X size={16} />
         </button>
       </div>
     </div>

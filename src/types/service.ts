@@ -6,4 +6,5 @@ export interface Service {
   description: string;
   image: string;
   features: string[];
+  buttonText:string;
 }

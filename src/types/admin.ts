@@ -60,10 +60,12 @@ export const VALET_MILESTONES = [
 ] as const;
 export type ValetMilestone = (typeof VALET_MILESTONES)[number];
 
-// What the advisor shares with the customer while the vehicle is at the dealership.
-// The bill and the payment that follow come from `invoice` and `payment`.
-export const ADVISOR_MILESTONES = ["checkedIn", "inService", "serviceDone"] as const;
-export type AdvisorMilestone = (typeof ADVISOR_MILESTONES)[number];
+// Updates the advisor shares with the customer while the vehicle is serviced, in
+// order. The bill and payment that follow come from `invoice` and `payment`; then
+// the advisor hands the vehicle over for the delivery valet (`ADVISOR_HANDOVER`).
+export const ADVISOR_MILESTONES = ["inspecting", "inspected", "inService", "serviceDone"] as const;
+export const ADVISOR_HANDOVER = "readyForDispatch";
+export type AdvisorMilestone = (typeof ADVISOR_MILESTONES)[number] | typeof ADVISOR_HANDOVER;
 
 // When each milestone was reached (ISO strings); missing = not reached yet
 export type MilestoneLog<T extends string> = Partial<Record<T, string>>;

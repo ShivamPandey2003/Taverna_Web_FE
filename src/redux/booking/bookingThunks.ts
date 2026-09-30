@@ -11,13 +11,16 @@ import { bookingApi } from "@/services/bookingApi";
 // Resolves false when a vehicle, pickup location or dealership is missing, or the API fails
 // (the API layer has already shown the error).
 export const confirmBooking =
-  (scheduledAt: string | null = null) =>
+  () =>
   async (dispatch: AppDispatch, getState: () => RootState): Promise<boolean> => {
     const state = getState();
     const vehicle = selectBookingVehicle(state);
     const address = selectBookingAddress(state);
     const dealership = selectBookingDealership(state);
     const location = state.booking.pickupLocation;
+    // Loaner Only has no pickup to schedule
+    const scheduledAt =
+      state.booking.selectedServiceId === "loaner-only" ? null : state.booking.scheduledAt;
 
     const pickup =
       location?.type === "current"

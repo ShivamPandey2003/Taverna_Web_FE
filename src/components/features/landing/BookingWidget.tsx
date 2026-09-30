@@ -63,7 +63,7 @@ export function BookingWidget() {
             Deliver to <strong>Taverna Dealership, Fort Lauderdale</strong>
           </div>
 
-          <span className="shrink-0 rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-primary">
+          <span className="shrink-0 rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-primary">
             Closest
           </span>
 

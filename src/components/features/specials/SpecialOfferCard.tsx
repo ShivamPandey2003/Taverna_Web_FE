@@ -44,7 +44,7 @@ export function SpecialOfferCard({
       {/* Bottom section */}
       <div className="mt-auto pt-8">
         {/* Badge */}
-        {/* <span className="inline-flex rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white">
+        {/* <span className="inline-flex rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">
           {offer.badge}
         </span> */}
 

@@ -18,6 +18,8 @@ type BookingState = {
   selectedDealershipId: string;
   driveable: boolean;
   concern: string;
+  // Pickup time the customer scheduled (ISO); null books for as soon as possible
+  scheduledAt: string | null;
 };
 
 const initialState: BookingState = {
@@ -27,6 +29,7 @@ const initialState: BookingState = {
   selectedDealershipId: dealerships[0].id,
   driveable: true,
   concern: "",
+  scheduledAt: null,
 };
 
 const bookingSlice = createSlice({
@@ -51,6 +54,9 @@ const bookingSlice = createSlice({
     setConcern: (state, action: PayloadAction<string>) => {
       state.concern = action.payload;
     },
+    setScheduledAt: (state, action: PayloadAction<string | null>) => {
+      state.scheduledAt = action.payload;
+    },
   },
   extraReducers: (builder) => {
     // Clear the per-booking inputs once a booking is placed; keep vehicle/dealership choices
@@ -58,6 +64,7 @@ const bookingSlice = createSlice({
       .addCase(bookingCreated, (state) => {
         state.driveable = true;
         state.concern = "";
+        state.scheduledAt = null;
       })
       .addCase(logout, () => initialState);
   },
@@ -70,6 +77,7 @@ export const {
   setSelectedDealership,
   setDriveable,
   setConcern,
+  setScheduledAt,
 } = bookingSlice.actions;
 
 export const selectBooking = (state: RootState) => state.booking;

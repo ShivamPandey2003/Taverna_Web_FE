@@ -13,7 +13,7 @@ export function DealershipGrid() {
         <button
           type="button"
           onClick={() => refetch()}
-          className="mt-3 text-sm font-semibold text-emerald-600 hover:text-emerald-700"
+          className="mt-3 text-sm font-semibold text-gray-900 underline underline-offset-4 hover:text-black"
         >
           Try again
         </button>

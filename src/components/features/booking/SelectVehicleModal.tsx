@@ -7,6 +7,8 @@ import {
   selectBooking,
   setSelectedVehicle,
 } from "@/redux/booking/bookingSlice";
+import { VehicleTitle } from "@/components/features/dashboard/VehicleTitle";
+import { maskedVin } from "@/libs/utils";
 
 // Visibility is owned by the page's modal slice; the choice is saved to the booking slice
 interface SelectVehicleModalProps {
@@ -145,7 +147,7 @@ function VehicleOption({
         "transition duration-150",
         selected
           ? "border-2 border-black bg-white"
-          : "border-gray-200 bg-white hover:border-gray-300",
+          : "border-gray-200 bg-white hover:border-gray-400",
       ].join(" ")}
     >
       {/* Image */}
@@ -159,21 +161,17 @@ function VehicleOption({
 
       {/* Details */}
       <div className="min-w-0 flex-1">
-        <h3 className="text-base font-bold text-gray-900">
-          {vehicle.brand} {vehicle.model}
+        <h3 className="text-base font-bold leading-tight text-gray-900">
+          <VehicleTitle vehicle={vehicle} />
         </h3>
 
         <div className="mt-1 flex items-center gap-4 text-sm text-gray-500">
           <span>
-            Year: {vehicle.year}
-          </span>
-
-          <span>
-            VIN: **{vehicle.vin.slice(-4)}
+            VIN: {maskedVin(vehicle.vin)}
           </span>
         </div>
 
-        <p className="mt-1 text-sm font-medium text-emerald-500">
+        <p className="mt-1 text-sm font-medium text-black">
           Miles: {vehicle.miles}
         </p>
       </div>

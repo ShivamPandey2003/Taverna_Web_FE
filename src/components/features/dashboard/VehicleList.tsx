@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { setSelectedVehicle } from "@/redux/booking/bookingSlice";
+import { setSelectedService, setSelectedVehicle } from "@/redux/booking/bookingSlice";
 import { openVehicleDetails } from "@/redux/modals/dashboardModal/dashboardModalSlice";
 import { selectVehicles } from "@/redux/vehicle/vehicleSlice";
 import { VehicleCard } from "./VehicleCard";
@@ -17,10 +17,11 @@ export function VehicleList() {
           key={vehicle.id}
           vehicle={vehicle}
           onSelect={() => dispatch(openVehicleDetails(vehicle.id))}
-          // Book Service opens with this vehicle already chosen
+          // Book pickup skips the service list: straight to review with Pickup & Delivery
           onBook={() => {
             dispatch(setSelectedVehicle(vehicle.id));
-            navigate("/dashboard/book-service");
+            dispatch(setSelectedService("pickup-delivery"));
+            navigate("/dashboard/book-service/review");
           }}
         />
       ))}

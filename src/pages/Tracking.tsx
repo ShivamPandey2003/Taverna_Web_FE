@@ -1,13 +1,13 @@
 import { useNavigate } from "react-router";
-import { BookingStatus } from "@/components/features/tracking/BookingStatus";
 import { InvoiceCard } from "@/components/features/tracking/InvoiceCard";
 import { StaffContactCard } from "@/components/features/tracking/StaffContactCard";
 import { TrackingMap } from "@/components/features/tracking/TrackingMap";
-import { VehicleSummary } from "@/components/features/tracking/VehicleSummary";
+import { TrackingHeader } from "@/components/features/tracking/TrackingHeader";
 import {
   getStatusDisplay,
   getTrackingStage,
 } from "@/components/features/tracking/serviceStatus";
+import { formatPickupTime } from "@/libs/utils";
 import { useAppSelector } from "@/redux/hooks";
 import { selectActiveBooking } from "@/redux/tracking/trackingSlice";
 import { USE_MOCK_API } from "@/services/apiClient";
@@ -43,10 +43,9 @@ export function ServiceTracking() {
     );
   }
 
-  const time = new Date(booking.scheduledAt ?? booking.createdAt).toLocaleTimeString(
-    "en-US",
-    { hour: "numeric", minute: "2-digit" }
-  );
+  const subtitle = booking.scheduledAt
+    ? `Pickup scheduled for ${formatPickupTime(booking.scheduledAt)}`
+    : `Booked ${formatPickupTime(booking.createdAt)}`;
 
   const status = liveBooking?.status ?? booking.status;
   const display = getStatusDisplay(status, liveBooking?.etaMinutes);
@@ -58,11 +57,14 @@ export function ServiceTracking() {
   return (
     <div className="min-h-0 h-full bg-[#f8f9fa] px-6 py-4 lg:px-10 overflow-auto">
       <div className="mx-auto max-w-[1200px] space-y-6">
-        <BookingStatus
-          dealership={booking.dealership.name.toUpperCase()}
-          time={time}
+        {/* Vehicle and live status together */}
+        <TrackingHeader
+          vehicle={booking.vehicle}
+          dealership={booking.dealership.name}
+          title={display.message}
+          subtitle={subtitle}
           status={status}
-          tone={display.tone}
+          gradient={display.color.gradient}
           onAdvance={canSimulate ? () => simulateNextStatus.mutate(booking.id) : undefined}
           advancing={simulateNextStatus.isPending}
         />
@@ -87,8 +89,6 @@ export function ServiceTracking() {
               payment={liveBooking.payment}
             />
           )}
-
-        <VehicleSummary vehicle={booking.vehicle} />
 
         {/* Only while a valet is moving the vehicle */}
         {(stage === "valet" || stage === "delivery") && <TrackingMap />}

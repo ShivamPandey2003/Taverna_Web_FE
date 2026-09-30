@@ -21,3 +21,16 @@ export function shortName(name: string) {
   const last = rest.at(-1);
   return last ? `${first} ${last.charAt(0)}.` : first;
 }
+
+// A vehicle's name on one line: "2022 Jeep Grand Cherokee"
+export function vehicleName(vehicle: { year: number; brand: string; model: string }) {
+  return `${vehicle.year} ${brandName(vehicle.brand)} ${vehicle.model}`;
+}
+
+// A pickup or booking time for customers: "Thu, Oct 2 • 10:30 AM"
+export function formatPickupTime(value: string | Date) {
+  const date = new Date(value);
+  const day = date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  const time = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return `${day} • ${time}`;
+}

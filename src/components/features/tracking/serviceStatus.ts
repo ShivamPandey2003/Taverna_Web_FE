@@ -1,4 +1,15 @@
 import { useEffect } from "react";
+import {
+  CalendarTick,
+  Car,
+  Driving,
+  Garage,
+  Invoice,
+  People,
+  Setting2,
+  TickCircle,
+  UserTick,
+} from "reicon-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   activeBookingRestored,
@@ -8,26 +19,29 @@ import { selectVehicles } from "@/redux/vehicle/vehicleSlice";
 import { useMyBooking, useMyOpenBooking } from "@/services/queries/bookingQueries";
 import { dealerships } from "@/components/features/review/dealership.data";
 import defaultVehicleImage from "@/assets/jeep-grand-cherokee.webp";
+import { statusColors, type StatusColor } from "@/libs/statusColors";
 import type { AdminBooking } from "@/types/admin";
 import { BookingStatus, type Booking } from "@/types/booking";
 import type { Vehicle } from "@/types/vehicle";
 
 export const TRACKING_PATH = "/dashboard/book-service/tracking";
 
-// Two colours only:
-//   pending (orange) - waiting on someone: the dealership to confirm, a valet to be
-//                      assigned, or the customer to pay the bill
-//   active  (green)  - the service is moving along, or done
-export type StatusTone = "pending" | "active";
-
-// Full class names so Tailwind generates them
-export const statusTones: Record<StatusTone, { bg: string; text: string }> = {
-  pending: { bg: "bg-status-pending", text: "text-status-pending" },
-  active: { bg: "bg-status-active", text: "text-status-active" },
+// An icon for each booking status, shown beside its name
+export const statusIcons: Record<BookingStatus, typeof People> = {
+  [BookingStatus.IN_QUEUE]: People,
+  [BookingStatus.BOOKED]: CalendarTick,
+  [BookingStatus.VALET_ASSIGNED]: UserTick,
+  [BookingStatus.VEHICLE_PICKED_UP]: Car,
+  [BookingStatus.VEHICLE_ARRIVED]: Garage,
+  [BookingStatus.IN_SERVICE]: Setting2,
+  [BookingStatus.BILL_GENERATED]: Invoice,
+  [BookingStatus.VEHICLE_RETURN]: Driving,
+  [BookingStatus.SERVICE_COMPLETE]: TickCircle,
 };
 
 export interface StatusDisplay {
-  tone: StatusTone;
+  // Same colour as the admin's status badge
+  color: StatusColor;
   // Short label on the right, e.g. "Pending", "In service", "Pay now"
   label: string;
   // Line under the vehicle, e.g. "Waiting for confirmation"
@@ -40,27 +54,31 @@ export interface StatusDisplay {
 
 // How each booking status reads to the customer
 export function getStatusDisplay(status: BookingStatus, etaMinutes?: number | null): StatusDisplay {
+  return { color: statusColors[status], ...getStatusText(status, etaMinutes) };
+}
+
+function getStatusText(status: BookingStatus, etaMinutes?: number | null): Omit<StatusDisplay, "color"> {
   const eta = etaMinutes != null && etaMinutes > 0 ? Math.round(etaMinutes) : undefined;
 
   switch (status) {
     case BookingStatus.IN_QUEUE:
-      return { tone: "pending", label: "Pending", message: "Waiting for confirmation" };
+      return { label: "Pending", message: "Waiting for confirmation" };
     case BookingStatus.BOOKED:
-      return { tone: "pending", label: "Confirmed", message: "Your booking is confirmed" };
+      return { label: "Confirmed", message: "Your booking is confirmed" };
     case BookingStatus.VALET_ASSIGNED:
-      return { tone: "active", label: "Valet assigned", message: "Your valet is on the way", etaMinutes: eta };
+      return { label: "Valet assigned", message: "Your valet is on the way", etaMinutes: eta };
     case BookingStatus.VEHICLE_PICKED_UP:
-      return { tone: "active", label: "Picked up", message: "Your vehicle is headed to the dealership" };
+      return { label: "Picked up", message: "Your vehicle is headed to the dealership" };
     case BookingStatus.VEHICLE_ARRIVED:
-      return { tone: "active", label: "At dealer", message: "Your vehicle reached the dealership" };
+      return { label: "At dealer", message: "Your vehicle reached the dealership" };
     case BookingStatus.IN_SERVICE:
-      return { tone: "active", label: "In service", message: "Your vehicle in service" };
+      return { label: "In service", message: "Your vehicle is in service" };
     case BookingStatus.BILL_GENERATED:
-      return { tone: "pending", label: "Pay now", message: "Bill generated", actionRequired: true };
+      return { label: "Pay now", message: "Your bill is ready", actionRequired: true };
     case BookingStatus.VEHICLE_RETURN:
-      return { tone: "active", label: "Returning", message: "Your vehicle is coming back to you", etaMinutes: eta };
+      return { label: "Returning", message: "Your vehicle is coming back to you", etaMinutes: eta };
     case BookingStatus.SERVICE_COMPLETE:
-      return { tone: "active", label: "Completed", message: "Your service is complete" };
+      return { label: "Completed", message: "Your service is complete" };
   }
 }
 

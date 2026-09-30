@@ -48,11 +48,11 @@ export function ServiceBookingCard({
                 key={feature}
                 className="flex items-center gap-2 text-sm text-gray-500"
               >
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-50">
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-gray-100">
                   <Check
                     size={11}
                     strokeWidth={3}
-                    className="text-emerald-600"
+                    className="text-black"
                   />
                 </span>
 
@@ -71,7 +71,7 @@ export function ServiceBookingCard({
           disabled={disabled}
           className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-black text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:hover:bg-black"
         >
-          Book this service
+          {service.buttonText}
           <ArrowRight size={16} />
         </button>
       </div>

@@ -6,7 +6,7 @@ export interface NavItem {
   icon: typeof HomeSmile;
 }
 
-// Customers: shown in the Sidebar
+// Customers: shown in the Navbar
 export const customerNavigation: NavItem[] = [
   { label: "Home", path: "/dashboard", icon: HomeSmile },
   { label: "Book Service", path: "/dashboard/book-service", icon: Calendar },
@@ -14,7 +14,7 @@ export const customerNavigation: NavItem[] = [
   { label: "Account", path: "/dashboard/account", icon: UserCircle },
 ];
 
-// Admins: shown in the Navbar (admins have no sidebar)
+// Admins: shown in the Navbar
 export const adminNavigation: NavItem[] = [
   { label: "Bookings", path: "/admin", icon: ClipboardList },
   { label: "Dealerships", path: "/admin/dealerships", icon: Building },

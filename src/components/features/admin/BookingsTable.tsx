@@ -11,7 +11,7 @@ import {
 } from "@/redux/modals/adminModal/adminModalSlice";
 import { useAdminBookings } from "@/services/queries/adminQueries";
 import type { BookingSortField } from "@/types/admin";
-import { cn } from "@/libs/utils";
+import { cn, vehicleName } from "@/libs/utils";
 import { BookingStatusBadge } from "./BookingStatusBadge";
 import { SortButton } from "./SortButton";
 import { TablePagination } from "./TablePagination";
@@ -41,7 +41,7 @@ export function BookingsTable() {
       <div className="relative min-h-0 overflow-auto">
         {/* Thin bar while a new page / sort / search loads over the current rows */}
         {isFetching && !isPending && (
-          <div className="absolute inset-x-0 top-0 z-10 h-0.5 animate-pulse bg-emerald-500" />
+          <div className="absolute inset-x-0 top-0 z-10 h-0.5 animate-pulse bg-black" />
         )}
 
         <table className="w-full min-w-[960px] text-left text-[13px]">
@@ -81,7 +81,7 @@ export function BookingsTable() {
                   <button
                     type="button"
                     onClick={() => refetch()}
-                    className="mt-3 text-sm font-semibold text-emerald-600 hover:text-emerald-700"
+                    className="mt-3 text-sm font-semibold text-gray-900 underline underline-offset-4 hover:text-black"
                   >
                     Try again
                   </button>
@@ -129,7 +129,7 @@ export function BookingsTable() {
                   className="max-w-[220px] truncate px-4 py-2 text-gray-900"
                   title={`VIN ${booking.vehicle.vin}`}
                 >
-                  {booking.vehicle.year} {booking.vehicle.brand} {booking.vehicle.model}
+                  {vehicleName(booking.vehicle)}
                 </td>
 
                 <td className="whitespace-nowrap px-4 py-2 text-gray-700">

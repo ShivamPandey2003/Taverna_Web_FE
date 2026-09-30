@@ -140,8 +140,8 @@ function DealershipCard({
       className={[
         "overflow-hidden rounded-2xl border text-left transition",
         selected
-          ? "border-2 border-emerald-500"
-          : "border-gray-200 hover:border-gray-300",
+          ? "border-2 border-black"
+          : "border-gray-200 hover:border-gray-400",
       ].join(" ")}
     >
       {/* Image */}
@@ -190,7 +190,7 @@ function FeatureBadge({
   children: React.ReactNode;
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700">
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-gray-300 bg-gray-100 px-2 py-1 text-[10px] font-semibold text-gray-900">
       {children}
     </span>
   );

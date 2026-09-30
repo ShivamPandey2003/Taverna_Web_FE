@@ -20,7 +20,7 @@ export function AddressSummary() {
             Current location
           </p>
 
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-800">
             {pickupLocation.label}
           </p>
         </>
@@ -41,7 +41,7 @@ export function AddressSummary() {
           {address.address}
         </p>
 
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-gray-800">
           {address.city}, {address.state}{" "}
           {address.zip}
         </p>

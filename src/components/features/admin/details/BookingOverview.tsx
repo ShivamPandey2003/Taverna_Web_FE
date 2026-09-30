@@ -1,24 +1,27 @@
+import { vehicleName } from "@/libs/utils";
 import type { AdminBooking } from "@/types/admin";
 import { formatDateTime, serviceLabels } from "../admin.utils";
 
 // Read-only summary of what the customer booked
 export function BookingOverview({ booking }: { booking: AdminBooking }) {
+  // Two columns, filled row by row: keep pairs that belong together side by side
   const rows: { label: string; value: string }[] = [
-    { label: "Customer", value: booking.customer.name },
-    { label: "Contact", value: `${booking.customer.email} · ${booking.customer.phone}` },
+    { label: "User", value: booking.customer.name },
+    { label: "Email", value: booking.customer.email },
+    { label: "Phone", value: booking.customer.phone },
+    { label: "Service", value: serviceLabels[booking.serviceId] },
     {
       label: "Vehicle",
-      value: `${booking.vehicle.year} ${booking.vehicle.brand} ${booking.vehicle.model}`,
+      value: vehicleName(booking.vehicle),
     },
     { label: "VIN", value: booking.vehicle.vin },
-    { label: "Service", value: serviceLabels[booking.serviceId] },
     { label: "Pickup", value: booking.pickup },
     { label: "Dealership", value: booking.dealershipName },
     {
       label: "Scheduled",
       value: booking.scheduledAt ? formatDateTime(booking.scheduledAt) : "As soon as possible",
     },
-    { label: "Created", value: formatDateTime(booking.createdAt) },
+    { label: "Booking Date", value: formatDateTime(booking.createdAt) },
   ];
 
   if (booking.serviceId === "pickup-delivery") {

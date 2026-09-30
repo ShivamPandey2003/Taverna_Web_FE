@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router";
-import { cn } from "@/libs/utils";
+import { cn, vehicleName } from "@/libs/utils";
 import {
-  statusTones,
   TRACKING_PATH,
   useActiveService,
 } from "@/components/features/tracking/serviceStatus";
@@ -12,7 +11,7 @@ export function ServiceInProgressNotice() {
   const service = useActiveService();
 
   const vehicle = service
-    ? `your ${service.booking.vehicle.brand} ${service.booking.vehicle.model}`
+    ? `your ${vehicleName(service.booking.vehicle)}`
     : "your current service";
 
   return (
@@ -24,7 +23,7 @@ export function ServiceInProgressNotice() {
             <span
               className={cn(
                 "rounded-full bg-white px-2 py-0.5 text-[11px] font-semibold",
-                statusTones[service.display.tone].text,
+                service.display.color.text,
               )}
             >
               {service.display.label}
