@@ -14,6 +14,7 @@ import {
 } from "@/types/admin";
 import {
   advisorMilestoneLabels,
+  bookingLabel,
   formatCurrency,
   formatDateTime,
   isComplete,
@@ -91,35 +92,44 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
 
       <AssignmentRow
         role="manager"
-        label="Advisor assigned"
+        title="Advisor"
+        bookingLabel={bookingLabel(booking)}
         assigned={advisor}
         link={staffLink(booking.id, "advisor")}
         saving={assignAdvisor.isPending}
         lockedReason={
           isComplete(booking) ? "The service is complete, so the advisor can't be changed." : undefined
         }
-        onAssign={(member) =>
+        onAssign={(member, done) =>
           assignAdvisor.mutate(
             { id: booking.id, managerId: member.id },
-            { onSuccess: () => toast.success(`${member.name} assigned as advisor`) },
+            {
+              onSuccess: () => {
+                toast.success(`${member.name} assigned as advisor`);
+                done();
+              },
+            },
           )
         }
       />
 
-      <SectionCard>
-        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="text-sm font-bold text-gray-900">Service progress</h3>
-          <p className="text-xs text-gray-500">Each update is shared with the customer.</p>
-        </div>
+      {/* There's nothing to follow until an advisor is assigned */}
+      {advisor && (
+        <SectionCard>
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-sm font-bold text-gray-900">Service progress</h3>
+            <p className="text-xs text-gray-500">Each update is shared with the customer.</p>
+          </div>
 
-        <MilestoneTracker milestones={milestones} />
-      </SectionCard>
+          <MilestoneTracker milestones={milestones} />
+        </SectionCard>
+      )}
 
       {invoice && <BillSummary invoice={invoice} paid={paid} />}
 
       {!advisor && (
         <p className="rounded-xl bg-gray-50 p-4 text-center text-sm text-gray-500">
-          Assign an advisor once the vehicle is at the dealership.
+          Select an advisor to continue...
         </p>
       )}
 

@@ -6,8 +6,8 @@ import type { AdminBooking } from "@/types/admin";
 import { formatCurrency, formatDateTime, isComplete } from "../admin.utils";
 import { ActionButton, SectionCard } from "./StepParts";
 
-// Last step. Before completion it offers "Mark Service Complete"; afterwards the
-// drawer is locked here and only shows how the service went.
+// Last step. Before completion it offers "Mark Service Complete"; afterwards it
+// only shows how the service went.
 export function CompleteStep({ booking }: { booking: AdminBooking }) {
   const completeBooking = useCompleteBooking();
   const complete = isComplete(booking);

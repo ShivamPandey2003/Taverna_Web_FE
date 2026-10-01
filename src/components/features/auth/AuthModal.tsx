@@ -143,7 +143,7 @@ export function AuthModal() {
                 {/* Header */}
                 <div className="mb-7">
                   <p className="text-sm font-semibold text-primary">
-                    Welcome to Taverna
+                    Taverna
                   </p>
 
                   <h1 className="mt-2 text-3xl font-bold tracking-tight text-gray-950">

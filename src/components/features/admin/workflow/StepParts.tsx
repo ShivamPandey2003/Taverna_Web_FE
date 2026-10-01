@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AngleDown, CheckCircle, Copy, CopySuccess, Lock, Plus, Search } from "reicon-react";
 import { toast } from "sonner";
 import { cn } from "@/libs/utils";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useAppDispatch } from "@/redux/hooks";
 import { openAddStaff } from "@/redux/modals/adminModal/adminModalSlice";
 import { useStaffOptions } from "@/services/queries/adminQueries";
@@ -22,9 +23,9 @@ export function StepDone({
   onAction?: () => void;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-300 bg-gray-100 p-4">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-status-active/40 bg-status-active/10 p-4">
       <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-        <CheckCircle size={18} className="shrink-0 text-black" />
+        <CheckCircle size={18} className="shrink-0 text-status-active" />
         {text}
       </div>
 
@@ -76,39 +77,99 @@ export function SectionCard({ children, className }: { children: ReactNode; clas
   );
 }
 
-// "Valet assigned [ John Brooks v ]" and the member's personal link, side by side
+// "Pickup valet [ John Brooks v ]" and the member's personal link, side by side.
+// Picking someone asks for a confirmation before they're assigned.
 export function AssignmentRow({
   role,
-  label,
+  title,
+  bookingLabel,
   assigned,
   link,
   saving,
   lockedReason,
+  changeWarning,
   onAssign,
 }: {
   role: StaffRole;
-  label: string;
+  // What they're assigned as, e.g. "Pickup valet"
+  title: string;
+  // The booking they're assigned to, e.g. "PC-221428 · Alex - 2022 Jeep Grand Cherokee"
+  bookingLabel: string;
   assigned: StaffMember | null;
   link: string;
   saving: boolean;
   // Why the assignment can't be changed any more, if it can't
   lockedReason?: string;
-  onAssign: (member: StaffMember) => void;
+  // What replacing the current member undoes, if anything
+  changeWarning?: string;
+  // Call `done` once the assignment is saved, to close the confirmation
+  onAssign: (member: StaffMember, done: () => void) => void;
 }) {
+  // Picked in the dropdown, waiting for the admin to confirm
+  const [picked, setPicked] = useState<StaffMember | null>(null);
+  const closeConfirm = () => setPicked(null);
+  const warning = assigned ? changeWarning : undefined;
+
   return (
     <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
       <SectionCard className="flex flex-col gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{title}</p>
         <StaffSelect
           role={role}
           value={assigned}
           saving={saving}
           lockedReason={lockedReason}
-          onChange={onAssign}
+          onChange={setPicked}
         />
       </SectionCard>
 
       <StaffLinkCard role={role} link={assigned ? link : null} />
+
+      {picked && (
+        <ConfirmModal
+          title={`${assigned ? "Change" : "Assign"} ${title.toLowerCase()}?`}
+          confirmLabel={assigned ? `Change ${staffRoleLabels[role]}` : `Assign ${staffRoleLabels[role]}`}
+          pendingLabel={assigned ? "Changing..." : "Assigning..."}
+          pending={saving}
+          tone={warning ? "danger" : "primary"}
+          onConfirm={() => onAssign(picked, closeConfirm)}
+          onClose={closeConfirm}
+          stacked
+        >
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 rounded-xl border border-gray-200 p-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-900 text-base font-semibold text-white">
+                {picked.name.charAt(0)}
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-base font-bold text-gray-900">{picked.name}</p>
+                <p className="truncate text-xs text-gray-500">
+                  {picked.phone} · {picked.email}
+                </p>
+              </div>
+            </div>
+
+            <dl className="space-y-1.5">
+              <div className="flex gap-3">
+                <dt className="w-20 shrink-0 text-gray-500">Booking</dt>
+                <dd className="min-w-0 font-medium text-gray-900">{bookingLabel}</dd>
+              </div>
+              {assigned && (
+                <div className="flex gap-3">
+                  <dt className="w-20 shrink-0 text-gray-500">Replaces</dt>
+                  <dd className="min-w-0 font-medium text-gray-900">{assigned.name}</dd>
+                </div>
+              )}
+            </dl>
+
+            {warning && (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
+                {warning}
+              </p>
+            )}
+          </div>
+        </ConfirmModal>
+      )}
     </div>
   );
 }
@@ -179,7 +240,7 @@ function StaffLinkCard({ role, link }: { role: StaffRole; link: string | null })
   );
 }
 
-// Dropdown of every valet / advisor with search; picking someone assigns them
+// Dropdown of every valet / advisor with search
 function StaffSelect({
   role,
   value,
