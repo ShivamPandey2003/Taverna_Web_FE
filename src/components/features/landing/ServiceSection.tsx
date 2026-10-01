@@ -14,12 +14,12 @@ export function ServiceSection() {
         <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
 
           <div>
-            <span className="text-xs font-bold uppercase tracking-wide text-primary">
+            {/* <span className="text-xs font-bold uppercase tracking-wide text-primary">
               Curated Packages
-            </span>
+            </span> */}
 
             <h2 className="mt-3 text-3xl font-bold tracking-tight">
-              Our Professional Valet Services
+              Our Premium Services
             </h2>
 
             <p className="mt-3 max-w-xl text-sm leading-5 text-text-secondary">
@@ -27,10 +27,10 @@ export function ServiceSection() {
               products. Select a service to begin booking.
             </p>
           </div>
-
+{/* 
           <button className="rounded-button border border-gray-400 px-5 py-2.5 text-xs font-semibold">
             View Custom Solutions
-          </button>
+          </button> */}
 
         </div>
 

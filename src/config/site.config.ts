@@ -20,12 +20,12 @@ export const siteConfig = {
     title: "Easy and quick car service booking at your fingertips",
 
     description:
-      "Taverna picks up, services, and returns your vehicle. No waiting at the dealership. No disruption to your day. Clean, reliable, and completely contactless.",
+      "Taverna collects your vehicle, takes care of the service, and delivers it back to your doorstep. No dealership visits. No wasted time. Just convenient, reliable, and hassle-free vehicle care.",
   },
 
   contact: {
-    email: "support@taverna.com",
-    phone: "(918) 123-4567",
-    address: "1200 Grand Avenue, Suite 400 New York, NY 10013",
+    email: "support@tavernaservice.com",
+    phone: "754-432-6093",
+    address: "777 N State Road 7Plantation, FL 33317-2157",
   },
 } as const;

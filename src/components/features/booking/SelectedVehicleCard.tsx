@@ -34,7 +34,7 @@ export function SelectedVehicleCard({
       {/* Vehicle */}
       <div className="flex min-w-0 items-center gap-4">
         {/* Image */}
-        <div className="flex h-[72px] w-[112px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#f3f4f7]">
+        <div className="flex h-[72px] w-[112px] shrink-0 items-center justify-center overflow-hidden rounded-xl"> {/* bg-[#f3f4f7] */}
           <img
             src={vehicle.image}
             alt={`${vehicle.brand} ${vehicle.model}`}
@@ -58,7 +58,7 @@ export function SelectedVehicleCard({
             </p>
 
             <p>
-              Miles: <span className="text-gray-900">{vehicle.miles}</span>
+              Miles: <span className="text-gray-900">{vehicle.miles || "—"}</span>
             </p>
           </div>
         </div>

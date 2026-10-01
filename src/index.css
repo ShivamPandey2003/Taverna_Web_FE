@@ -55,6 +55,7 @@
 
 * {
   box-sizing: border-box;
+  font-family: "Inter", sans-serif;
 }
 
 html {
@@ -90,5 +91,4 @@ body {
 
   .form-input:focus {
     @apply border-gray-400 ring-2 ring-gray-100;
-  }
-}
+  }}

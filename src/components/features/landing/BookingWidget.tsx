@@ -76,11 +76,11 @@ export function BookingWidget() {
       {/* Buttons */}
       <div className="grid grid-cols-2 gap-2">
         <button onClick={startBooking} className="cursor-pointer rounded-button border border-gray-400 px-4 py-3 text-sm font-semibold">
-          Schedule for later
+          Schedule for Later
         </button>
 
         <button onClick={startBooking} className="cursor-pointer rounded-button bg-black px-4 py-3 text-sm font-semibold text-white">
-          Confirm booking →
+          Confirm Booking →
         </button>
       </div>
     </div>

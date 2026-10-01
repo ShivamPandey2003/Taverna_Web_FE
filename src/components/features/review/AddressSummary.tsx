@@ -52,6 +52,10 @@ export function AddressSummary() {
   return (
     <BookingSummaryCard
       title="My Address"
+      status={{
+        valid: !!address || pickupLocation?.type === "current",
+        label: address || pickupLocation?.type === "current" ? "Pickup location selected" : "Select a pickup location",
+      }}
       onChange={() => dispatch(openReviewModal("location"))}
     >
       <div className="flex items-center gap-5">

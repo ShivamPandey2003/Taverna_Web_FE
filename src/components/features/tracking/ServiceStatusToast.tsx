@@ -46,7 +46,7 @@ export function ServiceStatusToast() {
               <VehicleTitle vehicle={vehicle} />
             </p>
             <p className="truncate text-[11px] text-gray-500">VIN: {maskedVin(vehicle.vin)}</p>
-            <p className="mt-1.5 truncate text-sm text-gray-700">{display.message}</p>
+            {/* <p className="mt-1.5 truncate text-sm text-gray-700">{display.message}</p> */}
           </div>
 
           <ServiceStatusIndicator display={display} />

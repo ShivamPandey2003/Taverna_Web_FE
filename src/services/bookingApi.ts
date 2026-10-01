@@ -25,6 +25,13 @@ export const bookingApi = {
       () => request<AdminBooking>("get", `/bookings/${id}`),
     ),
 
+  // Only while the booking is In-queue (not yet confirmed by the dealership)
+  cancel: (id: string) =>
+    callApi(
+      () => mockServer.cancelBooking(id),
+      () => request<{ id: string }>("delete", `/bookings/${id}`),
+    ),
+
   // Pays the generated invoice
   pay: (id: string) =>
     callApi(

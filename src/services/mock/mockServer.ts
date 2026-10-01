@@ -669,6 +669,17 @@ export const mockServer = {
     return findMyBooking(id);
   },
 
+  // The customer withdraws a booking the dealership hasn't confirmed yet; it's removed
+  cancelBooking(id: string) {
+    const booking = findMyBooking(id);
+    if (booking.status !== BookingStatus.IN_QUEUE) {
+      throw new Error("The dealership has confirmed this booking, so it can't be cancelled here.");
+    }
+    db.bookings.splice(db.bookings.indexOf(booking), 1);
+    persist();
+    return { id };
+  },
+
   // Pays the generated bill; the delivery valet can then bring the vehicle back
   payInvoice(id: string) {
     const booking = findMyBooking(id);

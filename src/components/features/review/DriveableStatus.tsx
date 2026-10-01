@@ -1,6 +1,7 @@
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectBooking, setDriveable } from "@/redux/booking/bookingSlice";
 import { TowTruckNotice } from "./TowTruckNotice";
+import { BookingFieldStatus } from "./BookingSummaryCard";
 
 export function DriveableStatus() {
   const dispatch = useAppDispatch();
@@ -11,9 +12,13 @@ export function DriveableStatus() {
   return (
     <div className="w-full rounded-2xl border border-gray-200 bg-white p-5">
       {/* Label */}
-      <p className="text-sm font-bold text-gray-900">
-        Driveable Status
-      </p>
+      <div className="flex items-center gap-2">
+        <p className="text-sm font-bold text-gray-900">Driveable Status</p>
+        <BookingFieldStatus
+          valid={typeof value === "boolean"}
+          label={typeof value === "boolean" ? "Driveability confirmed" : "Choose driveability"}
+        />
+      </div>
 
       <div className="mt-3 flex items-center justify-between">
         {/* Question */}
