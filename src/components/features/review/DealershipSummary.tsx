@@ -7,16 +7,16 @@ export function DealershipSummary() {
   const dispatch = useAppDispatch();
   const dealership = useAppSelector(selectBookingDealership);
 
-  if (!dealership) {
-    return null;
-  }
-
   return (
     <BookingSummaryCard
       title="Closest Dealership"
+      status={{
+        valid: !!dealership,
+        label: dealership ? "Dealership selected" : "Select a dealership",
+      }}
       onChange={() => dispatch(openReviewModal("dealership"))}
     >
-      <div className="flex items-center gap-6">
+      {dealership ? <div className="flex items-center gap-6">
         {/* Dealership image */}
         <div className="h-[90px] w-[140px] shrink-0 overflow-hidden rounded-lg">
           <img
@@ -36,7 +36,7 @@ export function DealershipSummary() {
             {dealership.address}
           </p>
         </div>
-      </div>
+      </div> : <p className="text-sm text-gray-500">No dealership selected. Choose one to continue.</p>}
     </BookingSummaryCard>
   );
 }

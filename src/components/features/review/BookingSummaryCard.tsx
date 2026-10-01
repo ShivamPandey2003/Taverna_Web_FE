@@ -1,8 +1,34 @@
+import { AlertCircle, CheckCircle } from "reicon-react";
 import { cn } from "@/libs/utils";
+
+export function BookingFieldStatus({
+  valid,
+  label,
+}: {
+  valid: boolean;
+  label: string;
+}) {
+  return valid ? (
+    <CheckCircle
+      size={17}
+      className="shrink-0 text-green-600"
+      aria-label={label}
+      role="img"
+    />
+  ) : (
+    <AlertCircle
+      size={17}
+      className="shrink-0 text-amber-500"
+      aria-label={label}
+      role="img"
+    />
+  );
+}
 
 interface BookingSummaryCardProps {
   title: string;
   children: React.ReactNode;
+  status?: { valid: boolean; label: string };
   onChange?: () => void;
   // Shows a "Clear" link next to "Change"
   onClear?: () => void;
@@ -12,6 +38,7 @@ interface BookingSummaryCardProps {
 export function BookingSummaryCard({
   title,
   children,
+  status,
   onChange,
   onClear,
   className,
@@ -24,9 +51,10 @@ export function BookingSummaryCard({
       )}
     >
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-gray-900">
-          {title}
-        </h2>
+        <div className="flex min-w-0 items-center gap-2">
+          <h2 className="text-sm font-bold text-gray-900">{title}</h2>
+          {status && <BookingFieldStatus valid={status.valid} label={status.label} />}
+        </div>
 
         <div className="flex items-center gap-4">
           {onChange && <CardLink label="Change" onClick={onChange} />}

@@ -179,7 +179,7 @@ function VehicleInformation({
 
         <VehicleStat
           label="MILES"
-          value={vehicle.miles}
+          value={vehicle.miles || "—"}
         />
 
         {/* <VehicleStat

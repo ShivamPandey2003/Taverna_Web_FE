@@ -6,6 +6,7 @@ import { selectBookingVehicle } from "@/redux/booking/bookingSlice";
 import { openReviewModal } from "@/redux/modals/reviewModal/reviewModalSlice";
 import { VehicleTitle } from "@/components/features/dashboard/VehicleTitle";
 import { maskedVin } from "@/libs/utils";
+import { MilesField } from "./MilesField";
 
 export function VehicleSummary() {
   const dispatch = useAppDispatch();
@@ -14,6 +15,7 @@ export function VehicleSummary() {
   return (
     <BookingSummaryCard
       title="My Vehicle"
+      status={{ valid: !!vehicle, label: vehicle ? "Vehicle selected" : "Select a vehicle" }}
       onChange={() => dispatch(openReviewModal("vehicle"))}
     >
       {!vehicle ? (
@@ -45,12 +47,8 @@ export function VehicleSummary() {
               </span>
             </p>
 
-            <p>
-              Miles:{" "}
-              <span className="font-semibold text-gray-900">
-                {vehicle.miles}
-              </span>
-            </p>
+            {/* Keyed so an edit in progress doesn't carry over to another vehicle */}
+            <MilesField key={vehicle.id} vehicle={vehicle} />
           </div>
         </div>
       </div>

@@ -101,7 +101,7 @@ export function VehicleDetailsModal() {
 
               <VehicleStat
                 label="Miles"
-                value={vehicle.miles}
+                value={vehicle.miles || "—"}
               />
 
               {/* <VehicleStat

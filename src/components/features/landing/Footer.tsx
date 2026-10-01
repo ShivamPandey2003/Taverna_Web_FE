@@ -22,15 +22,13 @@ export function Footer() {
             </div>
 
             <p className="mt-5 max-w-xs text-xs leading-5 text-text-secondary">
-              Taverna is a premier valet car care and concierge platform
-              delivering dealer-grade service and ultimate convenience right
-              to your home or office.
+              Taverna redefines vehicle maintenance by bringing professional, dealer-grade services right to your doorstep. From convenient vehicle pickup to expert servicing and safe return delivery, we handle every step with care and reliability.
             </p>
 
             <div className="mt-5 flex gap-2">
-              <SocialButton>◎</SocialButton>
+              {/* <SocialButton>◎</SocialButton>
               <SocialButton>f</SocialButton>
-              <SocialButton>𝕏</SocialButton>
+              <SocialButton>𝕏</SocialButton> */}
             </div>
           </div>
 
@@ -118,14 +116,14 @@ function FooterColumn({
   );
 }
 
-function SocialButton({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <button className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs">
-      {children}
-    </button>
-  );
-}
+// function SocialButton({
+//   children,
+// }: {
+//   children: React.ReactNode;
+// }) {
+//   return (
+//     <button className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs">
+//       {children}
+//     </button>
+//   );
+// }

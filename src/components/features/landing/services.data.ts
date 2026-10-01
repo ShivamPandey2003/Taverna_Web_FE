@@ -1,7 +1,7 @@
 import pickup from '@/assets/service-photo.png'
 import loaner from '@/assets/service-loaner.png'
-import exterior from '@/assets/service-Exterior.png'
-import interior from '@/assets/service-interior.png'
+// import exterior from '@/assets/service-Exterior.png'
+// import interior from '@/assets/service-interior.png'
 
 export const valetServices = [
   {
@@ -29,28 +29,28 @@ export const valetServices = [
     ],
   },
 
-  {
-    title: "Full Exterior Detail",
-    description:
-      "A thorough multi-step paint decontamination, premium polish, ceramic sealant coating, and precision wheel detailing that restores showroom gloss.",
-    image: exterior,
-    badge: "Premium Finish",
-    features: [
-      "Decontamination wash",
-      "Single-stage machine polish",
-      "6-month ceramic seal protection",
-    ],
-  },
+  // {
+  //   title: "Full Exterior Detail",
+  //   description:
+  //     "A thorough multi-step paint decontamination, premium polish, ceramic sealant coating, and precision wheel detailing that restores showroom gloss.",
+  //   image: exterior,
+  //   badge: "Premium Finish",
+  //   features: [
+  //     "Decontamination wash",
+  //     "Single-stage machine polish",
+  //     "6-month ceramic seal protection",
+  //   ],
+  // },
 
-  {
-    title: "Interior Valet & Sanitization",
-    description:
-      "Complete deep extraction cleaning of carpets, leather treatment, dash dressing, active odor elimination, and microscopic steam sanitization.",
-    image: interior,
-    features: [
-      "Steam sanitization of touchpoints",
-      "Leather conditioning & treatment",
-      "Deep fabric hot-water extraction",
-    ],
-  },
+  // {
+  //   title: "Interior Valet & Sanitization",
+  //   description:
+  //     "Complete deep extraction cleaning of carpets, leather treatment, dash dressing, active odor elimination, and microscopic steam sanitization.",
+  //   image: interior,
+  //   features: [
+  //     "Steam sanitization of touchpoints",
+  //     "Leather conditioning & treatment",
+  //     "Deep fabric hot-water extraction",
+  //   ],
+  // },
 ];
