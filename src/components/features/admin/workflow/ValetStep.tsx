@@ -90,7 +90,7 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
         role="valet"
         label={`${legTitles[leg]} assigned`}
         assigned={valet}
-        link={staffLink(booking.id, leg)}
+        link={staffLink(booking, leg)}
         saving={assignValet.isPending}
         lockedReason={lockedReason}
         onAssign={handleAssign}

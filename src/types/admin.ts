@@ -31,6 +31,9 @@ export interface InvoiceLine {
   amount: number;
 }
 
+// Tax added to every bill. The advisor's bill form previews it; the server applies it.
+export const INVOICE_TAX_RATE = 0.08;
+
 // Bill the customer sees once the service is done (status "Bill Generated")
 export interface Invoice {
   issuedAt: string;
@@ -46,6 +49,11 @@ export interface Invoice {
 // delivery (dealership → customer). Both go through the same milestones, in order;
 // what each one means depends on the leg (see admin.utils.ts for the labels).
 export type ValetLeg = "pickup" | "delivery";
+
+export const VALET_LEGS: readonly ValetLeg[] = ["pickup", "delivery"];
+
+// Who a staff link is for: one of the two valets, or the advisor
+export type StaffLinkRole = ValetLeg | "advisor";
 
 export const VALET_MILESTONES = [
   "dispatched",
@@ -108,6 +116,17 @@ export interface AdminBooking {
   deliveryValet?: StaffMember | null;
   deliveryProgress?: MilestoneLog<ValetMilestone>;
   completedAt?: string | null;
+  // Token that goes in each staff link (see staffLink in admin.utils.ts). Only
+  // admin responses carry it; it's what signs the valet / advisor in.
+  staffTokens?: Partial<Record<StaffLinkRole, string>>;
+}
+
+// A booking as the staff link endpoints return it
+export interface StaffBooking extends AdminBooking {
+  // Whose link the token belongs to; a valet's link can't open the advisor's page
+  linkRole?: StaffLinkRole;
+  // The valet's directions fall back to the dealership's name without it
+  dealershipAddress?: string;
 }
 
 export type BookingSortField =

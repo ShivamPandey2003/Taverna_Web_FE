@@ -89,7 +89,8 @@ export function AssignmentRow({
   role: StaffRole;
   label: string;
   assigned: StaffMember | null;
-  link: string;
+  // null when the booking has no link for this role
+  link: string | null;
   saving: boolean;
   // Why the assignment can't be changed any more, if it can't
   lockedReason?: string;
