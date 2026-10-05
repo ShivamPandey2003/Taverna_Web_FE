@@ -86,6 +86,12 @@ function createRandom(seed: number) {
   };
 }
 
+// Seed bookings 42 and up: never touched by the workflow, so the admin always
+// has some In-queue ones to confirm
+const SEED_HISTORY = 42;
+const SEED_IN_QUEUE = 10;
+const seedBookingId = (index: number) => `PC-${String(482900 + index)}`;
+
 function seedBookings(): AdminBooking[] {
   const random = createRandom(42);
   const pick = <T,>(items: readonly T[]) => items[Math.floor(random() * items.length)];
@@ -126,13 +132,18 @@ function seedBookings(): AdminBooking[] {
   const now = Date.now();
   const day = 24 * 60 * 60 * 1000;
 
-  return Array.from({ length: 42 }, (_, index): AdminBooking => {
-    const [name, email, phone] = pick(customers);
+  return Array.from({ length: SEED_HISTORY + SEED_IN_QUEUE }, (_, index): AdminBooking => {
+    const inQueue = index >= SEED_HISTORY;
+    // Not the demo customer, who has to be free to book
+    const [name, email, phone] = pick(inQueue ? customers.slice(1) : customers);
     const [brand, model, year] = pick(vehicles);
-    const createdAt = new Date(now - Math.floor(random() * 30 * day)).toISOString();
+    // In-queue bookings are fresh: placed within the last two days
+    const createdAt = new Date(
+      now - Math.floor(random() * (inQueue ? 2 : 30) * day),
+    ).toISOString();
 
     const booking: AdminBooking = {
-      id: `PC-${String(482900 + index)}`,
+      id: seedBookingId(index),
       customer: {
         id: email === "alex@gmail.com" ? "u-alex" : `u-${index}`,
         name,
@@ -158,8 +169,9 @@ function seedBookings(): AdminBooking[] {
       valet: null,
       relationshipManager: null,
       payment: null,
-      staffTokens: mockStaffTokens(`PC-${String(482900 + index)}`),
+      staffTokens: mockStaffTokens(seedBookingId(index)),
     };
+    if (inQueue) return booking;
 
     // Walk the booking some way through the workflow; 40% are finished history.
     // The demo customer's are all finished, so they can book right away.
@@ -237,6 +249,11 @@ function loadDb(): MockDb {
           advisorLog.readyForDispatch = booking.payment?.updatedAt ?? booking.createdAt;
         }
       });
+      // DBs saved before the seed had its In-queue bookings
+      const savedIds = new Set(saved.bookings.map((booking) => booking.id));
+      saved.bookings.unshift(
+        ...seed.bookings.slice(SEED_HISTORY).filter((booking) => !savedIds.has(booking.id)),
+      );
       return saved;
     }
   } catch {
