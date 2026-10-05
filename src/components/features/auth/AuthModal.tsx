@@ -30,6 +30,7 @@ import {
   useSignup,
   useVerifyOtp,
 } from "@/services/queries/authQueries";
+import { X } from "reicon-react";
 
 export function AuthModal() {
   const dispatch = useAppDispatch();
@@ -108,10 +109,10 @@ export function AuthModal() {
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow-sm transition hover:bg-white hover:text-black"
+          className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-600 transition hover:bg-white hover:text-black"
           aria-label="Close"
         >
-          ×
+          <X size={16}/>
         </button>
 
         {/* IMAGE */}
