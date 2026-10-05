@@ -86,7 +86,7 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
         title={legTitles[leg]}
         bookingLabel={bookingLabel(booking)}
         assigned={valet}
-        link={staffLink(booking.id, leg)}
+        link={staffLink(booking, leg)}
         saving={assignValet.isPending}
         lockedReason={lockedReason}
         // Swapping a valet who's already on the way restarts the trip

@@ -3,6 +3,7 @@ import { BookingStatus } from "@/types/booking";
 import type {
   AdminBooking,
   AdvisorMilestone,
+  StaffLinkRole,
   ValetLeg,
   ValetMilestone,
 } from "@/types/admin";
@@ -101,10 +102,14 @@ const tripDone = (booking: AdminBooking, leg: ValetLeg) => {
   return !!valet && !!progress.delivered;
 };
 
-// Personal link the staff member opens to post updates for this booking
-export function staffLink(bookingId: string, leg: ValetLeg | "advisor") {
-  const path = leg === "advisor" ? `advisor/${bookingId}` : `valet/${leg}/${bookingId}`;
-  return `${window.location.origin}/${path}`;
+// Personal link the staff member opens to post updates for this booking. Staff
+// never log in: the token at the end of the path signs them in. Must match the
+// staff routes in routes/index.tsx.
+export function staffLink(booking: AdminBooking, role: StaffLinkRole) {
+  const token = booking.staffTokens?.[role];
+  if (!token) return null;
+  const path = role === "advisor" ? `advisor/${booking.id}` : `valet/${role}/${booking.id}`;
+  return `${window.location.origin}/${path}/${encodeURIComponent(token)}`;
 }
 
 export const isComplete = (booking: AdminBooking) =>

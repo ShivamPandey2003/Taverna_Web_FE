@@ -12,15 +12,15 @@ interface TrackingHeaderProps {
   // When the booking was placed, or its scheduled pickup
   subtitle: string;
   status: BookingStatus;
-  // Gradient end stop for the status's colour (StatusColor.gradient)
+  // Gradient stops for the status's colour (StatusColor.gradient)
   gradient: string;
   // Demo only (mock API): makes the status pill move the booking to its next status
   onAdvance?: () => void;
   advancing?: boolean;
 }
 
-// The vehicle on the left over white, the booking status on the right over its colour.
-// The background fades between them: top to bottom when stacked, left to right from md.
+// The vehicle on the left over white, the booking status on the right in a rounded
+// panel of its colour. They stack below md, vehicle on top.
 export function TrackingHeader({
   vehicle,
   dealership,
@@ -36,17 +36,11 @@ export function TrackingHeader({
     "mt-4 flex items-center gap-2 rounded-full bg-white/20 px-5 py-2 text-sm font-semibold backdrop-blur-sm";
 
   return (
-    <section
-      className={cn(
-        "overflow-hidden rounded-2xl border border-gray-200",
-        "bg-linear-to-b from-white from-35% to-50% md:bg-linear-to-r md:from-45% md:to-65%",
-        gradient,
-      )}
-    >
-      <div className="flex flex-col md:flex-row md:items-center">
+    <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+      <div className="flex flex-col md:flex-row md:items-stretch">
         {/* Vehicle */}
         <div className="flex items-center gap-5 p-4 md:w-[58%] md:p-5">
-          <div className="flex h-[100px] w-[150px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#f6f7f8] md:h-[130px] md:w-[200px]">
+          <div className="flex h-[100px] w-[150px] shrink-0 items-center justify-center overflow-hidden rounded-xl md:h-[130px] md:w-[200px]"> {/* bg-[#f6f7f8] */}
             <img
               src={vehicle.image}
               alt={`${vehicle.brand} ${vehicle.model}`}
@@ -61,13 +55,18 @@ export function TrackingHeader({
 
             <div className="mt-3 flex gap-6">
               <VehicleInfo label="VIN" value={maskedVin(vehicle.vin)} title={vehicle.vin} />
-              <VehicleInfo label="MILES" value={vehicle.miles} />
+              <VehicleInfo label="MILES" value={vehicle.miles || "—"} />
             </div>
           </div>
         </div>
 
-        {/* Status, centred over the coloured side */}
-        <div className="flex flex-1 flex-col items-center px-6 pb-6 pt-8 text-center text-white md:py-8">
+        {/* Status, in its own colour panel inside the card */}
+        <div
+          className={cn(
+            "m-3 flex flex-1 flex-col items-center justify-center rounded-xl bg-linear-to-br px-6 py-7 text-center text-white",
+            gradient,
+          )}
+        >
           <p className="text-xs font-medium uppercase tracking-wide text-white/85">
             {dealership}
           </p>

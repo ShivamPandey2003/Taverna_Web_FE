@@ -96,7 +96,8 @@ export function AssignmentRow({
   // The booking they're assigned to, e.g. "PC-221428 · Alex - 2022 Jeep Grand Cherokee"
   bookingLabel: string;
   assigned: StaffMember | null;
-  link: string;
+  // null when the booking has no link for this role
+  link: string | null;
   saving: boolean;
   // Why the assignment can't be changed any more, if it can't
   lockedReason?: string;

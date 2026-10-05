@@ -41,7 +41,22 @@ function useMyBookingMutation(mutationFn: (id: string) => Promise<AdminBooking>)
   });
 }
 
-export const usePayInvoice = () => useMyBookingMutation((id) => bookingApi.pay(id));
+// Cancelling removes the booking, so its cached copies go too. Anything still
+// polling is stopped first so a late answer can't bring the booking back.
+export function useCancelBooking() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => bookingApi.cancel(id),
+    onSuccess: async (_, id) => {
+      await queryClient.cancelQueries({ queryKey: ["bookings"] });
+      queryClient.setQueryData(bookingKeys.open, null);
+      queryClient.removeQueries({ queryKey: bookingKeys.detail(id) });
+    },
+  });
+}
+
+export const usePayInvoice =() => useMyBookingMutation((id) => bookingApi.pay(id));
 
 export const useSimulateNextStatus = () =>
   useMyBookingMutation((id) => bookingApi.simulateNextStatus(id));

@@ -172,7 +172,7 @@ function VehicleOption({
         </div>
 
         <p className="mt-1 text-sm font-medium text-black">
-          Miles: {vehicle.miles}
+          Miles: {vehicle.miles || "—"}
         </p>
       </div>
 

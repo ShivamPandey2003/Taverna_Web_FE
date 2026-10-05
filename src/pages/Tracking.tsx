@@ -3,6 +3,8 @@ import { InvoiceCard } from "@/components/features/tracking/InvoiceCard";
 import { StaffContactCard } from "@/components/features/tracking/StaffContactCard";
 import { TrackingMap } from "@/components/features/tracking/TrackingMap";
 import { TrackingHeader } from "@/components/features/tracking/TrackingHeader";
+import { BookingActions } from "@/components/features/tracking/BookingActions";
+import { BookingDetailsCard } from "@/components/features/tracking/BookingDetailsCard";
 import {
   getStatusDisplay,
   getTrackingStage,
@@ -68,6 +70,14 @@ export function ServiceTracking() {
           onAdvance={canSimulate ? () => simulateNextStatus.mutate(booking.id) : undefined}
           advancing={simulateNextStatus.isPending}
         />
+
+        {/* Before anyone is assigned: what was booked */}
+        {(status === Status.IN_QUEUE || status === Status.BOOKED) && (
+          <>
+            <BookingDetailsCard booking={booking} />
+            <BookingActions booking={booking} canCancel={status === Status.IN_QUEUE} />
+          </>
+        )}
 
         {/* One contact at a time: pickup valet, then the advisor, then the delivery valet */}
         {stage === "valet" && liveBooking?.valet && (

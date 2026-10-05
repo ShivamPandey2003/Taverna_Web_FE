@@ -1,3 +1,7 @@
+import { useNavigate } from "react-router";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { selectIsAuthenticated, setAuthMode } from "@/redux/auth/authSlice";
+import { openAuthModal } from "@/redux/modals/homeModal/homeModalSlice";
 
 interface ServiceCardProps {
   title: string;
@@ -14,6 +18,20 @@ export function ServiceCard({
   badge,
   features,
 }: ServiceCardProps) {
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
+
+  // Booking needs an account, so logged-out visitors start the login flow
+  const startBooking = () => {
+    if (isAuthenticated) {
+      navigate("/dashboard/book-service");
+      return;
+    }
+    dispatch(setAuthMode("login"));
+    dispatch(openAuthModal());
+  };
+
   return (
     <article className="rounded-card border border-border bg-white p-5">
 
@@ -63,13 +81,17 @@ export function ServiceCard({
       </div>
 
       {/* Footer */}
-      <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
-        <button className="text-xs font-semibold">
-          Explore details & select options
-        </button>
+      <button
+        type="button"
+        onClick={startBooking}
+        className="mt-5 flex w-full cursor-pointer items-center justify-between border-t border-border pt-4"
+      >
+        <span className="text-xs font-semibold">
+          Book This Service
+        </span>
 
         <span>→</span>
-      </div>
+      </button>
 
     </article>
   );

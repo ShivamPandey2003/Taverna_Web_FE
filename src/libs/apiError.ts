@@ -34,3 +34,24 @@ export function getApiErrorMessage(
 export function getNetworkErrorMessage(): string {
   return NETWORK_MESSAGE;
 }
+
+// Staff open their pages from a link instead of logging in, so an auth failure
+// means the link (its token) is no good
+const STAFF_LINK_MESSAGES: Record<number, string> = {
+  401: "This link has expired. Ask the Taverna team for a new one.",
+  403: "This link isn't valid for you. Ask the Taverna team for a new one.",
+  404: "We couldn't find this booking.",
+  409: "This booking changed in the meantime. Refresh and try again.",
+};
+
+export function getStaffApiErrorMessage(code?: number, backendMessage?: string | null): string {
+  if (!isUsableBackendMessage(backendMessage) && code && STAFF_LINK_MESSAGES[code]) {
+    return STAFF_LINK_MESSAGES[code];
+  }
+  return getApiErrorMessage(code, backendMessage);
+}
+
+// Any thrown value -> text that can be shown on screen
+export function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : GENERIC_MESSAGE;
+}

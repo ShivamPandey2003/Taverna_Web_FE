@@ -95,7 +95,7 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
         title="Advisor"
         bookingLabel={bookingLabel(booking)}
         assigned={advisor}
-        link={staffLink(booking.id, "advisor")}
+        link={staffLink(booking, "advisor")}
         saving={assignAdvisor.isPending}
         lockedReason={
           isComplete(booking) ? "The service is complete, so the advisor can't be changed." : undefined

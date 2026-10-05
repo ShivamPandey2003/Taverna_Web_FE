@@ -22,7 +22,7 @@ export function VehicleCard({
     >
 
       {/* Image */}
-      <div className="relative flex h-[180px] items-center justify-center overflow-hidden bg-[#f4f4f7]">
+      <div className="relative flex h-[180px] items-center justify-center overflow-hidden"> {/* bg-[#f4f4f7] */}
         <img
           src={vehicle.image}
           alt={`${vehicle.brand} ${vehicle.model}`}
@@ -67,7 +67,7 @@ export function VehicleCard({
 
             <VehicleStat
               label="Miles"
-              value={vehicle.miles}
+              value={vehicle.miles || "—"}
             />
           </div>
 

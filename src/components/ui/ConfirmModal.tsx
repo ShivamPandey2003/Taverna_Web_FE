@@ -7,6 +7,8 @@ interface ConfirmModalProps {
   // What will happen, e.g. "Delete Jane Doe? This can't be undone."
   children: ReactNode;
   confirmLabel?: string;
+  // The way out, e.g. "Keep booking" when the action itself is a cancellation
+  cancelLabel?: string;
   pendingLabel?: string;
   pending?: boolean;
   onConfirm: () => void;
@@ -22,6 +24,7 @@ export function ConfirmModal({
   title,
   children,
   confirmLabel = "Delete",
+  cancelLabel = "Cancel",
   pendingLabel = "Deleting...",
   pending = false,
   onConfirm,
@@ -42,7 +45,7 @@ export function ConfirmModal({
             onClick={onClose}
             className="h-10 rounded-lg border border-gray-200 bg-white px-5 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
           >
-            Cancel
+            {cancelLabel}
           </button>
 
           <button

@@ -1,6 +1,7 @@
 // import { MessageText2 } from 'reicon-react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { selectBooking, setConcern } from '@/redux/booking/bookingSlice';
+import { BookingFieldStatus } from './BookingSummaryCard';
 
 export function ConcernInput() {
   const dispatch = useAppDispatch();
@@ -10,15 +11,19 @@ export function ConcernInput() {
 
   return (
     <section className="flex flex-1 flex-col rounded-2xl border border-gray-200 bg-white p-5">
-      <label
-        htmlFor="service-concern"
-        className="block text-sm font-bold text-gray-900"
-      >
-        Describe Your Concern{" "}
-        <span className="font-normal text-gray-500">
-          (Optional)
-        </span>
-      </label>
+      <div className="flex items-center gap-2">
+        <label
+          htmlFor="service-concern"
+          className="block text-sm font-bold text-gray-900"
+        >
+          Describe Your Concern{" "}
+          <span className="font-normal text-gray-500">(Optional)</span>
+        </label>
+        <BookingFieldStatus
+          valid
+          label={value.trim() ? "Concern provided" : "Optional: no concern provided"}
+        />
+      </div>
 
       <div className="relative mt-4 flex flex-1 flex-col">
         {/* Message icon hidden for now; restore it with pl-11 on the textarea */}

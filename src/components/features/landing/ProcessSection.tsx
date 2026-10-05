@@ -12,17 +12,16 @@ export function ProcessSection() {
 
         {/* Heading */}
         <div className="mx-auto max-w-2xl text-center">
-          <span className="text-xs font-bold uppercase tracking-wide text-primary">
+          {/* <span className="text-xs font-bold uppercase tracking-wide text-primary">
             Process
-          </span>
+          </span> */}
 
           <h2 className="mt-3 text-3xl font-bold tracking-tight">
             How service at Taverna works
           </h2>
 
           <p className="mt-4 text-sm leading-6 text-text-secondary">
-            Get first-class vehicle maintenance and detailing without ever
-            lifting a finger or wasting hours at a service center.
+            Experience premium vehicle care without lifting a finger or spending hours at a service center.
           </p>
         </div>
 
