@@ -11,18 +11,13 @@ interface VehicleCardProps {
   onBook?: () => void;
 }
 
-export function VehicleCard({
-  vehicle,
-  onSelect,
-  onBook,
-}: VehicleCardProps) {
+export function VehicleCard({ vehicle, onSelect, onBook }: VehicleCardProps) {
   return (
-    <article
-      className="group w-full max-w-[380px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md"
-    >
-
+    <article className="group w-full max-w-[380px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
       {/* Image */}
-      <div className="relative flex h-[180px] items-center justify-center overflow-hidden"> {/* bg-[#f4f4f7] */}
+      <div className="relative flex h-[180px] items-center justify-center overflow-hidden">
+        {" "}
+        {/* bg-[#f4f4f7] */}
         <img
           src={vehicle.image}
           alt={`${vehicle.brand} ${vehicle.model}`}
@@ -32,7 +27,6 @@ export function VehicleCard({
 
       {/* Information */}
       <div className="p-5">
-
         {/* Year and brand on the first line, model on the second, all one style;
             the info icon sits on the right edge */}
         <div className="flex items-start justify-between gap-3">
@@ -65,10 +59,7 @@ export function VehicleCard({
               title={vehicle.vin}
             />
 
-            <VehicleStat
-              label="Miles"
-              value={vehicle.miles || "—"}
-            />
+            <VehicleStat label="Miles" value={vehicle.miles || "—"} />
           </div>
 
           {onBook && (
@@ -80,16 +71,18 @@ export function VehicleCard({
                 onBook();
               }}
               aria-label={`Book a pickup for ${brandName(vehicle.brand)} ${vehicle.model}`}
-              className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-black px-4 text-sm font-semibold text-white transition hover:bg-gray-800"
+              className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-black px-4 text-sm leading-none font-semibold text-white transition hover:bg-gray-800"
             >
-              <Calendar size={16} className="shrink-0" />
-              Book Pickup
+              {/* The calendar is drawn low in its box; lift it to the text's centre */}
+              <Calendar
+                size={16}
+                className="shrink-0"
+              />
+              <span className="text-[16px]">Book Pickup</span>
             </button>
           )}
         </div>
-
       </div>
-
     </article>
   );
 }
@@ -105,9 +98,7 @@ function VehicleStat({
 }) {
   return (
     <div className="min-w-0">
-      <p className="text-xs text-gray-800 font-medium">
-        {label}
-      </p>
+      <p className="text-xs text-gray-800 font-medium">{label}</p>
 
       <p
         title={title}
