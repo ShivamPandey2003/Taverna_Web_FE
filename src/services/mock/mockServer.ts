@@ -3,6 +3,7 @@ import type { AuthSession, AuthUser } from "@/types/auth";
 import {
   ADVISOR_HANDOVER,
   ADVISOR_MILESTONES,
+  INVOICE_TAX_RATE,
   VALET_MILESTONES,
   type AdminBooking,
   type AdvisorMilestone,
@@ -10,6 +11,8 @@ import {
   type Invoice,
   type InvoiceLine,
   type Paginated,
+  type StaffBooking,
+  type StaffLinkRole,
   type StaffListParams,
   type StaffMember,
   type StaffRole,
@@ -155,6 +158,7 @@ function seedBookings(): AdminBooking[] {
       valet: null,
       relationshipManager: null,
       payment: null,
+      staffTokens: mockStaffTokens(`PC-${String(482900 + index)}`),
     };
 
     // Walk the booking some way through the workflow; 40% are finished history.
@@ -205,6 +209,8 @@ function loadDb(): MockDb {
       // Older seeds left paid bookings at "Valet assigned" forever, which kept
       // every valet and advisor on an active booking (so none could be deleted)
       saved.bookings.forEach((booking) => {
+        // Bookings saved before staff links carried a token
+        booking.staffTokens ??= mockStaffTokens(booking.id);
         if (booking.payment?.status === "paid" && booking.status === BookingStatus.VALET_ASSIGNED) {
           booking.status = BookingStatus.SERVICE_COMPLETE;
         }
@@ -327,6 +333,43 @@ function findBooking(id: string) {
   return booking;
 }
 
+// One token per staff link. The real API issues signed tokens; these only have to
+// be the same on every load, so a copied link keeps working.
+function mockStaffTokens(bookingId: string): Record<StaffLinkRole, string> {
+  const token = (role: StaffLinkRole) => `mock-${role}-${bookingId.toLowerCase()}`;
+  return { pickup: token("pickup"), advisor: token("advisor"), delivery: token("delivery") };
+}
+
+// The booking a staff link opens, and whose link it is. Staff aren't logged in:
+// the token from the link is all that's checked.
+function findStaffBooking(token: string, id: string) {
+  const booking = db.bookings.find((item) => item.id === id);
+  const roles = Object.keys(booking?.staffTokens ?? {}) as StaffLinkRole[];
+  const role = roles.find((key) => booking?.staffTokens?.[key] === token);
+  if (!booking || !role) {
+    throw new Error("This link isn't valid. Ask the Taverna team for a new one.");
+  }
+  return { booking, role };
+}
+
+function assertStaffRole(actual: StaffLinkRole, expected: StaffLinkRole) {
+  if (actual !== expected) {
+    throw new Error("This link can't be used for that update.");
+  }
+}
+
+// What staff get back: the booking with the dealership's address for directions,
+// and without the other links' tokens
+function staffView(booking: AdminBooking, linkRole: StaffLinkRole): StaffBooking {
+  return {
+    ...booking,
+    linkRole,
+    staffTokens: undefined,
+    dealershipAddress: db.dealerships.find((item) => item.name === booking.dealershipName)
+      ?.address,
+  };
+}
+
 // A booking the logged-in customer owns (admins can open any)
 function findMyBooking(id: string) {
   const user = currentUser();
@@ -337,7 +380,6 @@ function findMyBooking(id: string) {
   return booking;
 }
 
-const TAX_RATE = 0.08;
 const roundCents = (value: number) => Math.round(value * 100) / 100;
 
 function serviceLine(booking: AdminBooking) {
@@ -345,23 +387,33 @@ function serviceLine(booking: AdminBooking) {
   return booking.valet ? `Valet Service by ${shortName(booking.valet.name)}` : "Valet Service";
 }
 
-// Standard bill: service, fuel surcharge, convenience fee (+ tow) and tax
-function createInvoice(booking: AdminBooking): Invoice {
+// Standard bill: service, fuel surcharge, convenience fee (+ tow). Used when the
+// admin generates the bill; an advisor types their own rows from their link.
+function standardItems(booking: AdminBooking): InvoiceLine[] {
   const items: InvoiceLine[] = [
     { label: serviceLine(booking), amount: booking.serviceId === "pickup-delivery" ? 340 : 180 },
     { label: "Fuel surcharge", amount: 12 },
     { label: "Convenience fee", amount: 4.48 },
   ];
   if (!booking.driveable) items.push({ label: "Tow truck", amount: 49 });
+  return items;
+}
+
+// Adds tax and totals the rows
+function createInvoice(lines: InvoiceLine[]): Invoice {
+  const items = lines.map((line) => ({ label: line.label.trim(), amount: roundCents(line.amount) }));
+  if (!items.length || items.some((item) => !item.label || !(item.amount > 0))) {
+    throw new Error("Every row of the bill needs an item and a price.");
+  }
 
   const subtotal = roundCents(items.reduce((sum, item) => sum + item.amount, 0));
-  const tax = roundCents(subtotal * TAX_RATE);
+  const tax = roundCents(subtotal * INVOICE_TAX_RATE);
 
   return {
-    issuedAt: new Date().toISOString(),
+    issuedAt: clock(),
     items,
     subtotal,
-    taxRate: TAX_RATE,
+    taxRate: INVOICE_TAX_RATE,
     tax,
     total: roundCents(subtotal + tax),
   };
@@ -528,12 +580,12 @@ function markAdvisorMilestone(booking: AdminBooking, milestone: AdvisorMilestone
   advanceStatusTo(booking, advisorStatuses[milestone]);
 }
 
-function generateBill(booking: AdminBooking) {
+function generateBill(booking: AdminBooking, items = standardItems(booking)) {
   assertNotComplete(booking);
   if (!booking.advisorProgress?.serviceDone) {
     throw new Error("Finish the service before generating the bill.");
   }
-  booking.invoice ??= { ...createInvoice(booking), issuedAt: clock() };
+  booking.invoice ??= createInvoice(items);
   advanceStatusTo(booking, BookingStatus.BILL_GENERATED);
 }
 
@@ -598,7 +650,13 @@ const payAction = (booking: AdminBooking) =>
 const firstAvailable = (list: StaffMember[]) => list.find((item) => item.available) ?? list[0];
 
 // Created after the workflow helpers above, which the seed uses
-const db = loadDb();
+let db = loadDb();
+
+// A staff link is usually open in another tab than the admin dashboard; pick up
+// what that tab saved so neither works on (or saves back) stale data
+window.addEventListener("storage", (event) => {
+  if (event.key === DB_KEY || event.key === null) db = loadDb();
+});
 
 export const mockServer = {
   // ---- Auth ----
@@ -636,7 +694,15 @@ export const mockServer = {
   createBooking(
     input: Omit<
       AdminBooking,
-      "id" | "customer" | "createdAt" | "status" | "confirmedAt" | "valet" | "relationshipManager" | "payment"
+      | "id"
+      | "customer"
+      | "createdAt"
+      | "status"
+      | "confirmedAt"
+      | "valet"
+      | "relationshipManager"
+      | "payment"
+      | "staffTokens"
     >,
   ) {
     const user = currentUser();
@@ -645,9 +711,10 @@ export const mockServer = {
         "You already have a service in progress. You can book again once it's complete.",
       );
     }
+    const id = `PC-${Date.now().toString().slice(-6)}`;
     const booking: AdminBooking = {
       ...input,
-      id: `PC-${Date.now().toString().slice(-6)}`,
+      id,
       customer: { id: user.id, name: user.name, email: user.email, phone: user.phone },
       createdAt: new Date().toISOString(),
       status: BookingStatus.IN_QUEUE,
@@ -655,6 +722,7 @@ export const mockServer = {
       valet: null,
       relationshipManager: null,
       payment: null,
+      staffTokens: mockStaffTokens(id),
     };
     db.bookings.unshift(booking);
     persist();
@@ -850,6 +918,46 @@ export const mockServer = {
     complete(booking);
     persist();
     return booking;
+  },
+
+  // ---- Staff links (the valet / advisor pages; signed in by the link's token) ----
+  getStaffBooking(token: string, id: string) {
+    const { booking, role } = findStaffBooking(token, id);
+    return staffView(booking, role);
+  },
+
+  staffUpdateValetProgress(token: string, id: string, leg: ValetLeg, milestone: ValetMilestone) {
+    const { booking, role } = findStaffBooking(token, id);
+    assertStaffRole(role, leg);
+    markValetMilestone(booking, leg, milestone);
+    persist();
+    return staffView(booking, role);
+  },
+
+  staffUpdateAdvisorProgress(token: string, id: string, milestone: AdvisorMilestone) {
+    const { booking, role } = findStaffBooking(token, id);
+    assertStaffRole(role, "advisor");
+    markAdvisorMilestone(booking, milestone);
+    persist();
+    return staffView(booking, role);
+  },
+
+  // The advisor types the bill's rows; tax and totals are added here
+  staffGenerateInvoice(token: string, id: string, items: InvoiceLine[]) {
+    const { booking, role } = findStaffBooking(token, id);
+    assertStaffRole(role, "advisor");
+    generateBill(booking, items);
+    persist();
+    return staffView(booking, role);
+  },
+
+  // The advisor has checked that the customer paid another way
+  staffConfirmPayment(token: string, id: string) {
+    const { booking, role } = findStaffBooking(token, id);
+    assertStaffRole(role, "advisor");
+    markPaid(booking);
+    persist();
+    return staffView(booking, role);
   },
 
   // ---- Staff (valets and advisors) ----

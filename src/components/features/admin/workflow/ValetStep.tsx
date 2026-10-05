@@ -1,9 +1,8 @@
-import { useState } from "react";
 import { toast } from "sonner";
-import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useAssignValet, useUpdateValetProgress } from "@/services/queries/adminQueries";
 import { VALET_MILESTONES, type AdminBooking, type StaffMember, type ValetLeg } from "@/types/admin";
 import {
+  bookingLabel,
   isComplete,
   legTitles,
   nextMilestone,
@@ -35,15 +34,15 @@ const nextStepLabels: Record<ValetLeg, string> = {
 export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
   const assignValet = useAssignValet();
   const updateProgress = useUpdateValetProgress();
-  // Replacement waiting for confirmation, because it restarts the trip
-  const [replacement, setReplacement] = useState<StaffMember | null>(null);
 
   const { valet, progress } = valetTrip(booking, leg);
   const labels = valetMilestoneLabels[leg];
   const next = valet ? nextMilestone(VALET_MILESTONES, progress) : null;
   const finished = !!valet && !next;
 
-  const lockedReason = isComplete(booking)
+  const complete = isComplete(booking);
+
+  const lockedReason = complete
     ? "The service is complete, so the valet can't be changed."
     : progress.pickedUp
       ? "The valet already has the vehicle, so they can't be changed."
@@ -59,20 +58,16 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
     })),
   ];
 
-  const assign = (member: StaffMember) =>
+  const assign = (member: StaffMember, done: () => void) =>
     assignValet.mutate(
       { id: booking.id, leg, valetId: member.id },
       {
         onSuccess: () => {
           toast.success(`${member.name} assigned as ${legTitles[leg].toLowerCase()}`);
-          setReplacement(null);
+          done();
         },
       },
     );
-
-  // Swapping a valet who's already on the way needs a confirmation
-  const handleAssign = (member: StaffMember) =>
-    progress.dispatched ? setReplacement(member) : assign(member);
 
   const markNext = () => {
     if (!next) return;
@@ -88,24 +83,36 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
 
       <AssignmentRow
         role="valet"
-        label={`${legTitles[leg]} assigned`}
+        title={legTitles[leg]}
+        bookingLabel={bookingLabel(booking)}
         assigned={valet}
-        link={staffLink(booking.id, leg)}
+        link={staffLink(booking, leg)}
         saving={assignValet.isPending}
         lockedReason={lockedReason}
-        onAssign={handleAssign}
+        // Swapping a valet who's already on the way restarts the trip
+        changeWarning={
+          progress.dispatched
+            ? `${valet?.name} is already on the way. Changing the valet starts this trip over from "Valet assigned".`
+            : undefined
+        }
+        onAssign={assign}
       />
 
-      <SectionCard>
-        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="text-sm font-bold text-gray-900">Trip progress</h3>
-          <p className="text-xs text-gray-500">
-            The valet posts these from their link. You can also mark them here.
-          </p>
-        </div>
+      {/* There's no trip to follow until a valet is assigned */}
+      {valet && (
+        <SectionCard>
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-sm font-bold text-gray-900">Trip progress</h3>
+            <p className="text-xs text-gray-500">
+              {complete
+                ? "Posted by the valet from their link."
+                : "The valet posts these from their link. You can also mark them here."}
+            </p>
+          </div>
 
-        <MilestoneTracker milestones={milestones} />
-      </SectionCard>
+          <MilestoneTracker milestones={milestones} />
+        </SectionCard>
+      )}
 
       {!valet && (
         <p className="rounded-xl bg-gray-50 p-4 text-center text-sm text-gray-500">
@@ -122,24 +129,9 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
       {finished && (
         <StepDone
           text={labels.delivered}
-          actionLabel={isComplete(booking) ? undefined : nextStepLabels[leg]}
+          actionLabel={complete ? undefined : nextStepLabels[leg]}
           onAction={onDone}
         />
-      )}
-
-      {replacement && (
-        <ConfirmModal
-          title="Change valet?"
-          confirmLabel="Change valet"
-          pendingLabel="Changing..."
-          pending={assignValet.isPending}
-          onConfirm={() => assign(replacement)}
-          onClose={() => setReplacement(null)}
-          stacked
-        >
-          {valet?.name} is already on the way. Assigning {replacement.name} starts this trip
-          over from "Valet assigned".
-        </ConfirmModal>
       )}
     </div>
   );

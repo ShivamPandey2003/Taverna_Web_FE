@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 import type { AdminBooking } from "@/types/admin";
 import { useConfirmBooking } from "@/services/queries/adminQueries";
-import { formatDateTime } from "../admin.utils";
+import { formatDateTime, isComplete } from "../admin.utils";
 import { BookingOverview } from "../details/BookingOverview";
 import { ActionButton, StepDone } from "./StepParts";
 
@@ -30,7 +30,7 @@ export function ConfirmStep({ booking, onDone }: ConfirmStepProps) {
       {booking.confirmedAt ? (
         <StepDone
           text={`Confirmed on ${formatDateTime(booking.confirmedAt)}`}
-          actionLabel="Next: Assign pickup valet"
+          actionLabel={isComplete(booking) ? undefined : "Next: Assign pickup valet"}
           onAction={onDone}
         />
       ) : (

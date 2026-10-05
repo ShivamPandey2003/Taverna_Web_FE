@@ -1,7 +1,9 @@
+import { vehicleName } from "@/libs/utils";
 import { BookingStatus } from "@/types/booking";
 import type {
   AdminBooking,
   AdvisorMilestone,
+  StaffLinkRole,
   ValetLeg,
   ValetMilestone,
 } from "@/types/admin";
@@ -14,6 +16,10 @@ export const serviceLabels: Record<ServiceId, string> = {
 };
 
 export const bookingStatuses = Object.values(BookingStatus);
+
+// "PC-221428 · Alex - 2022 Jeep Grand Cherokee"
+export const bookingLabel = (booking: AdminBooking) =>
+  `${booking.id} · ${booking.customer.name} - ${vehicleName(booking.vehicle)}`;
 
 export function formatDateTime(value: string | null) {
   if (!value) return "—";
@@ -96,10 +102,14 @@ const tripDone = (booking: AdminBooking, leg: ValetLeg) => {
   return !!valet && !!progress.delivered;
 };
 
-// Personal link the staff member opens to post updates for this booking
-export function staffLink(bookingId: string, leg: ValetLeg | "advisor") {
-  const path = leg === "advisor" ? `advisor/${bookingId}` : `valet/${leg}/${bookingId}`;
-  return `${window.location.origin}/${path}`;
+// Personal link the staff member opens to post updates for this booking. Staff
+// never log in: the token at the end of the path signs them in. Must match the
+// staff routes in routes/index.tsx.
+export function staffLink(booking: AdminBooking, role: StaffLinkRole) {
+  const token = booking.staffTokens?.[role];
+  if (!token) return null;
+  const path = role === "advisor" ? `advisor/${booking.id}` : `valet/${role}/${booking.id}`;
+  return `${window.location.origin}/${path}/${encodeURIComponent(token)}`;
 }
 
 export const isComplete = (booking: AdminBooking) =>
@@ -122,10 +132,9 @@ export function isStepDone(booking: AdminBooking, step: WorkflowStep) {
   }
 }
 
-// Steps unlock in order: each one needs every earlier step done. A complete
-// booking is locked to its summary.
+// Steps unlock in order: each one needs every earlier step done. On a complete
+// booking every step is done, so they all open, read-only.
 export function isStepUnlocked(booking: AdminBooking, step: WorkflowStep) {
-  if (isComplete(booking)) return step === "complete";
   const index = WORKFLOW_STEPS.indexOf(step);
   return WORKFLOW_STEPS.slice(0, index).every((previous) => isStepDone(booking, previous));
 }

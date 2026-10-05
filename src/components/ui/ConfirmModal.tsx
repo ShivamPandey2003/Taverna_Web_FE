@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "@/libs/utils";
 import { Modal } from "./Modal";
 
 interface ConfirmModalProps {
@@ -14,9 +15,11 @@ interface ConfirmModalProps {
   onClose: () => void;
   // Renders above another open modal
   stacked?: boolean;
+  // "danger" (red) for deletes and resets, "primary" (black) for a plain double-check
+  tone?: "danger" | "primary";
 }
 
-// Asks before a destructive action such as a delete
+// Asks before an action that's destructive or easy to get wrong
 export function ConfirmModal({
   title,
   children,
@@ -27,6 +30,7 @@ export function ConfirmModal({
   onConfirm,
   onClose,
   stacked,
+  tone = "danger",
 }: ConfirmModalProps) {
   return (
     <Modal
@@ -48,7 +52,12 @@ export function ConfirmModal({
             type="button"
             onClick={onConfirm}
             disabled={pending}
-            className="h-10 rounded-lg bg-red-600 px-5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+            // Enter confirms a plain double-check; a destructive one needs a deliberate click
+            autoFocus={tone === "primary"}
+            className={cn(
+              "h-10 rounded-lg px-5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50",
+              tone === "danger" ? "bg-red-600 hover:bg-red-700" : "bg-black hover:bg-gray-800",
+            )}
           >
             {pending ? pendingLabel : confirmLabel}
           </button>

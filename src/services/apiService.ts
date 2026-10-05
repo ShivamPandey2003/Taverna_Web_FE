@@ -1,6 +1,10 @@
 import axios from "axios";
 import { toast } from "sonner";
-import { getApiErrorMessage, getNetworkErrorMessage } from "@/libs/apiError";
+import {
+  getApiErrorMessage,
+  getNetworkErrorMessage,
+  getStaffApiErrorMessage,
+} from "@/libs/apiError";
 
 const platform_url = import.meta.env.VITE_REACT_APP_API_URL;
 
@@ -102,5 +106,52 @@ export const apiRequest = async (
       : getNetworkErrorMessage();
     toast.error(friendly);
     throw new Error(friendly, { cause: error });
+  }
+};
+
+// ---- Staff links (valet / advisor pages) ----
+
+// No interceptors: the token comes from the link, never from localStorage, and a
+// bad link must not log out whoever is signed in on this browser
+const staffClient = axios.create({
+  baseURL: platform_url,
+});
+
+// Sends the link's token as the Bearer token. Errors are thrown with a friendly
+// message and never toasted: failed loads show an error screen on the page, and
+// failed updates are toasted by the staff mutation hooks.
+export const staffApiRequest = async (
+  token: string,
+  method: ApiMethod,
+  url: string,
+  data: unknown = null,
+) => {
+  try {
+    const response = await staffClient.request({
+      method,
+      url,
+      data,
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const body = response?.data;
+    const code: number | undefined = body?.header?.code ?? body?.code;
+    const message: string | undefined = body?.header?.message ?? body?.message;
+
+    if (typeof code === "number" && code >= 400) {
+      throw new Error(getStaffApiErrorMessage(code, message));
+    }
+    return body;
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const backendMessage: string | undefined =
+        error.response?.data?.header?.message ?? error.response?.data?.message;
+      const friendly = status
+        ? getStaffApiErrorMessage(status, backendMessage)
+        : getNetworkErrorMessage();
+      throw new Error(friendly, { cause: error });
+    }
+    if (error instanceof Error) throw error;
+    throw new Error(getNetworkErrorMessage(), { cause: error });
   }
 };

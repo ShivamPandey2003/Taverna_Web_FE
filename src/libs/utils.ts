@@ -34,3 +34,33 @@ export function formatPickupTime(value: string | Date) {
   const time = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
   return `${day} • ${time}`;
 }
+
+export function firstName(name: string) {
+  return name.trim().split(/\s+/)[0];
+}
+
+export function initials(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return (parts[0].charAt(0) + (parts.length > 1 ? parts.at(-1)!.charAt(0) : "")).toUpperCase();
+}
+
+// "3:42 PM" today, "Sep 28, 3:42 PM" on other days
+export function formatTime(value: string) {
+  const date = new Date(value);
+  const today = date.toDateString() === new Date().toDateString();
+  return date.toLocaleString("en-US", {
+    ...(!today && { month: "short", day: "numeric" }),
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+// Link for dialing from the phone: "(954) 555-0141" -> "tel:9545550141"
+export function telLink(phone: string) {
+  return `tel:${phone.replace(/[^\d+]/g, "")}`;
+}
+
+// Opens turn-by-turn directions in Google Maps (or the phone's maps app)
+export function directionsLink(destination: string) {
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
+}

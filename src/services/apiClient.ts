@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { apiRequest } from "./apiService";
+import { apiRequest, staffApiRequest } from "./apiService";
 
 // Until the backend is ready every call is answered by services/mock/mockServer.ts.
 // Set VITE_USE_MOCK_API=false in .env to send the same calls to VITE_REACT_APP_API_URL.
@@ -38,6 +38,27 @@ type Method = "get" | "post" | "put" | "delete";
 export async function request<T>(method: Method, url: string, data?: unknown): Promise<T> {
   const body = await apiRequest(method, url, data ?? null);
   return (body?.data ?? body?.response?.data ?? body?.response ?? body) as T;
+}
+
+// Staff link calls: answered by the same mock, or sent with the link's token.
+// Unlike callApi these never toast (see staffApiRequest).
+export async function callStaffApi<T>(mock: () => T, real: () => Promise<T>): Promise<T> {
+  if (!USE_MOCK_API) {
+    return real();
+  }
+
+  await delay(MOCK_LATENCY_MS);
+  return structuredClone(mock());
+}
+
+export async function staffRequest<T>(
+  token: string,
+  method: Method,
+  url: string,
+  data?: unknown,
+): Promise<T> {
+  const body = await staffApiRequest(token, method, url, data ?? null);
+  return (body?.data ?? body) as T;
 }
 
 export function toQueryString(params: Record<string, string | number>) {

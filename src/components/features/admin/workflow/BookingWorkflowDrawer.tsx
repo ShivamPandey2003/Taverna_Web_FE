@@ -1,3 +1,4 @@
+// import { Lock } from "reicon-react";
 import { vehicleName } from "@/libs/utils";
 import { Drawer } from "@/components/ui/Drawer";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -32,7 +33,7 @@ export function BookingWorkflowDrawer() {
   const onClose = () => dispatch(closeBookingWorkflow());
 
   // Opens on the first unfinished step unless the admin picked one. A picked step
-  // that is locked (e.g. the service was just completed) falls back as well.
+  // that is locked (e.g. left over from another booking) falls back as well.
   const step =
     booking && (!activeStep || !isStepUnlocked(booking, activeStep))
       ? firstOpenStep(booking)
@@ -82,6 +83,14 @@ export function BookingWorkflowDrawer() {
             activeStep={step}
             onSelect={(next) => dispatch(setWorkflowStep(next))}
           />
+
+          {/* {isComplete(booking) && (
+            <p className="mt-4 flex items-center gap-2 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-600">
+              <Lock size={15} className="shrink-0 text-gray-400" />
+              This service is complete. You can look through every step, but nothing can be
+              changed.
+            </p>
+          )} */}
 
           {/* Keyed so each step's local state starts fresh */}
           <div key={step} className="mt-5 border-t border-gray-200 pt-5">

@@ -2,14 +2,14 @@ import { Check, Lock } from "reicon-react";
 import { cn } from "@/libs/utils";
 import { WORKFLOW_STEPS, type WorkflowStep } from "@/redux/modals/adminModal/adminModalSlice";
 import type { AdminBooking } from "@/types/admin";
-import { isComplete, isStepDone, isStepUnlocked } from "../admin.utils";
+import { isStepDone, isStepUnlocked } from "../admin.utils";
 
 // What's left to do on each step
 const stepLabels: Record<WorkflowStep, string> = {
-  confirm: "Confirm Booking",
-  pickup: "Assign Pickup Valet",
-  advisor: "Assign Advisor",
-  delivery: "Assign Delivery Valet",
+  confirm: "Booking Details",
+  pickup: "Pickup Valet",
+  advisor: "Advisor",
+  delivery: "Delivery Valet",
   complete: "Service Complete",
 };
 
@@ -28,11 +28,9 @@ interface WorkflowStepperProps {
   onSelect: (step: WorkflowStep) => void;
 }
 
-// One card per step. A step opens only once every step before it is finished,
-// and a completed booking stays on its last step.
+// One card per step. A step opens only once every step before it is finished;
+// on a completed booking they all open, to look back at.
 export function WorkflowStepper({ booking, activeStep, onSelect }: WorkflowStepperProps) {
-  const complete = isComplete(booking);
-
   return (
     <ol className="grid grid-cols-2 gap-2 sm:grid-cols-5">
       {WORKFLOW_STEPS.map((step, index) => {
@@ -46,18 +44,12 @@ export function WorkflowStepper({ booking, activeStep, onSelect }: WorkflowStepp
               type="button"
               disabled={!unlocked}
               onClick={() => onSelect(step)}
-              title={
-                unlocked
-                  ? undefined
-                  : complete
-                    ? "The service is complete"
-                    : "Finish the previous step first"
-              }
+              title={unlocked ? undefined : "Finish the previous step first"}
               className={cn(
                 "flex h-full w-full flex-col items-center justify-center gap-2 rounded-xl border-2 p-3 text-center transition",
                 // A finished step stays green even while it's open, like the others
                 done
-                  ? "border-gray-300 bg-gray-100 hover:border-gray-400"
+                  ? "border-status-active/40 bg-status-active/10 hover:border-status-active"
                   : active
                     ? "border-gray-900 bg-white"
                     : "border-gray-200 bg-gray-50 hover:border-gray-400",
@@ -68,7 +60,7 @@ export function WorkflowStepper({ booking, activeStep, onSelect }: WorkflowStepp
                 className={cn(
                   "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold",
                   done
-                    ? "bg-black text-white"
+                    ? "bg-status-active text-white"
                     : active
                       ? "bg-gray-900 text-white"
                       : "bg-gray-200 text-gray-600",
