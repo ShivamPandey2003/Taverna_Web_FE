@@ -9,11 +9,13 @@ import {
   selectDashboardModal,
 } from "@/redux/modals/dashboardModal/dashboardModalSlice";
 import { VehicleTitle } from "@/components/features/dashboard/VehicleTitle";
+import { useSaveVehicle } from "@/services/queries/vehicleQueries";
 
 // Shows the VIN lookup result so the user can confirm it before it is saved
 export function VehicleDetailsModal() {
   const dispatch = useAppDispatch();
   const { verifiedVehicle: vehicle } = useAppSelector(selectDashboardModal);
+  const saveVehicle = useSaveVehicle();
 
   if (!vehicle) {
     return null;
@@ -21,10 +23,14 @@ export function VehicleDetailsModal() {
 
   const onClose = () => dispatch(closeVerifiedVehicle());
 
-  const onAddVehicle = () => {
-    dispatch(addVehicle(vehicle));
-    toast.success(`${vehicleName(vehicle)} added`);
-  };
+  // Saved on the server first; adding it to Redux closes this modal
+  const onAddVehicle = () =>
+    saveVehicle.mutate(vehicle, {
+      onSuccess: (saved) => {
+        dispatch(addVehicle(saved));
+        toast.success(`${vehicleName(saved)} added`);
+      },
+    });
 
   const onNotMyVehicle = () => dispatch(rejectVerifiedVehicle());
 
@@ -118,16 +124,18 @@ export function VehicleDetailsModal() {
           <button
             type="button"
             onClick={onAddVehicle}
-            className="h-12 w-full rounded-xl bg-[#111827] text-sm font-semibold text-white transition hover:bg-black"
+            disabled={saveVehicle.isPending}
+            className="h-12 w-full rounded-xl bg-[#111827] text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Add Vehicle
+            {saveVehicle.isPending ? "Adding..." : "Add Vehicle"}
           </button>
 
           {/* Not your vehicle */}
           <button
             type="button"
             onClick={onNotMyVehicle}
-            className="mt-4 block w-full text-center text-sm font-semibold text-gray-700 transition hover:text-gray-900"
+            disabled={saveVehicle.isPending}
+            className="disabled:opacity-50 mt-4 block w-full text-center text-sm font-semibold text-gray-700 transition hover:text-gray-900"
           >
             Not your vehicle
           </button>

@@ -1,5 +1,5 @@
 import { BookingStatus } from "@/types/booking";
-import type { AuthSession, AuthUser } from "@/types/auth";
+import type { AuthUser } from "@/types/auth";
 import {
   ADVISOR_HANDOVER,
   ADVISOR_MILESTONES,
@@ -25,13 +25,13 @@ import { authStorage } from "@/services/authStorage";
 import { shortName } from "@/libs/utils";
 import { dealerships as seedDealerships } from "@/components/features/review/dealership.data";
 
-// In-browser stand-in for the backend. Data is kept in localStorage so bookings
-// placed from the user dashboard show up in the admin dashboard.
+// In-browser stand-in for the parts of the backend that aren't wired up yet. Data is
+// kept in localStorage so bookings placed from the user dashboard show up in the
+// admin dashboard. Auth (login, signup, OTP, logout) is the real API: see authApi.ts.
 
 const DB_KEY = "taverna_mock_db";
 
 type MockDb = {
-  users: AuthUser[];
   bookings: AdminBooking[];
   valets: StaffMember[];
   relationshipManagers: StaffMember[];
@@ -58,23 +58,6 @@ const relationshipManagers: StaffMember[] = [
   staff("rm-1", "Olivia Bennett", "(954) 555-0220", true),
   staff("rm-2", "Ethan Walker", "(954) 555-0236", true),
   staff("rm-3", "Priya Shah", "(954) 555-0251", false),
-];
-
-const seedUsers: AuthUser[] = [
-  {
-    id: "u-admin",
-    name: "Taverna Admin",
-    email: "admin@taverna.com",
-    phone: "(954) 555-0100",
-    role: "admin",
-  },
-  {
-    id: "u-alex",
-    name: "Alex",
-    email: "alex@gmail.com",
-    phone: "(218) 123-4567",
-    role: "user",
-  },
 ];
 
 // Deterministic pseudo-random numbers so the seed is identical on every machine
@@ -190,7 +173,6 @@ function seedBookings(): AdminBooking[] {
 
 function loadDb(): MockDb {
   const seed: MockDb = {
-    users: seedUsers,
     bookings: seedBookings(),
     valets,
     relationshipManagers,
@@ -253,13 +235,9 @@ function persist() {
   }
 }
 
-function findUserByEmail(email: string) {
-  return db.users.find((user) => user.email.toLowerCase() === email.toLowerCase());
-}
-
+// Accounts live in the real API now; the mock trusts whoever is logged in
 function currentUser() {
-  const session = authStorage.load();
-  const user = session && db.users.find((item) => item.id === session.user.id);
+  const user = authStorage.load()?.user;
   if (!user) throw new Error("Your session has expired. Please log in again.");
   return user;
 }
@@ -659,35 +637,10 @@ window.addEventListener("storage", (event) => {
 });
 
 export const mockServer = {
-  // ---- Auth ----
-  sendLoginOtp(email: string) {
-    if (!findUserByEmail(email)) {
-      throw new Error("No account found for this email. Please sign up.");
-    }
-    return { sent: true };
-  },
-
-  signup(data: { name: string; email: string; phone: string }) {
-    if (findUserByEmail(data.email)) {
-      throw new Error("An account with this email already exists. Please log in.");
-    }
-    db.users.push({ id: `u-${Date.now()}`, ...data, role: "user" });
-    persist();
-    return { sent: true };
-  },
-
-  // Any 6-digit code is accepted
-  verifyOtp(email: string): AuthSession {
-    const user = findUserByEmail(email);
-    if (!user) throw new Error("No account found for this email. Please sign up.");
-    return { token: `mock-token-${user.id}`, user };
-  },
-
-  updateMe(patch: Partial<Pick<AuthUser, "name" | "phone">>) {
-    const user = currentUser();
-    Object.assign(user, patch);
-    persist();
-    return user;
+  // ---- Profile ----
+  // The caller puts the result in Redux, which is what persists the session
+  updateMe(patch: Partial<Pick<AuthUser, "name" | "phone">>): AuthUser {
+    return { ...currentUser(), ...patch };
   },
 
   // ---- Customer bookings ----

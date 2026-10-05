@@ -3,6 +3,7 @@ import { Outlet } from "react-router";
 import { Navbar } from "@/components/global/Navbar";
 import { ServiceStatusToast } from "@/components/features/tracking/ServiceStatusToast";
 import { useSyncActiveBooking } from "@/components/features/tracking/serviceStatus";
+import { useSyncVehicles } from "@/hooks/useSyncVehicles";
 import { useAppSelector } from "@/redux/hooks";
 import { selectIsAdmin } from "@/redux/auth/authSlice";
 
@@ -10,6 +11,8 @@ export function DashboardLayout() {
   const isAdmin = useAppSelector(selectIsAdmin);
   // Bring back a customer's unfinished booking after a reload
   useSyncActiveBooking(!isAdmin);
+  // Customers' saved vehicles, for every dashboard page
+  useSyncVehicles(!isAdmin);
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">

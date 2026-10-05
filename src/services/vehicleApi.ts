@@ -1,0 +1,101 @@
+import { toast } from "sonner";
+import PlaceholderImage from "@/assets/jeep-grand-cherokee.webp";
+import { request } from "./apiClient";
+import type { Vehicle, VerifiedVehicle } from "@/types/vehicle";
+
+// POST vehicles/verify-vin
+interface VinLookupResponse {
+  vin: string;
+  verified: boolean;
+  // Comes back as text here ("2015") but as a number on saved vehicles
+  year: string | number;
+  make: string;
+  model: string;
+  trim: string;
+  engine: string;
+  color: string;
+  image_url: string | null;
+}
+
+// A saved vehicle, from vehicles/save and vehicles/list
+interface VehicleResponse {
+  vehicleId: string;
+  vin: string;
+  year: number;
+  make: string;
+  model: string;
+  trim: string;
+  engine: string;
+  color: string;
+  currentMileage: number | null;
+  image_url: string | null;
+  isActive: boolean;
+  displayName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 45230 -> "45,230 mi". The API stores 0 for a vehicle whose mileage was never given.
+const formatMiles = (mileage: number | null) =>
+  mileage ? `${mileage.toLocaleString("en-US")} mi` : null;
+
+function toVehicle(vehicle: VehicleResponse): Vehicle {
+  return {
+    id: vehicle.vehicleId,
+    brand: vehicle.make,
+    model: vehicle.model,
+    year: Number(vehicle.year),
+    vin: vehicle.vin,
+    miles: formatMiles(vehicle.currentMileage),
+    image: vehicle.image_url || PlaceholderImage,
+    trim: vehicle.trim,
+    engine: vehicle.engine,
+  };
+}
+
+export const vehicleApi = {
+  // Decodes a VIN into vehicle details; nothing is saved yet
+  verifyVin: async (vin: string): Promise<VerifiedVehicle> => {
+    const result = await request<VinLookupResponse>("post", "vehicles/verify-vin", { vin });
+
+    if (!result.verified) {
+      // Not an API error, so the API layer hasn't toasted anything
+      const message = "We couldn't verify this VIN. Check it and try again.";
+      toast.error(message);
+      throw new Error(message);
+    }
+
+    return {
+      brand: result.make,
+      model: result.model,
+      year: Number(result.year),
+      vin: result.vin,
+      miles: null,
+      image: result.image_url || PlaceholderImage,
+      imageUrl: result.image_url,
+      trim: result.trim,
+      engine: result.engine,
+    };
+  },
+
+  // Adds the verified vehicle to the logged-in customer's account
+  save: async (vehicle: VerifiedVehicle) =>
+    toVehicle(
+      await request<VehicleResponse>("post", "vehicles/save", {
+        vin: vehicle.vin,
+        year: vehicle.year,
+        make: vehicle.brand,
+        model: vehicle.model,
+        trim: vehicle.trim ?? "",
+        engine: vehicle.engine ?? "",
+        current_mileage: 0,
+        image_url: vehicle.imageUrl,
+      }),
+    ),
+
+  // The logged-in customer's saved vehicles
+  list: async () => {
+    const { vehicles } = await request<{ vehicles: VehicleResponse[] }>("get", "vehicles/list");
+    return vehicles.filter((vehicle) => vehicle.isActive !== false).map(toVehicle);
+  },
+};

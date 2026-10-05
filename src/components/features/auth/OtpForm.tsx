@@ -8,12 +8,16 @@ interface OtpFormProps {
   email: string;
   onSubmit: (data: OtpFormData) => void;
   onBack: () => void;
+  onResend: () => void;
+  resending: boolean;
 }
 
 export function OtpForm({
   email,
   onSubmit,
   onBack,
+  onResend,
+  resending,
 }: OtpFormProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -91,11 +95,13 @@ export function OtpForm({
 
       <button
         type="button"
-        className="w-full text-sm font-semibold text-gray-600 hover:text-gray-900"
+        onClick={onResend}
+        disabled={resending}
+        className="w-full text-sm font-semibold text-gray-600 hover:text-gray-900 disabled:opacity-50"
       >
         Didn't receive the code?{" "}
         <span className="text-primary">
-          Resend
+          {resending ? "Sending..." : "Resend"}
         </span>
       </button>
     </form>

@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { inputClass, SectionHeader } from './SectionHeader';
-import { lookupVehicleByVin } from './vehicle.data';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { selectAccountUser } from '@/redux/account/accountSlice';
 import { selectVehicles } from '@/redux/vehicle/vehicleSlice';
@@ -12,6 +11,7 @@ import {
   selectDashboardModal,
   showVerifiedVehicle,
 } from '@/redux/modals/dashboardModal/dashboardModalSlice';
+import { useVerifyVin } from '@/services/queries/vehicleQueries';
 
 const registerVehicleSchema = z.object({
   vin: z
@@ -53,6 +53,7 @@ function RegisterVehicleForm() {
   const dispatch = useAppDispatch();
   const vehicles = useAppSelector(selectVehicles);
   const user = useAppSelector(selectAccountUser);
+  const verifyVin = useVerifyVin();
 
   const {
     register,
@@ -81,10 +82,11 @@ function RegisterVehicleForm() {
       return;
     }
 
-    // API:
-    // const vehicle = await verifyVehicle(data);
-
-    dispatch(showVerifiedVehicle(lookupVehicleByVin(vin)));
+    try {
+      dispatch(showVerifiedVehicle(await verifyVin.mutateAsync(vin)));
+    } catch {
+      // already reported by the API layer
+    }
   };
 
   return (

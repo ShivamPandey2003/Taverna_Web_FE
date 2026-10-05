@@ -1,13 +1,13 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
 import { addVehicle, removeVehicle } from "@/redux/vehicle/vehicleSlice";
-import type { Vehicle } from "@/types/vehicle";
+import type { VerifiedVehicle } from "@/types/vehicle";
 
 // Modals on the dashboard vehicle list (/dashboard)
 type DashboardModalState = {
   registerVehicleOpen: boolean;
   // Vehicle returned by the VIN lookup, waiting for the user to confirm "Add Vehicle"
-  verifiedVehicle: Omit<Vehicle, "id"> | null;
+  verifiedVehicle: VerifiedVehicle | null;
   // Saved vehicle whose details modal is open
   viewVehicleId: string | null;
 };
@@ -28,7 +28,7 @@ const dashboardModalSlice = createSlice({
     closeRegisterVehicle: (state) => {
       state.registerVehicleOpen = false;
     },
-    showVerifiedVehicle: (state, action: PayloadAction<Omit<Vehicle, "id">>) => {
+    showVerifiedVehicle: (state, action: PayloadAction<VerifiedVehicle>) => {
       state.registerVehicleOpen = false;
       state.verifiedVehicle = action.payload;
     },

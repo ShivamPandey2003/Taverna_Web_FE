@@ -34,7 +34,7 @@ export async function callApi<T>(
 
 type Method = "get" | "post" | "put" | "delete";
 
-// Assumes the backend wraps payloads as { code, message, data }
+// The backend wraps payloads as { code, message, response }
 export async function request<T>(method: Method, url: string, data?: unknown): Promise<T> {
   const body = await apiRequest(method, url, data ?? null);
   return (body?.data ?? body?.response?.data ?? body?.response ?? body) as T;

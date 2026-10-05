@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 
 import { LoginForm } from "./LoginForm";
 import { SignupForm } from "./SignupForm";
@@ -23,13 +24,22 @@ import {
   closeAuthModal,
   selectHomeModal,
 } from "@/redux/modals/homeModal/homeModalSlice";
-import { authApi } from "@/services/authApi";
+import {
+  useLogin,
+  useResendOtp,
+  useSignup,
+  useVerifyOtp,
+} from "@/services/queries/authQueries";
 
 export function AuthModal() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { authModalOpen } = useAppSelector(selectHomeModal);
   const { mode, step, email } = useAppSelector(selectAuth);
+  const login = useLogin();
+  const signup = useSignup();
+  const verifyOtp = useVerifyOtp();
+  const resendOtp = useResendOtp();
 
   if (!authModalOpen) {
     return null;
@@ -42,7 +52,7 @@ export function AuthModal() {
     data: LoginFormData
   ) => {
     try {
-      await authApi.sendLoginOtp(data.email);
+      await login.mutateAsync(data.email);
       dispatch(otpRequested(data.email));
     } catch {
       // already reported
@@ -53,11 +63,12 @@ export function AuthModal() {
     data: SignupFormData
   ) => {
     try {
-      await authApi.signup({
-        name: data.fullname,
+      await signup.mutateAsync({
+        fullname: data.fullname,
         email: data.email,
-        phone: data.phone,
-        notifications: data.notification_preferences,
+        phone_number: data.phone,
+        notification_preferences: data.notification_preferences,
+        privacy_policy: data.privacy_policy,
       });
       dispatch(otpRequested(data.email));
     } catch {
@@ -70,7 +81,7 @@ export function AuthModal() {
     data: OtpFormData
   ) => {
     try {
-      const session = await authApi.verifyOtp(email, data.otp);
+      const session = await verifyOtp.mutateAsync({ email, otp: data.otp });
       dispatch(loginSucceeded(session));
       onClose();
       navigate(session.user.role === "admin" ? "/admin" : "/dashboard");
@@ -78,6 +89,11 @@ export function AuthModal() {
       // already reported
     }
   };
+
+  const handleResend = () =>
+    resendOtp.mutate(email, {
+      onSuccess: () => toast.success("We sent you a new code"),
+    });
 
   const switchMode = (newMode: AuthMode) => {
     dispatch(setAuthMode(newMode));
@@ -201,6 +217,8 @@ export function AuthModal() {
                 email={email}
                 onSubmit={handleOtp}
                 onBack={() => dispatch(backToAuthForm())}
+                onResend={handleResend}
+                resending={resendOtp.isPending}
               />
             )}
 

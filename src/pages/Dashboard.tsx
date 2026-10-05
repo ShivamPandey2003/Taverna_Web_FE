@@ -8,11 +8,15 @@ import { cn } from "@/libs/utils";
 import { selectAccountUser } from "@/redux/account/accountSlice";
 import { openRegisterVehicle } from "@/redux/modals/dashboardModal/dashboardModalSlice";
 import { selectVehicles } from "@/redux/vehicle/vehicleSlice";
+import { useVehicles } from "@/services/queries/vehicleQueries";
 
 export function Dashboard() {
   const dispatch = useAppDispatch();
   const vehicles = useAppSelector(selectVehicles);
   const user = useAppSelector(selectAccountUser);
+  // Same query the layout syncs into Redux; here only for its loading state
+  const vehiclesQuery = useVehicles();
+  const noVehiclesYet = vehicles.length === 0;
 
   return (
     // Bottom padding only under the vehicle list; the empty state fills the page exactly
@@ -22,7 +26,22 @@ export function Dashboard() {
         vehicles.length > 0 && "pb-10",
       )}
     >
-      {vehicles.length === 0 ? (
+      {noVehiclesYet && vehiclesQuery.isPending ? (
+        <p className="flex flex-1 items-center justify-center text-sm text-gray-500">
+          Loading your vehicles...
+        </p>
+      ) : noVehiclesYet && vehiclesQuery.isError ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+          <p className="text-sm text-gray-500">We couldn't load your vehicles.</p>
+          <button
+            type="button"
+            onClick={() => vehiclesQuery.refetch()}
+            className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+          >
+            Try again
+          </button>
+        </div>
+      ) : noVehiclesYet ? (
         <EmptyVehicleState
           userName={user.name}
           onAddVehicle={() => dispatch(openRegisterVehicle())}

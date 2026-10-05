@@ -6,7 +6,15 @@ import {
   getStaffApiErrorMessage,
 } from "@/libs/apiError";
 
-const platform_url = import.meta.env.VITE_REACT_APP_API_URL;
+// Base of every endpoint, e.g. https://dev-api.tavernaservice.com/api/v1/. The local
+// .env sets it in full; the deploy workflow only passes the host (VITE_API_BASE_URL).
+const apiHost: string | undefined = import.meta.env.VITE_API_BASE_URL;
+const apiUrl: string | undefined =
+  import.meta.env.VITE_REACT_APP_API_URL || (apiHost ? `${apiHost.replace(/\/$/, "")}/api/v1/` : undefined);
+
+// The API doesn't send CORS headers, so the dev server proxies it (vite.config.ts):
+// in dev, requests go to this origin under the same path.
+const platform_url = import.meta.env.DEV && apiUrl ? new URL(apiUrl).pathname : apiUrl;
 
 type ApiMethod = "get" | "post" | "put" | "delete";
 
@@ -51,6 +59,10 @@ export const apiRequest = async (
   data: any = null,
   responseType: "json" | "blob" = "json"
 ) => {
+  // A 401 only means "session expired" when there was a session. Without one it's
+  // a plain refusal (e.g. logging in with an email that has no account).
+  const hadSession = !!localStorage.getItem("token");
+
   try {
     // const requestHeaders = { ...headers };
     const response = await apiClient.request({
@@ -65,7 +77,7 @@ export const apiRequest = async (
       const code: number | undefined = body?.header?.code ?? body?.code;
       const message: string | undefined = body?.header?.message ?? body?.message;
 
-      if (code === 401) {
+      if (code === 401 && hadSession) {
         toast.error(getApiErrorMessage(401, message));
         handleSessionExpiration();
         return body;
@@ -91,10 +103,14 @@ export const apiRequest = async (
 
     const status: number | undefined =
       error?.status ?? error?.response?.status ?? error?.data?.code;
+    // The API answers errors as { code, message }
     const backendMessage: string | undefined =
-      error?.data?.header?.message ?? error?.response?.data?.header?.message;
+      error?.data?.header?.message ??
+      error?.data?.message ??
+      error?.response?.data?.header?.message ??
+      error?.response?.data?.message;
 
-    if (status === 401) {
+    if (status === 401 && hadSession) {
       const message401 = getApiErrorMessage(401, backendMessage);
       toast.error(message401);
       handleSessionExpiration();
