@@ -13,7 +13,7 @@ export function BookingDetailsCard({ booking }: { booking: Booking }) {
 
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-5">
-      <h2 className="text-base font-bold text-gray-900">Booking details</h2>
+      <h2 className="text-base font-bold text-gray-900">Booking Details</h2>
 
       {/* The booking itself, four across */}
       <DetailGrid details={bookingGroup.details} className="mt-3 lg:grid-cols-4" />
@@ -30,7 +30,7 @@ export function BookingDetailsCard({ booking }: { booking: Booking }) {
 
       {concern && (
         <div className="mt-3 border-t border-gray-100 pt-3">
-          <h3 className="text-xs font-semibold tracking-wide text-gray-400">Your concern</h3>
+          <h3 className="text-xs font-semibold tracking-wide text-gray-400">Your Concern</h3>
           <p className="mt-1.5 text-sm text-gray-900">{concern}</p>
         </div>
       )}

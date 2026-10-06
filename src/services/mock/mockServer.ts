@@ -253,17 +253,34 @@ function loadDb(): MockDb {
           booking.deliveryProgress = all(LEG_MILESTONES.delivery);
           booking.completedAt = at;
         }
-        // The advisor's single "checked in" update became inspecting + inspection done,
-        // and they now hand the vehicle over before the delivery valet takes it
+        // The advisor's single "checked in" update became "inspecting", and they
+        // now hand the vehicle over before the delivery valet takes it
         const advisorLog = booking.advisorProgress as Record<string, string> | undefined;
         if (advisorLog?.checkedIn) {
           advisorLog.inspecting ??= advisorLog.checkedIn;
-          advisorLog.inspected ??= advisorLog.checkedIn;
           delete advisorLog.checkedIn;
         }
         if (advisorLog && !advisorLog.readyForDispatch && booking.deliveryValet) {
           advisorLog.readyForDispatch = booking.payment?.updatedAt ?? booking.createdAt;
         }
+      });
+      // Saved before assignment times were recorded: the nearest known time stands in
+      saved.bookings.forEach((booking) => {
+        const at = booking.assignedAt ?? {};
+        if (booking.valet) {
+          at.pickup ??= booking.pickupProgress?.dispatched ?? booking.confirmedAt ?? booking.createdAt;
+        }
+        if (booking.relationshipManager) {
+          at.advisor ??=
+            booking.advisorProgress?.inspecting ?? booking.pickupProgress?.reached ?? booking.createdAt;
+        }
+        if (booking.deliveryValet) {
+          at.delivery ??=
+            booking.deliveryProgress?.dispatched ??
+            booking.advisorProgress?.readyForDispatch ??
+            booking.createdAt;
+        }
+        booking.assignedAt = at;
       });
       // DBs saved before the seed had its In-queue bookings
       const savedIds = new Set(saved.bookings.map((booking) => booking.id));
@@ -531,9 +548,7 @@ const pickupStatuses: Record<ValetMilestone, BookingStatus> = {
 
 const advisorStatuses: Record<AdvisorMilestone, BookingStatus> = {
   inspecting: BookingStatus.VEHICLE_ARRIVED,
-  inspected: BookingStatus.VEHICLE_ARRIVED,
   inService: BookingStatus.IN_SERVICE,
-  serviceDone: BookingStatus.IN_SERVICE,
   readyForDispatch: BookingStatus.VEHICLE_RETURN,
 };
 
@@ -556,6 +571,7 @@ function assignValet(booking: AdminBooking, leg: ValetLeg, valet: StaffMember) {
     throw new Error("This valet already has the vehicle, so they can't be changed.");
   }
 
+  booking.assignedAt = { ...booking.assignedAt, [leg]: clock() };
   // A new valet starts the trip over
   if (leg === "pickup") {
     booking.valet = { ...valet };
@@ -603,6 +619,7 @@ function assignAdvisor(booking: AdminBooking, advisor: StaffMember) {
     throw new Error("The vehicle has to reach the dealership before assigning an advisor.");
   }
   booking.relationshipManager = { ...advisor };
+  booking.assignedAt = { ...booking.assignedAt, advisor: clock() };
 }
 
 function markAdvisorMilestone(booking: AdminBooking, milestone: AdvisorMilestone) {
@@ -624,8 +641,8 @@ function markAdvisorMilestone(booking: AdminBooking, milestone: AdvisorMilestone
 
 function generateBill(booking: AdminBooking, items = standardItems(booking)) {
   assertNotComplete(booking);
-  if (!booking.advisorProgress?.serviceDone) {
-    throw new Error("Finish the service before generating the bill.");
+  if (!booking.advisorProgress?.inService) {
+    throw new Error("Start the service before generating the bill.");
   }
   booking.invoice ??= createInvoice(items);
   advanceStatusTo(booking, BookingStatus.BILL_GENERATED);

@@ -56,7 +56,7 @@ export function CompleteStep({ booking }: { booking: AdminBooking }) {
         />
         <div>
           <p className="text-base font-bold text-gray-900">
-            {complete ? "Service complete" : "Ready to complete"}
+            {complete ? "Service Complete" : "Ready to Complete"}
           </p>
           <p className="text-sm text-gray-600">
             {complete

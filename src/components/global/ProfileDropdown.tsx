@@ -111,7 +111,7 @@ export function ProfileDropdown() {
               className={cn(itemClass, "text-red-600 hover:bg-red-50")}
             >
               <Logout size={18} />
-              Log out
+              Log Out
             </button>
           </div>
         </div>

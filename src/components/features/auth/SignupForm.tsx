@@ -111,8 +111,8 @@ export function SignupForm({
         className="h-11 w-full rounded-lg bg-black text-sm font-semibold text-white transition hover:bg-gray-800 disabled:opacity-50"
       >
         {isSubmitting
-          ? "Creating account..."
-          : "Create account"}
+          ? "Creating Account..."
+          : "Create Account"}
       </button>
     </form>
   );

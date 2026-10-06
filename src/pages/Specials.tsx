@@ -7,7 +7,7 @@ export function Specials() {
       {/* Header */}
       <div className="mx-auto">
         <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-          Offers picked for you & your vehicle
+          Offers Picked for You & Your Vehicle
         </h1>
 
         {/* Offers */}

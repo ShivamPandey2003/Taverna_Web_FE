@@ -33,7 +33,7 @@ export function EmptyVehicleState({
 
         {/* Empty state */}
         <h2 className="mt-5 text-base font-semibold text-[#111827]">
-          No vehicles yet
+          No Vehicles Yet
         </h2>
 
         <p className="mt-1 text-sm text-[#9aa3b2]">

@@ -87,7 +87,7 @@ export function NotificationDropdown() {
                 disabled={unreadCount === 0}
                 className="text-sm font-medium text-gray-900 underline underline-offset-4 transition hover:text-black disabled:cursor-default disabled:opacity-40"
               >
-                Mark all read
+                Mark All Read
               </button>
             </div>
 

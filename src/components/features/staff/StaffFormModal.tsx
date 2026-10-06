@@ -140,7 +140,7 @@ function StaffForm({
           <button
             type="submit"
             disabled={saving}
-            className="h-10 rounded-lg bg-black px-5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-10 rounded-lg bg-black px-5 text-sm font-semibold capitalize text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? "Saving..." : member ? "Save Changes" : `Add ${roleLabel}`}
           </button>

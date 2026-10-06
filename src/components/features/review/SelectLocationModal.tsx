@@ -166,7 +166,7 @@ function SelectLocationContent({
 
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-gray-900">
-                  Use current location
+                  Use Current Location
                 </p>
 
                 <p className="line-clamp-1 text-sm text-gray-500">
@@ -181,7 +181,7 @@ function SelectLocationContent({
               />
             </button>
 
-            {/* Add address */}
+            {/* Add Address */}
             <button
               type="button"
               onClick={onAddAddress}
@@ -192,7 +192,7 @@ function SelectLocationContent({
               </LocationIcon>
 
               <span className="text-sm font-bold text-gray-900">
-                Add address
+                Add Address
               </span>
             </button>
           </div>

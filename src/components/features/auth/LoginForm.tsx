@@ -41,7 +41,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
       >
         {isSubmitting
           ? "Sending OTP..."
-          : "Continue with email"}
+          : "Continue with Email"}
       </button>
 
       <p className="text-center text-xs leading-5 text-gray-500">

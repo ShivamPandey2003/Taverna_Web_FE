@@ -5,35 +5,33 @@ import { VALET_LEGS, type AdvisorMilestone, type StaffBooking, type ValetLeg, ty
 // admin.utils.ts), so staff, admin and customer all see the same words.
 export const valetActions: Record<ValetLeg, Record<ValetMilestone, string>> = {
   pickup: {
-    dispatched: "Start trip to customer",
-    arrived: "I've arrived",
-    pickedUp: "Vehicle picked up",
-    enRoute: "Heading to dealership",
-    reached: "Arrived at dealership",
-    delivered: "Hand over to dealership",
+    dispatched: "Start Trip to Customer",
+    arrived: "I've Arrived",
+    pickedUp: "Vehicle Picked Up",
+    enRoute: "Heading to Dealership",
+    reached: "Arrived at Dealership",
+    delivered: "Hand Over to Dealership",
   },
   delivery: {
-    dispatched: "Start trip to dealership",
-    arrived: "I've arrived",
-    pickedUp: "Vehicle picked up",
-    enRoute: "Heading to customer",
-    reached: "Arrived at customer",
-    delivered: "Deliver to customer",
+    dispatched: "Start Trip to Customer",
+    arrived: "I've Arrived",
+    pickedUp: "Vehicle Picked Up",
+    enRoute: "Heading to Customer",
+    reached: "Arrived at Customer",
+    delivered: "Deliver to Customer",
   },
 };
 
 export const advisorActions: Record<AdvisorMilestone, string> = {
-  inspecting: "Start inspection",
-  inspected: "Finish inspection",
-  inService: "Start service",
-  serviceDone: "Finish service",
+  inspecting: "Start Inspection",
+  inService: "Start Service",
   // The last update, once the invoice is paid: unlocks the delivery valet
-  readyForDispatch: "Vehicle ready to dispatch",
+  readyForDispatch: "Vehicle Ready to Dispatch",
 };
 
 export const tripTitles: Record<ValetLeg, string> = {
-  pickup: "Pickup trip",
-  delivery: "Delivery trip",
+  pickup: "Pickup Trip",
+  delivery: "Delivery Trip",
 };
 
 export function isValetLeg(value: string | undefined): value is ValetLeg {

@@ -29,7 +29,7 @@ interface AdvisorStepProps {
 }
 
 // The advisor is the customer's contact while the vehicle is at the dealership:
-// assigned → inspecting → inspection done → service in progress → service done →
+// assigned → inspecting → service in progress →
 // invoice generated → payment confirmed → ready to dispatch. Each update shows up on
 // the customer's tracking page; the delivery valet stays locked until the last one.
 export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
@@ -46,15 +46,20 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
   const ready = !!progress[ADVISOR_HANDOVER];
 
   const milestones: Milestone[] = [
-    { key: "assigned", label: "Advisor assigned", done: !!advisor },
+    {
+      key: "assigned",
+      label: "Advisor Assigned",
+      done: !!advisor,
+      at: booking.assignedAt?.advisor,
+    },
     ...ADVISOR_MILESTONES.map((key) => ({
       key,
       label: advisorMilestoneLabels[key],
       done: !!progress[key],
       at: progress[key],
     })),
-    { key: "invoice", label: "Invoice generated", done: !!invoice, at: invoice?.issuedAt },
-    { key: "paid", label: "Payment confirmed", done: paid, at: payment?.updatedAt },
+    { key: "invoice", label: "Invoice Generated", done: !!invoice, at: invoice?.issuedAt },
+    { key: "paid", label: "Payment Confirmed", done: paid, at: payment?.updatedAt },
     {
       key: ADVISOR_HANDOVER,
       label: advisorMilestoneLabels[ADVISOR_HANDOVER],
@@ -116,7 +121,7 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
       {advisor && (
         <SectionCard>
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-            <h3 className="text-sm font-bold text-gray-900">Service progress</h3>
+            <h3 className="text-sm font-bold text-gray-900">Service Progress</h3>
             {/* <p className="text-xs text-gray-500">Each update is shared with the customer.</p> */}
           </div>
 
@@ -173,7 +178,7 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
             pending={updateProgress.isPending}
             onClick={() => mark(ADVISOR_HANDOVER)}
           >
-            Mark “Vehicle ready to dispatch”
+            Mark “Vehicle Ready to Dispatch”
           </ActionButton>
         </>
       )}
@@ -181,7 +186,7 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
       {ready && (
         <StepDone
           text={`Vehicle ready to dispatch since ${formatDateTime(progress[ADVISOR_HANDOVER] ?? null)}`}
-          actionLabel={isComplete(booking) ? undefined : "Next: Assign delivery valet"}
+          actionLabel={isComplete(booking) ? undefined : "Next: Assign Delivery Valet"}
           onAction={onDone}
         />
       )}

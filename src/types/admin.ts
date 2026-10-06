@@ -85,7 +85,7 @@ export const TRIP_END: Record<ValetLeg, ValetMilestone> = {
 // Updates the advisor shares with the customer while the vehicle is serviced, in
 // order. The bill and payment that follow come from `invoice` and `payment`; then
 // the advisor hands the vehicle over for the delivery valet (`ADVISOR_HANDOVER`).
-export const ADVISOR_MILESTONES = ["inspecting", "inspected", "inService", "serviceDone"] as const;
+export const ADVISOR_MILESTONES = ["inspecting", "inService"] as const;
 export const ADVISOR_HANDOVER = "readyForDispatch";
 export type AdvisorMilestone = (typeof ADVISOR_MILESTONES)[number] | typeof ADVISOR_HANDOVER;
 
@@ -131,6 +131,9 @@ export interface AdminBooking {
   // Brings the vehicle back once the bill is paid
   deliveryValet?: StaffMember | null;
   deliveryProgress?: MilestoneLog<ValetMilestone>;
+  // When each valet / the advisor was assigned (ISO strings), for the first
+  // step of their progress
+  assignedAt?: Partial<Record<StaffLinkRole, string>>;
   completedAt?: string | null;
   // Token that goes in each staff link (see staffLink in admin.utils.ts). Only
   // admin responses carry it; it's what signs the valet / advisor in.

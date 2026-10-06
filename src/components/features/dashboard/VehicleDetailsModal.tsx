@@ -129,7 +129,7 @@ export function VehicleDetailsModal() {
             onClick={onNotMyVehicle}
             className="mt-4 block w-full text-center text-sm font-semibold text-gray-700 transition hover:text-gray-900"
           >
-            Not your vehicle
+            Not Your Vehicle
           </button>
         </div>
       </div>

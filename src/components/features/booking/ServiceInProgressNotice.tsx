@@ -18,7 +18,7 @@ export function ServiceInProgressNotice() {
     <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-orange-200 bg-orange-50 p-5">
       <div className="min-w-0">
         <h2 className="flex items-center gap-2 text-base font-bold text-gray-900">
-          You have a service in progress
+          You Have a Service in Progress
           {service && (
             <span
               className={cn(

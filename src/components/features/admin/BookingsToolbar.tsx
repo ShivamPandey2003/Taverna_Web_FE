@@ -64,7 +64,7 @@ export function BookingsToolbar() {
           onClick={() => dispatch(resetFilters())}
           className="h-9 rounded-lg px-3 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
         >
-          Clear filters
+          Clear Filters
         </button>
       )}
     </div>

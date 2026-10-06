@@ -63,7 +63,7 @@ function ValetTrip({
   const { valet, progress } = valetTrip(booking, leg);
   // The valet reads the first two steps as their own trip, not as the admin's
   // "Valet assigned" / "Valet dispatched"
-  const labels = { ...valetMilestoneLabels[leg], dispatched: "Trip started" };
+  const labels = { ...valetMilestoneLabels[leg], dispatched: "Trip Started" };
   // The trip's date and time: when the customer asked to be picked up, or since
   // when the serviced vehicle has been ready to go back
   const readyAt = booking.advisorProgress?.[ADVISOR_HANDOVER];
@@ -91,7 +91,7 @@ function ValetTrip({
   }
 
   const milestones: Milestone[] = [
-    { key: "assigned", label: "Trip assigned", done: true },
+    { key: "assigned", label: "Trip Assigned", done: true, at: booking.assignedAt?.[leg] },
     ...LEG_MILESTONES[leg].map((key) => ({
       key,
       label: labels[key],
@@ -177,7 +177,7 @@ function TripDone({
   deliveredAt?: string;
 }) {
   return (
-    <StateScreen tone="success" icon={<CheckCircle size={32} />} title="Trip complete">
+    <StateScreen tone="success" icon={<CheckCircle size={32} />} title="Trip Complete">
       {leg === "pickup"
         ? `The vehicle arrived at ${booking.dealershipName}`
         : `The vehicle was delivered to ${booking.customer.name}`}
@@ -190,7 +190,7 @@ function TripDone({
 function NotAssigned({ booking, leg }: { booking: StaffBooking; leg: ValetLeg }) {
   if (isComplete(booking)) {
     return (
-      <StateScreen tone="success" icon={<CheckCircle size={32} />} title="Service complete">
+      <StateScreen tone="success" icon={<CheckCircle size={32} />} title="Service Complete">
         Booking {booking.id} is finished. Nothing else to do here.
       </StateScreen>
     );
@@ -199,7 +199,7 @@ function NotAssigned({ booking, leg }: { booking: StaffBooking; leg: ValetLeg })
   // The delivery trip can only start once the advisor marks the paid-up vehicle ready
   if (leg === "delivery" && !booking.advisorProgress?.[ADVISOR_HANDOVER]) {
     return (
-      <StateScreen tone="pending" icon={<Hourglass size={30} />} title="Vehicle still in service">
+      <StateScreen tone="pending" icon={<Hourglass size={30} />} title="Vehicle Still in Service">
         The vehicle is at {booking.dealershipName}. The delivery trip opens once the service is
         paid for and the advisor marks the vehicle ready to dispatch. This page updates by itself.
       </StateScreen>
@@ -207,7 +207,7 @@ function NotAssigned({ booking, leg }: { booking: StaffBooking; leg: ValetLeg })
   }
 
   return (
-    <StateScreen icon={<UserCircle size={30} />} title="No valet assigned yet">
+    <StateScreen icon={<UserCircle size={30} />} title="No Valet Assigned Yet">
       The Taverna team hasn't assigned the {tripTitles[leg].toLowerCase()} for booking {booking.id}{" "}
       yet. This page updates by itself.
     </StateScreen>

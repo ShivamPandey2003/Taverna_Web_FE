@@ -1,5 +1,6 @@
 import { NavLink } from "react-router";
 import { cn } from "@/libs/utils";
+import { Logo } from "@/components/ui/Logo";
 import { useAppSelector } from "@/redux/hooks";
 import { selectIsAdmin } from "@/redux/auth/authSlice";
 import { NotificationDropdown } from "./Notification/NotificationDropdown";
@@ -13,22 +14,7 @@ export function Navbar() {
     <header className="h-[60px] border-b border-gray-200 bg-white">
       <div className="flex h-full items-center justify-between gap-4 px-6">
 
-        {/* Logo */}
-        <div className="flex items-center gap-4">
-          <div className="relative flex h-10 w-10 items-center justify-center">
-            <span className="font-serif text-4xl leading-none text-black">
-              T
-            </span>
-
-            <span className="absolute left-1/2 top-0 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-primary" />
-
-            <span className="absolute bottom-1 left-1/2 h-0.5 w-5 -translate-x-1/2 bg-primary" />
-          </div>
-
-          <span className="text-2xl font-bold tracking-tight">
-            Taverna
-          </span>
-        </div>
+        <Logo />
 
         {/* Page links for the logged-in role (there is no sidebar) */}
         <NavLinks items={isAdmin ? adminNavigation : customerNavigation} />

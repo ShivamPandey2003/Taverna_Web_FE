@@ -2,6 +2,8 @@ import { Outlet, useMatch } from "react-router";
 import { WifiOff } from "reicon-react";
 import { valetTrip } from "@/components/features/admin/admin.utils";
 import { isValetLeg } from "@/components/features/staffPortal/shared/workflow";
+import { Logo } from "@/components/ui/Logo";
+import { cn } from "@/libs/utils";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useStaffBooking } from "@/services/queries/staffQueries";
 
@@ -27,17 +29,13 @@ function useStaffName() {
 export function StaffLayout() {
   const online = useOnlineStatus();
   const staffName = useStaffName();
+  const wide = !!useMatch("/advisor/:bookingId/:token");
 
   return (
-    <div className="staff-app min-h-dvh bg-section text-text">
+    <div className={cn("staff-app min-h-dvh bg-section text-text", wide && "staff-wide")}>
       <header className="sticky top-0 z-20 border-b border-border bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-[560px] items-center justify-between gap-3 px-4">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-sm font-extrabold text-white">
-              T
-            </span>
-            <span className="text-[17px] font-extrabold tracking-tight">Taverna</span>
-          </div>
+        <div className="mx-auto flex h-14 w-full max-w-[var(--staff-width)] items-center justify-between gap-3 px-4">
+          <Logo />
           <span className="chip chip-muted min-w-0">
             <span className="truncate">{staffName ?? "Staff"}</span>
           </span>

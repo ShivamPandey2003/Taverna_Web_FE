@@ -30,7 +30,7 @@ export function ConfirmStep({ booking, onDone }: ConfirmStepProps) {
       {booking.confirmedAt ? (
         <StepDone
           text={`Confirmed on ${formatDateTime(booking.confirmedAt)}`}
-          actionLabel={isComplete(booking) ? undefined : "Next: Assign pickup valet"}
+          actionLabel={isComplete(booking) ? undefined : "Next: Assign Pickup Valet"}
           onAction={onDone}
         />
       ) : (
