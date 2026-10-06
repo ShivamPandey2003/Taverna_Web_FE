@@ -51,7 +51,7 @@ export function BookingWorkflowDrawer() {
       title={
         <>
           <h2>Manage Booking</h2>
-          {booking && <BookingStatusBadge status={booking.status} />}
+          {booking && <BookingStatusBadge status={booking.status} size="md" />}
         </>
       }
       subtitle={

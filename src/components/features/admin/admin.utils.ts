@@ -67,8 +67,8 @@ export const valetMilestoneLabels: Record<ValetLeg, Record<ValetMilestone, strin
 
 // Updates the advisor shares with the customer
 export const advisorMilestoneLabels: Record<AdvisorMilestone, string> = {
-  inspecting: "Inspecting Car",
-  inService: "Service in Progress",
+  inspecting: "Vehicle in Inspection",
+  inService: "Vehicle in Service",
   readyForDispatch: "Ready to Dispatch",
 };
 

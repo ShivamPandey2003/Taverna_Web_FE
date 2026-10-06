@@ -21,7 +21,7 @@ export function BookingsToolbar() {
       <SearchInput
         value={search}
         onSearch={(value) => dispatch(setSearch(value))}
-        placeholder="Search by booking ID, customer, email, phone or VIN"
+        placeholder="Search by booking id, customer name and phone no"
       />
 
       {/* Status */}

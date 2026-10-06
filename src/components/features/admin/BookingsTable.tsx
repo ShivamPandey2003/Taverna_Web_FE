@@ -29,6 +29,13 @@ const columns: { label: string; sortField?: BookingSortField }[] = [
   { label: "Actions" },
 ];
 
+// A Book Now booking has no scheduled time: the pickup is expected this long
+// after it was made
+const ASAP_PICKUP_MINUTES = 45;
+
+const asapPickupTime = (createdAt: string) =>
+  new Date(new Date(createdAt).getTime() + ASAP_PICKUP_MINUTES * 60_000).toISOString();
+
 export function BookingsTable() {
   const dispatch = useAppDispatch();
   const params = useAppSelector(selectBookingListParams);
@@ -49,7 +56,14 @@ export function BookingsTable() {
           <thead className="sticky top-0 border-b border-gray-200 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
             <tr>
               {columns.map((column) => (
-                <th key={column.label} className="whitespace-nowrap px-4 py-2.5">
+                <th
+                  key={column.label}
+                  className={cn(
+                    "whitespace-nowrap px-4 py-2.5",
+                    // Sits over the centred Manage button
+                    column.label === "Actions" && "text-center",
+                  )}
+                >
                   {column.sortField ? (
                     <SortButton
                       label={column.label}
@@ -146,14 +160,14 @@ export function BookingsTable() {
                 </td> */}
 
                 <td className="whitespace-nowrap px-4 py-2 text-gray-700">
-                  {booking.scheduledAt ? formatShortDateTime(booking.scheduledAt) : "ASAP"}
+                  {formatShortDateTime(booking.scheduledAt ?? asapPickupTime(booking.createdAt))}
                 </td>
 
                 <td className="px-4 py-2">
                   <BookingStatusBadge status={booking.status} />
                 </td>
 
-                <td className="px-4 py-2 text-right">
+                <td className="px-4 py-2 text-center">
                   <button
                     type="button"
                     onClick={(event) => {

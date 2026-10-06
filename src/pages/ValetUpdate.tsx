@@ -90,15 +90,14 @@ function ValetTrip({
     );
   }
 
-  const milestones: Milestone[] = [
-    { key: "assigned", label: "Trip Assigned", done: true, at: booking.assignedAt?.[leg] },
-    ...LEG_MILESTONES[leg].map((key) => ({
-      key,
-      label: labels[key],
-      done: !!progress[key],
-      at: progress[key],
-    })),
-  ];
+  // Starts at "Trip Started": being assigned isn't a step the valet takes (the
+  // admin's tracker still shows it)
+  const milestones: Milestone[] = LEG_MILESTONES[leg].map((key) => ({
+    key,
+    label: labels[key],
+    done: !!progress[key],
+    at: progress[key],
+  }));
 
   // Until the valet arrives they head to the start; once they have the vehicle, to the end
   // (the delivery trip has no "arrived" update, so there it's until they pick it up)
@@ -124,7 +123,7 @@ function ValetTrip({
       <div className={next ? "page-body page-body-with-action" : "page-body pb-8"}>
         {/* First thing on the page: where the trip stands */}
         <section className="card">
-          <p className="eyebrow mb-4">Trip progress</p>
+          <p className="eyebrow mb-4">PICKUP PROGRESS</p>
           <MilestoneTimeline milestones={milestones} direction="horizontal" />
         </section>
 
