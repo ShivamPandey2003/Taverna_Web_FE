@@ -21,7 +21,8 @@ export function MilestoneTracker({ milestones }: MilestoneTrackerProps) {
   const nextIndex = milestones.findIndex((milestone) => !milestone.done);
 
   return (
-    <div className="-mx-1 overflow-x-auto px-1 pb-1">
+    // Padded so the scroll area doesn't clip the halo around the step that's up next
+    <div className="-mx-2 -mt-2 overflow-x-auto px-2 pb-1 pt-2">
       <ol className="flex w-full min-w-max items-start">
         {milestones.map((milestone, index) => {
           const isNext = index === nextIndex;
@@ -45,7 +46,7 @@ export function MilestoneTracker({ milestones }: MilestoneTrackerProps) {
                     milestone.done
                       ? "border-status-active bg-status-active/10 text-status-active"
                       : isNext
-                        ? "border-status-pending bg-status-pending/10 text-status-pending ring-4 ring-status-pending/15"
+                        ? "border-status-pending bg-status-pending/10 text-status-pending ring-4 ring-status-pending/15 motion-safe:animate-step-pulse"
                         : "border-gray-200 bg-gray-50 text-gray-400",
                   )}
                   aria-label={milestone.done ? "Done" : isNext ? "Up next" : "Not yet"}
