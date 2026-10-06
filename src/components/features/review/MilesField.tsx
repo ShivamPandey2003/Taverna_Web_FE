@@ -84,7 +84,7 @@ export function MilesField({ vehicle }: { vehicle: Vehicle }) {
           onClick={() => setDraft("")}
           className="text-xs font-semibold text-gray-900 underline underline-offset-4 transition hover:text-black"
         >
-          Add miles
+          Add Miles
         </button>
       )}
     </p>

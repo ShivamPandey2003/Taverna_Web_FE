@@ -6,6 +6,7 @@ import {
   Garage,
   Invoice,
   People,
+  Routing,
   Setting2,
   TickCircle,
   UserTick,
@@ -31,6 +32,7 @@ export const statusIcons: Record<BookingStatus, typeof People> = {
   [BookingStatus.IN_QUEUE]: People,
   [BookingStatus.BOOKED]: CalendarTick,
   [BookingStatus.VALET_ASSIGNED]: UserTick,
+  [BookingStatus.VALET_ON_ROAD]: Routing,
   [BookingStatus.VEHICLE_PICKED_UP]: Car,
   [BookingStatus.VEHICLE_ARRIVED]: Garage,
   [BookingStatus.IN_SERVICE]: Setting2,
@@ -66,7 +68,9 @@ function getStatusText(status: BookingStatus, etaMinutes?: number | null): Omit<
     case BookingStatus.BOOKED:
       return { label: "Confirmed", message: "Your booking is confirmed" };
     case BookingStatus.VALET_ASSIGNED:
-      return { label: "Valet assigned", message: "Your valet is on the way", etaMinutes: eta };
+      return { label: "Valet assigned", message: "Your valet has been assigned", etaMinutes: eta };
+    case BookingStatus.VALET_ON_ROAD:
+      return { label: "On the way", message: "Your valet is on the way", etaMinutes: eta };
     case BookingStatus.VEHICLE_PICKED_UP:
       return { label: "Picked up", message: "Your vehicle is headed to the dealership" };
     case BookingStatus.VEHICLE_ARRIVED:

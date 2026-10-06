@@ -1,5 +1,6 @@
 import { Check } from "reicon-react";
-import { cn, formatTime } from "@/libs/utils";
+import { cn } from "@/libs/utils";
+import { formatShortDateTime } from "@/components/features/admin/admin.utils";
 
 export interface Milestone {
   key: string;
@@ -71,7 +72,7 @@ export function MilestoneTimeline({ milestones, direction = "vertical" }: Milest
 
               {milestone.at && (
                 <time dateTime={milestone.at} className="mt-0.5 text-[10px] text-text-secondary">
-                  {formatTime(milestone.at)}
+                  {formatShortDateTime(milestone.at)}
                 </time>
               )}
             </li>
@@ -127,7 +128,7 @@ export function MilestoneTimeline({ milestones, direction = "vertical" }: Milest
 
               {milestone.at ? (
                 <time dateTime={milestone.at} className="shrink-0 text-xs text-text-secondary">
-                  {formatTime(milestone.at)}
+                  {formatShortDateTime(milestone.at)}
                 </time>
               ) : (
                 isNext && <span className="chip chip-pending shrink-0">Up next</span>

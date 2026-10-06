@@ -30,8 +30,8 @@ const legDescriptions: Record<ValetLeg, string> = {
 };
 
 const nextStepLabels: Record<ValetLeg, string> = {
-  pickup: "Next: Assign advisor",
-  delivery: "Next: Complete service",
+  pickup: "Next: Assign Advisor",
+  delivery: "Next: Complete Service",
 };
 
 // Assign a valet, share their link, and follow the trip milestone by milestone.
@@ -54,7 +54,7 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
       : undefined;
 
   const milestones: Milestone[] = [
-    { key: "assigned", label: "Valet assigned", done: !!valet },
+    { key: "assigned", label: "Valet Assigned", done: !!valet, at: booking.assignedAt?.[leg] },
     ...LEG_MILESTONES[leg].map((key) => ({
       key,
       label: labels[key],
@@ -97,7 +97,7 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
         // Swapping a valet who's already on the way restarts the trip
         changeWarning={
           progress.dispatched
-            ? `${valet?.name} is already on the way. Changing the valet starts this trip over from "Valet assigned".`
+            ? `${valet?.name} is already on the way. Changing the valet starts this trip over from "Valet Assigned".`
             : undefined
         }
         onAssign={assign}
@@ -107,7 +107,7 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
       {valet && (
         <SectionCard>
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-            <h3 className="text-sm font-bold text-gray-900">Trip progress</h3>
+            <h3 className="text-sm font-bold text-gray-900">Trip Progress</h3>
             <p className="text-xs text-gray-500">
               {/* {complete
                 ? "Posted by the valet from their link."

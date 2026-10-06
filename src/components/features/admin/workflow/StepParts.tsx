@@ -121,6 +121,8 @@ export function AssignmentRow({
   const [picked, setPicked] = useState<StaffMember | null>(null);
   const closeConfirm = () => setPicked(null);
   const warning = assigned ? changeWarning : undefined;
+  // "valet" -> "Valet", for the confirm button
+  const roleTitle = staffRoleLabels[role].replace(/^./, (letter) => letter.toUpperCase());
 
   return (
     <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_auto]">
@@ -143,9 +145,9 @@ export function AssignmentRow({
 
       {picked && (
         <ConfirmModal
-          title={`${assigned ? "Change" : "Assign"} ${title.toLowerCase()}?`}
+          title={`${assigned ? "Change" : "Assign"} ${title}`}
           subtitle={`${booking.id} · ${booking.customer.name}`}
-          confirmLabel={assigned ? `Change ${staffRoleLabels[role]}` : `Assign ${staffRoleLabels[role]}`}
+          confirmLabel={`${assigned ? "Change" : "Assign"} ${roleTitle}`}
           pendingLabel={assigned ? "Changing..." : "Assigning..."}
           pending={saving}
           tone={warning ? "danger" : "primary"}
@@ -530,7 +532,7 @@ function StaffSelect({
           <button
             type="button"
             onClick={handleAdd}
-            className="flex w-full items-center gap-2 border-t border-gray-100 px-4 py-2.5 text-sm font-semibold text-gray-900 transition hover:bg-gray-50"
+            className="flex w-full items-center gap-2 border-t border-gray-100 px-4 py-2.5 text-sm font-semibold capitalize text-gray-900 transition hover:bg-gray-50"
           >
             <Plus size={15} strokeWidth={2.5} />
             Add new {roleLabel}

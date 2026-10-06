@@ -1,5 +1,6 @@
 import { siteConfig } from "@/config/site.config";
 import { Container } from "@/components/ui/Container";
+import { Logo } from "@/components/ui/Logo";
 import { useNavigate } from "react-router";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectSession, setAuthMode, type AuthMode } from "@/redux/auth/authSlice";
@@ -20,12 +21,8 @@ export function Navbar() {
       <Container>
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <a href="/" className="flex items-center gap-3">
-            <div className="flex h-7 w-7 items-center justify-center text-lg font-bold">
-              <span className="text-primary">T</span>
-            </div>
-
-            <span className="text-lg font-bold">{siteConfig.name}</span>
+          <a href="/" aria-label={`${siteConfig.name} home`}>
+            <Logo />
           </a>
 
           {/* Navigation */}
@@ -53,7 +50,7 @@ export function Navbar() {
             ) : (
               <>
                 <button onClick={() => openAuth("login")} className="text-sm font-semibold cursor-pointer">
-                  Log in
+                  Log In
                 </button>
 
                 <button

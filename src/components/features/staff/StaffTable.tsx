@@ -84,7 +84,7 @@ export function StaffTable({ role }: { role: StaffRole }) {
                     onClick={() => refetch()}
                     className="mt-3 text-sm font-semibold text-gray-900 underline underline-offset-4 hover:text-black"
                   >
-                    Try again
+                    Try Again
                   </button>
                 </td>
               </tr>

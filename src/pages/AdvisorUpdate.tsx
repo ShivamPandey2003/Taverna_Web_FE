@@ -9,7 +9,6 @@ import { BillForm } from "@/components/features/staffPortal/advisor/BillForm";
 import { BookingError, WrongLink } from "@/components/features/staffPortal/shared/BookingError";
 import { BookingHero } from "@/components/features/staffPortal/shared/BookingHero";
 import { BookingSkeleton } from "@/components/features/staffPortal/shared/BookingSkeleton";
-import { CustomerCard } from "@/components/features/staffPortal/shared/CustomerCard";
 import { MilestoneTimeline, type Milestone } from "@/components/features/staffPortal/shared/MilestoneTimeline";
 import { StatusChip } from "@/components/features/staffPortal/shared/StatusChip";
 import { staffToast } from "@/components/features/staffPortal/shared/staffToast";
@@ -21,7 +20,7 @@ import {
   valetMilestoneLabels,
   valetTrip,
 } from "@/components/features/admin/admin.utils";
-import { firstName, formatTime } from "@/libs/utils";
+import { firstName, formatPickupTime, formatTime } from "@/libs/utils";
 import {
   useStaffAdvisorProgress,
   useStaffBooking,
@@ -49,7 +48,7 @@ export function AdvisorUpdate() {
   return <AdvisorService booking={booking.data} link={link} />;
 }
 
-// Inspecting → inspection done → service in progress → service done, then fill in and
+// Inspecting → service in progress, then fill in and
 // generate the invoice, which ends the advisor's part: the payment and the handover
 // for delivery are the admin's. Every update shows up on the customer's tracking page.
 function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffLinkParams }) {
@@ -80,14 +79,15 @@ function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffL
   }
 
   const milestones: Milestone[] = [
-    { key: "assigned", label: "Advisor assigned", done: true },
+    // "Advisor assigned" on the admin side; here the advisor reads it as their own job
+    { key: "assigned", label: "Vehicle Assigned", done: true, at: booking.assignedAt?.advisor },
     ...ADVISOR_MILESTONES.map((key) => ({
       key,
       label: advisorMilestoneLabels[key],
       done: !!progress[key],
       at: progress[key],
     })),
-    { key: "invoice", label: "Invoice generated", done: !!invoice, at: invoice?.issuedAt },
+    { key: "invoice", label: "Invoice Generated", done: !!invoice, at: invoice?.issuedAt },
   ];
   const hasAction = !!next || canGenerateBill;
 
@@ -120,8 +120,10 @@ function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffL
         </section>
 
         <BookingHero
-          title="Service updates"
+          title="Service Updates"
           booking={booking}
+          columns
+          when={{ label: "Booking date", value: formatPickupTime(booking.createdAt) }}
           status={
             ready || complete ? (
               <StatusChip tone="active">Done</StatusChip>
@@ -129,12 +131,8 @@ function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffL
               <StatusChip tone="active">Paid</StatusChip>
             ) : invoice ? (
               <StatusChip tone="pending">Awaiting payment</StatusChip>
-            ) : progress.serviceDone ? (
-              <StatusChip tone="pending">Invoice to generate</StatusChip>
             ) : progress.inService ? (
               <StatusChip tone="active">In service</StatusChip>
-            ) : progress.inspected ? (
-              <StatusChip tone="active">Inspection done</StatusChip>
             ) : progress.inspecting ? (
               <StatusChip tone="active">Inspecting</StatusChip>
             ) : (
@@ -157,7 +155,6 @@ function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffL
 
         {invoice && <BillCard invoice={invoice} paid={paid} />}
 
-        <CustomerCard customer={booking.customer} />
       </div>
 
       {hasAction && (
@@ -173,7 +170,7 @@ function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffL
             ) : (
               <HoldToConfirm
                 key="bill"
-                label="Generate invoice"
+                label="Generate Invoice"
                 pendingLabel="Generating..."
                 pending={generateInvoice.isPending}
                 disabled={!billReady}
@@ -206,7 +203,7 @@ function DoneSummary({
     <StateScreen
       tone="success"
       icon={<CheckCircle size={32} />}
-      title={isComplete(booking) ? "Service complete" : "All done on your side"}
+      title={isComplete(booking) ? "Service Complete" : "All Done on Your Side"}
     >
       {paidAt && `Paid ${formatTime(paidAt)}. `}
       {isComplete(booking)
@@ -225,7 +222,7 @@ function DoneSummary({
 function NotAssigned({ booking }: { booking: StaffBooking }) {
   if (isComplete(booking)) {
     return (
-      <StateScreen tone="success" icon={<CheckCircle size={32} />} title="Service complete">
+      <StateScreen tone="success" icon={<CheckCircle size={32} />} title="Service Complete">
         Booking {booking.id} is finished. Nothing else to do here.
       </StateScreen>
     );
@@ -236,7 +233,7 @@ function NotAssigned({ booking }: { booking: StaffBooking }) {
   if (!progress.reached) {
     const reached = [...VALET_MILESTONES].reverse().find((key) => progress[key]);
     return (
-      <StateScreen tone="pending" icon={<Driving size={30} />} title="Vehicle on its way">
+      <StateScreen tone="pending" icon={<Driving size={30} />} title="Vehicle on Its Way">
         {valet
           ? `${valet.name} is bringing the ${booking.vehicle.model} to ${booking.dealershipName}${reached ? ` (${valetMilestoneLabels.pickup[reached].toLowerCase()})` : ""}.`
           : `The ${booking.vehicle.model} hasn't been collected yet.`}{" "}
@@ -246,7 +243,7 @@ function NotAssigned({ booking }: { booking: StaffBooking }) {
   }
 
   return (
-    <StateScreen icon={<UserCircle size={30} />} title="No advisor assigned yet">
+    <StateScreen icon={<UserCircle size={30} />} title="No Advisor Assigned Yet">
       The vehicle is at {booking.dealershipName}. The Taverna team hasn't assigned an advisor for
       booking {booking.id} yet. This page updates by itself.
     </StateScreen>

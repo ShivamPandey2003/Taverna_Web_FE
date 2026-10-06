@@ -19,6 +19,8 @@ interface StaffFormModalProps {
   onClose: () => void;
   // Renders above another open modal
   stacked?: boolean;
+  // Covers only the nearest positioned parent (e.g. the drawer) instead of the whole screen
+  contained?: boolean;
 }
 
 export function StaffFormModal({ open, ...props }: StaffFormModalProps) {
@@ -36,6 +38,7 @@ function StaffForm({
   defaultName = "",
   onClose,
   stacked,
+  contained,
 }: Omit<StaffFormModalProps, "open">) {
   const createStaff = useCreateStaff(role);
   const updateStaff = useUpdateStaff(role);
@@ -87,6 +90,7 @@ function StaffForm({
       onClose={onClose}
       width="max-w-[440px]"
       stacked={stacked}
+      contained={contained}
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <FormField label="Full name" htmlFor="staff-name" error={errors.name?.message}>
@@ -136,7 +140,7 @@ function StaffForm({
           <button
             type="submit"
             disabled={saving}
-            className="h-10 rounded-lg bg-black px-5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-10 rounded-lg bg-black px-5 text-sm font-semibold capitalize text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saving ? "Saving..." : member ? "Save Changes" : `Add ${roleLabel}`}
           </button>

@@ -24,6 +24,7 @@ import {
   selectHomeModal,
 } from "@/redux/modals/homeModal/homeModalSlice";
 import { authApi } from "@/services/authApi";
+import { X } from "reicon-react";
 
 export function AuthModal() {
   const dispatch = useAppDispatch();
@@ -86,16 +87,17 @@ export function AuthModal() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
 
-      {/* Modal */}
-      <div className="relative flex max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+      {/* Modal. Never shorter than it is with the login form (about 420px), so a
+          shorter step like the OTP one doesn't make it shrink. */}
+      <div className="relative flex max-h-[90vh] min-h-[min(420px,90vh)] w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
 
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow-sm transition hover:bg-white hover:text-black"
+          className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-600 transition hover:bg-white hover:text-black"
           aria-label="Close"
         >
-          ×
+          <X size={16}/>
         </button>
 
         {/* IMAGE */}
@@ -123,7 +125,7 @@ export function AuthModal() {
             </div>
 
             <h2 className="max-w-sm text-3xl font-bold leading-tight">
-              Your car deserves concierge-level care.
+              Your Car Deserves Concierge-Level Care.
             </h2>
 
             <p className="mt-3 max-w-sm text-sm leading-5 text-white/80">
@@ -148,8 +150,8 @@ export function AuthModal() {
 
                   <h1 className="mt-2 text-3xl font-bold tracking-tight text-gray-950">
                     {mode === "login"
-                      ? "Welcome back"
-                      : "Create your account"}
+                      ? "Welcome Back"
+                      : "Create Your Account"}
                   </h1>
 
                   <p className="mt-2 text-sm text-gray-500">
@@ -170,7 +172,7 @@ export function AuthModal() {
                         : "text-gray-500"
                     }`}
                   >
-                    Log in
+                    Log In
                   </button>
 
                   <button
@@ -182,7 +184,7 @@ export function AuthModal() {
                         : "text-gray-500"
                     }`}
                   >
-                    Sign up
+                    Sign Up
                   </button>
                 </div>
 

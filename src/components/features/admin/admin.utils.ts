@@ -48,35 +48,33 @@ export function formatCurrency(amount: number) {
 // ones in LEG_MILESTONES.pickup.
 export const valetMilestoneLabels: Record<ValetLeg, Record<ValetMilestone, string>> = {
   pickup: {
-    dispatched: "Valet dispatched",
-    arrived: "Arrived at customer",
-    pickedUp: "Picked up vehicle",
-    enRoute: "Heading to dealership",
-    reached: "Arrived at dealership",
-    delivered: "Handed to dealership",
+    dispatched: "Valet Dispatched",
+    arrived: "Arrived at Customer",
+    pickedUp: "Picked Up Vehicle",
+    enRoute: "Heading to Dealership",
+    reached: "Arrived at Dealership",
+    delivered: "Handed to Dealership",
   },
   delivery: {
-    dispatched: "Valet dispatched",
-    arrived: "Arrived at dealership",
-    pickedUp: "Picked up vehicle",
-    enRoute: "Heading to customer",
-    reached: "Arrived at customer",
-    delivered: "Delivered to customer",
+    dispatched: "Valet Dispatched",
+    arrived: "Arrived at Dealership",
+    pickedUp: "Picked Up Vehicle",
+    enRoute: "Heading to Customer",
+    reached: "Arrived at Customer",
+    delivered: "Delivered to Customer",
   },
 };
 
 // Updates the advisor shares with the customer
 export const advisorMilestoneLabels: Record<AdvisorMilestone, string> = {
-  inspecting: "Inspecting car",
-  inspected: "Inspection done",
-  inService: "Service in progress",
-  serviceDone: "Service done",
-  readyForDispatch: "Ready to dispatch",
+  inspecting: "Vehicle in Inspection",
+  inService: "Vehicle in Service",
+  readyForDispatch: "Ready to Dispatch",
 };
 
 export const legTitles: Record<ValetLeg, string> = {
-  pickup: "Pickup valet",
-  delivery: "Delivery valet",
+  pickup: "Pickup Valet",
+  delivery: "Delivery Valet",
 };
 
 // The valet and milestone log of one trip
