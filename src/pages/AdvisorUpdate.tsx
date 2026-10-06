@@ -21,7 +21,7 @@ import {
   valetMilestoneLabels,
   valetTrip,
 } from "@/components/features/admin/admin.utils";
-import { firstName, formatTime } from "@/libs/utils";
+import { firstName, formatPickupTime, formatTime } from "@/libs/utils";
 import {
   useStaffAdvisorProgress,
   useStaffBooking,
@@ -80,7 +80,8 @@ function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffL
   }
 
   const milestones: Milestone[] = [
-    { key: "assigned", label: "Advisor assigned", done: true },
+    // "Advisor assigned" on the admin side; here the advisor reads it as their own job
+    { key: "assigned", label: "Vehicle assigned", done: true },
     ...ADVISOR_MILESTONES.map((key) => ({
       key,
       label: advisorMilestoneLabels[key],
@@ -122,6 +123,7 @@ function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffL
         <BookingHero
           title="Service updates"
           booking={booking}
+          when={{ label: "Booking date", value: formatPickupTime(booking.createdAt) }}
           status={
             ready || complete ? (
               <StatusChip tone="active">Done</StatusChip>
@@ -143,6 +145,8 @@ function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffL
           }
         />
 
+        <CustomerCard customer={booking.customer} />
+
         {(invoice || complete) && (
           <DoneSummary
             booking={booking}
@@ -157,7 +161,6 @@ function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffL
 
         {invoice && <BillCard invoice={invoice} paid={paid} />}
 
-        <CustomerCard customer={booking.customer} />
       </div>
 
       {hasAction && (

@@ -11,6 +11,9 @@ export const BookingStatus = {
   IN_QUEUE: "In-queue",
   BOOKED: "Booked",
   VALET_ASSIGNED: "Valet Assigned",
+  // A valet is on the road: the pickup valet from setting off until they have the
+  // vehicle, the delivery valet from setting off until they reach the customer
+  VALET_ON_ROAD: "Valet On Road",
   VEHICLE_PICKED_UP: "Vehicle Picked Up",
   VEHICLE_ARRIVED: "Vehicle Arrived",
   IN_SERVICE: "In Service",

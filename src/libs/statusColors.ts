@@ -58,6 +58,7 @@ export const statusColors: Record<BookingStatus, StatusColor> = {
   [BookingStatus.IN_QUEUE]: request,
   [BookingStatus.BOOKED]: pickup,
   [BookingStatus.VALET_ASSIGNED]: pickup,
+  [BookingStatus.VALET_ON_ROAD]: pickup,
   [BookingStatus.VEHICLE_PICKED_UP]: pickup,
   [BookingStatus.VEHICLE_ARRIVED]: atDealership,
   [BookingStatus.IN_SERVICE]: atDealership,

@@ -228,6 +228,17 @@ function loadDb(): MockDb {
         if ((booking.status as string) === "Service complete") {
           booking.status = BookingStatus.SERVICE_COMPLETE;
         }
+        // Dispatched before "Valet On Road" existed
+        if (booking.status === BookingStatus.VALET_ASSIGNED && booking.pickupProgress?.dispatched) {
+          booking.status = BookingStatus.VALET_ON_ROAD;
+        }
+        if (
+          booking.status === BookingStatus.VEHICLE_RETURN &&
+          booking.deliveryProgress?.dispatched &&
+          !booking.deliveryProgress.reached
+        ) {
+          booking.status = BookingStatus.VALET_ON_ROAD;
+        }
         if (booking.payment?.status === "paid" && booking.status === BookingStatus.VALET_ASSIGNED) {
           booking.status = BookingStatus.SERVICE_COMPLETE;
         }
@@ -507,11 +518,11 @@ function nextMilestone<T extends string>(order: readonly T[], log: Partial<Recor
 const legDone = (booking: AdminBooking, leg: ValetLeg) =>
   !!legValet(booking, leg) && !!legProgress(booking, leg)[TRIP_END[leg]];
 
-// Status the customer sees once a pickup milestone is reached; the whole
-// delivery trip reads as "Vehicle Return"
+// Status the customer sees once a pickup milestone is reached. The delivery
+// trip reads as "Vehicle Return", except while its valet is on the road.
 const pickupStatuses: Record<ValetMilestone, BookingStatus> = {
-  dispatched: BookingStatus.VALET_ASSIGNED,
-  arrived: BookingStatus.VALET_ASSIGNED,
+  dispatched: BookingStatus.VALET_ON_ROAD,
+  arrived: BookingStatus.VALET_ON_ROAD,
   pickedUp: BookingStatus.VEHICLE_PICKED_UP,
   enRoute: BookingStatus.VEHICLE_PICKED_UP,
   reached: BookingStatus.VEHICLE_ARRIVED,
@@ -554,6 +565,8 @@ function assignValet(booking: AdminBooking, leg: ValetLeg, valet: StaffMember) {
   } else {
     booking.deliveryValet = { ...valet };
     booking.deliveryProgress = {};
+    // Back from "Valet On Road" if the valet who was replaced had set off
+    booking.status = BookingStatus.VEHICLE_RETURN;
   }
 }
 
@@ -573,6 +586,12 @@ function markValetMilestone(booking: AdminBooking, leg: ValetLeg, milestone: Val
     booking.etaMinutes = milestone === "dispatched" ? 30 : null;
   } else {
     booking.deliveryProgress = next;
+    // "Valet On Road" from setting off until they reach the customer, then
+    // "Vehicle Return" again. Set directly: it sits earlier in the status order.
+    booking.status =
+      milestone === "reached" || milestone === "delivered"
+        ? BookingStatus.VEHICLE_RETURN
+        : BookingStatus.VALET_ON_ROAD;
     // Countdown while the valet drives the vehicle back to the customer
     booking.etaMinutes = milestone === "pickedUp" ? 30 : null;
   }

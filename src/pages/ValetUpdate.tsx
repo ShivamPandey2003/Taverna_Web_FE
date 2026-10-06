@@ -21,7 +21,7 @@ import {
   valetMilestoneLabels,
   valetTrip,
 } from "@/components/features/admin/admin.utils";
-import { formatTime } from "@/libs/utils";
+import { formatPickupTime, formatTime } from "@/libs/utils";
 import {
   useStaffBooking,
   useStaffValetProgress,
@@ -61,7 +61,23 @@ function ValetTrip({
 }) {
   const updateProgress = useStaffValetProgress();
   const { valet, progress } = valetTrip(booking, leg);
-  const labels = valetMilestoneLabels[leg];
+  // The valet reads the first two steps as their own trip, not as the admin's
+  // "Valet assigned" / "Valet dispatched"
+  const labels = { ...valetMilestoneLabels[leg], dispatched: "Trip started" };
+  // The trip's date and time: when the customer asked to be picked up, or since
+  // when the serviced vehicle has been ready to go back
+  const readyAt = booking.advisorProgress?.[ADVISOR_HANDOVER];
+  const when =
+    leg === "pickup"
+      ? {
+          label: "Scheduled pickup",
+          value: booking.scheduledAt
+            ? formatPickupTime(booking.scheduledAt)
+            : "As soon as possible",
+        }
+      : readyAt
+        ? { label: "Ready for delivery since", value: formatPickupTime(readyAt) }
+        : undefined;
   const route = tripRoute(booking, leg);
   const complete = isComplete(booking);
   const next = valet && !complete ? nextMilestone(LEG_MILESTONES[leg], progress) : null;
@@ -75,7 +91,7 @@ function ValetTrip({
   }
 
   const milestones: Milestone[] = [
-    { key: "assigned", label: "Valet assigned", done: true },
+    { key: "assigned", label: "Trip assigned", done: true },
     ...LEG_MILESTONES[leg].map((key) => ({
       key,
       label: labels[key],
@@ -115,6 +131,7 @@ function ValetTrip({
         <BookingHero
           title={tripTitles[leg]}
           booking={booking}
+          when={when}
           status={
             !next ? (
               <StatusChip tone="active">Done</StatusChip>

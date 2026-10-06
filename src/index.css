@@ -66,10 +66,10 @@
   @keyframes step-pulse {
     0%,
     100% {
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-status-pending) 24%, transparent);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-status-pending) 50%, transparent);
     }
     50% {
-      box-shadow: 0 0 0 7px color-mix(in srgb, var(--color-status-pending) 6%, transparent);
+      box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-status-pending) 16%, transparent);
     }
   }
 

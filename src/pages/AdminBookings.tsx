@@ -16,9 +16,9 @@ export function AdminBookings() {
             Bookings
           </h1>
 
-          <p className="text-sm text-gray-500">
+          {/* <p className="text-sm text-gray-500">
             Open a booking to see its details, or manage it to confirm it, assign valets and an advisor, and complete it.
-          </p>
+          </p> */}
         </header>
 
         <BookingsToolbar />
