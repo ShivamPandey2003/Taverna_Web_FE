@@ -106,6 +106,12 @@ function ValetTrip({
   return (
     <>
       <div className={next ? "page-body page-body-with-action" : "page-body pb-8"}>
+        {/* First thing on the page: where the trip stands */}
+        <section className="card">
+          <p className="eyebrow mb-4">Trip progress</p>
+          <MilestoneTimeline milestones={milestones} direction="horizontal" />
+        </section>
+
         <BookingHero
           title={tripTitles[leg]}
           booking={booking}
@@ -126,11 +132,6 @@ function ValetTrip({
         ) : (
           <TripDone booking={booking} leg={leg} deliveredAt={progress[TRIP_END[leg]]} />
         )}
-
-        <section className="card">
-          <p className="eyebrow mb-4">Trip progress</p>
-          <MilestoneTimeline milestones={milestones} />
-        </section>
       </div>
 
       {next && (
