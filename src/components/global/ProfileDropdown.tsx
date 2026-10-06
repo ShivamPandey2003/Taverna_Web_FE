@@ -46,6 +46,12 @@ export function ProfileDropdown() {
     };
   }, [open]);
 
+  // "Taverna Admin" -> "TA", "Sarah" -> "S"
+  const words = user.name.trim().split(/\s+/).filter(Boolean);
+  const initials = [words[0], words.length > 1 ? words[words.length - 1] : ""]
+    .map((word) => word?.charAt(0).toUpperCase() ?? "")
+    .join("");
+
   const openProfile = () => {
     setOpen(false);
     dispatch(setActiveSection("account"));
@@ -57,17 +63,15 @@ export function ProfileDropdown() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="flex items-center gap-3 rounded-full py-1 pl-1 pr-2 transition hover:bg-gray-100"
+        className="flex items-center gap-1.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-gray-100"
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-label={`Account menu for ${user.name}`}
       >
+        {/* Initials only; the full name is in the menu */}
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-semibold text-gray-900">
-          {user.name.charAt(0).toUpperCase()}
+          {initials}
         </div>
-
-        <span className="hidden text-sm font-semibold text-gray-800 sm:inline">
-          {user.name}
-        </span>
 
         <AngleDown
           size={16}

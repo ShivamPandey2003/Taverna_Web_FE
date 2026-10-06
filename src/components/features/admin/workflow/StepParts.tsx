@@ -143,7 +143,7 @@ export function AssignmentRow({
 
       {picked && (
         <ConfirmModal
-          title={`${assigned ? "Change" : "Assign"} ${title.toLowerCase()}?`}
+          title={`${assigned ? "Change" : "Assign"} ${title.toLowerCase()}`}
           subtitle={`${booking.id} · ${booking.customer.name}`}
           confirmLabel={assigned ? `Change ${staffRoleLabels[role]}` : `Assign ${staffRoleLabels[role]}`}
           pendingLabel={assigned ? "Changing..." : "Assigning..."}

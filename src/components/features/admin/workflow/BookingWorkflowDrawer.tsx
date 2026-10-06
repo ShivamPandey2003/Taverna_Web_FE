@@ -3,6 +3,7 @@ import { vehicleName } from "@/libs/utils";
 import { Drawer } from "@/components/ui/Drawer";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
+  closeAddStaff,
   closeBookingWorkflow,
   selectAdminModal,
   setWorkflowStep,
@@ -18,12 +19,13 @@ import { ValetStep } from "./ValetStep";
 import { AdvisorStep } from "./AdvisorStep";
 import { CompleteStep } from "./CompleteStep";
 import { CopyButton } from "./StepParts";
+import { StaffFormModal } from "@/components/features/staff/StaffFormModal";
 
 // Confirm → pickup valet → advisor → delivery valet → complete, in a drawer from
 // the right. Each step unlocks once the one before it is finished.
 export function BookingWorkflowDrawer() {
   const dispatch = useAppDispatch();
-  const { workflowBookingId, activeStep } = useAppSelector(selectAdminModal);
+  const { workflowBookingId, activeStep, addStaff } = useAppSelector(selectAdminModal);
   const { data: booking, isPending, isError } = useAdminBooking(workflowBookingId);
 
   if (!workflowBookingId) {
@@ -121,6 +123,16 @@ export function BookingWorkflowDrawer() {
           </div>
         </>
       )}
+
+      {/* Opened from the assign steps' dropdown. Over the drawer only, like the
+          assign confirmation, so the bookings table stays visible. */}
+      <StaffFormModal
+        open={!!addStaff}
+        role={addStaff?.role ?? "valet"}
+        defaultName={addStaff?.name}
+        onClose={() => dispatch(closeAddStaff())}
+        contained
+      />
     </Drawer>
   );
 }

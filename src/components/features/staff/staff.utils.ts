@@ -11,7 +11,7 @@ export const staffPageTitles: Record<StaffRole, string> = {
 };
 
 export const availabilityOptions: { value: StaffAvailability; label: string }[] = [
-  { value: "all", label: "All statuses" },
+  { value: "all", label: "All Status" },
   { value: "available", label: "Available" },
   { value: "busy", label: "Busy" },
 ];

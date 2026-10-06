@@ -224,6 +224,10 @@ function loadDb(): MockDb {
       saved.bookings.forEach((booking) => {
         // Bookings saved before staff links carried a token
         booking.staffTokens ??= mockStaffTokens(booking.id);
+        // Saved while the status was still spelled "Service complete"
+        if ((booking.status as string) === "Service complete") {
+          booking.status = BookingStatus.SERVICE_COMPLETE;
+        }
         if (booking.payment?.status === "paid" && booking.status === BookingStatus.VALET_ASSIGNED) {
           booking.status = BookingStatus.SERVICE_COMPLETE;
         }

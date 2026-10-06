@@ -33,7 +33,7 @@ export function BookingsToolbar() {
         className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-gray-400"
         aria-label="Filter by status"
       >
-        <option value="all">All statuses</option>
+        <option value="all">All Status</option>
         {bookingStatuses.map((item) => (
           <option key={item} value={item}>
             {item}

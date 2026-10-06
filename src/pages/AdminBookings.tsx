@@ -2,14 +2,8 @@ import { BookingsTable } from "@/components/features/admin/BookingsTable";
 import { BookingsToolbar } from "@/components/features/admin/BookingsToolbar";
 import { BookingDetailsModal } from "@/components/features/admin/details/BookingDetailsModal";
 import { BookingWorkflowDrawer } from "@/components/features/admin/workflow/BookingWorkflowDrawer";
-import { StaffFormModal } from "@/components/features/staff/StaffFormModal";
-import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { closeAddStaff, selectAdminModal } from "@/redux/modals/adminModal/adminModalSlice";
 
 export function AdminBookings() {
-  const dispatch = useAppDispatch();
-  const { addStaff } = useAppSelector(selectAdminModal);
-
   return (
     // The manage drawer sits beside the table: the table shrinks to the left half
     // while it's open and goes back to full width when it closes
@@ -34,14 +28,6 @@ export function AdminBookings() {
 
       <BookingWorkflowDrawer />
       <BookingDetailsModal />
-      {/* Opened from the workflow's assign steps, on top of the drawer */}
-      <StaffFormModal
-        open={!!addStaff}
-        role={addStaff?.role ?? "valet"}
-        defaultName={addStaff?.name}
-        onClose={() => dispatch(closeAddStaff())}
-        stacked
-      />
     </main>
   );
 }

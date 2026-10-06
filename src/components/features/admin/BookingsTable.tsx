@@ -20,9 +20,10 @@ import { formatShortDateTime, serviceLabels } from "./admin.utils";
 const columns: { label: string; sortField?: BookingSortField }[] = [
   { label: "Booking ID", sortField: "id" },
   { label: "Customer", sortField: "customer" },
+  { label: "Contact" },
   { label: "Vehicle" },
   { label: "Service" },
-  { label: "Created", sortField: "createdAt" },
+  // { label: "Created", sortField: "createdAt" },
   { label: "Scheduled", sortField: "scheduledAt" },
   { label: "Status", sortField: "status" },
   { label: "Actions" },
@@ -125,6 +126,10 @@ export function BookingsTable() {
                   {booking.customer.name}
                 </td>
 
+                <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  {booking.customer.phone}
+                </td>
+
                 <td
                   className="max-w-[220px] truncate px-4 py-2 text-gray-900"
                   title={`VIN ${booking.vehicle.vin}`}
@@ -136,9 +141,9 @@ export function BookingsTable() {
                   {serviceLabels[booking.serviceId]}
                 </td>
 
-                <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                {/* <td className="whitespace-nowrap px-4 py-2 text-gray-700">
                   {formatShortDateTime(booking.createdAt)}
-                </td>
+                </td> */}
 
                 <td className="whitespace-nowrap px-4 py-2 text-gray-700">
                   {booking.scheduledAt ? formatShortDateTime(booking.scheduledAt) : "ASAP"}

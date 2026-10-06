@@ -16,7 +16,7 @@ export const BookingStatus = {
   IN_SERVICE: "In Service",
   BILL_GENERATED: "Bill Generated",
   VEHICLE_RETURN: "Vehicle Return",
-  SERVICE_COMPLETE: "Service complete",
+  SERVICE_COMPLETE: "Service Complete",
 } as const;
 
 export type BookingStatus = (typeof BookingStatus)[keyof typeof BookingStatus];
