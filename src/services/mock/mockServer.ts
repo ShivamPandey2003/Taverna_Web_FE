@@ -4,7 +4,8 @@ import {
   ADVISOR_HANDOVER,
   ADVISOR_MILESTONES,
   INVOICE_TAX_RATE,
-  VALET_MILESTONES,
+  LEG_MILESTONES,
+  TRIP_END,
   type AdminBooking,
   type AdvisorMilestone,
   type BookingListParams,
@@ -231,10 +232,10 @@ function loadDb(): MockDb {
           const at = booking.payment?.updatedAt ?? booking.createdAt;
           const all = <T extends string>(keys: readonly T[]) =>
             Object.fromEntries(keys.map((key) => [key, at])) as Record<T, string>;
-          booking.pickupProgress = all(VALET_MILESTONES);
+          booking.pickupProgress = all(LEG_MILESTONES.pickup);
           booking.advisorProgress = all([...ADVISOR_MILESTONES, ADVISOR_HANDOVER]);
           booking.deliveryValet ??= booking.valet;
-          booking.deliveryProgress = all(VALET_MILESTONES);
+          booking.deliveryProgress = all(LEG_MILESTONES.delivery);
           booking.completedAt = at;
         }
         // The advisor's single "checked in" update became inspecting + inspection done,
@@ -500,7 +501,7 @@ function nextMilestone<T extends string>(order: readonly T[], log: Partial<Recor
 }
 
 const legDone = (booking: AdminBooking, leg: ValetLeg) =>
-  !!legValet(booking, leg) && !!legProgress(booking, leg).delivered;
+  !!legValet(booking, leg) && !!legProgress(booking, leg)[TRIP_END[leg]];
 
 // Status the customer sees once a pickup milestone is reached; the whole
 // delivery trip reads as "Vehicle Return"
@@ -556,7 +557,7 @@ function markValetMilestone(booking: AdminBooking, leg: ValetLeg, milestone: Val
   assertNotComplete(booking);
   if (!legValet(booking, leg)) throw new Error("Assign a valet first.");
   const log = legProgress(booking, leg);
-  if (nextMilestone(VALET_MILESTONES, log) !== milestone) {
+  if (nextMilestone(LEG_MILESTONES[leg], log) !== milestone) {
     throw new Error("Valet updates have to be made in order.");
   }
 
@@ -568,7 +569,8 @@ function markValetMilestone(booking: AdminBooking, leg: ValetLeg, milestone: Val
     booking.etaMinutes = milestone === "dispatched" ? 30 : null;
   } else {
     booking.deliveryProgress = next;
-    booking.etaMinutes = milestone === "enRoute" ? 30 : null;
+    // Countdown while the valet drives the vehicle back to the customer
+    booking.etaMinutes = milestone === "pickedUp" ? 30 : null;
   }
 }
 
@@ -631,7 +633,7 @@ function complete(booking: AdminBooking) {
 
 // How many actions take a booking from new to complete (bill, payment and handover included)
 const WORKFLOW_ACTIONS =
-  1 + 2 * (1 + VALET_MILESTONES.length) + 1 + ADVISOR_MILESTONES.length + 3 + 1;
+  1 + (1 + LEG_MILESTONES.pickup.length) + (1 + LEG_MILESTONES.delivery.length) + 1 + ADVISOR_MILESTONES.length + 3 + 1;
 
 type StaffPicker = Record<StaffRole, () => StaffMember>;
 
@@ -642,7 +644,7 @@ function nextAction(booking: AdminBooking, pickStaff: StaffPicker): (() => void)
   if (!booking.confirmedAt) return () => confirm(booking);
 
   if (!booking.valet) return () => assignValet(booking, "pickup", pickStaff.valet());
-  const pickupStep = nextMilestone(VALET_MILESTONES, legProgress(booking, "pickup"));
+  const pickupStep = nextMilestone(LEG_MILESTONES.pickup, legProgress(booking, "pickup"));
   if (pickupStep) return () => markValetMilestone(booking, "pickup", pickupStep);
 
   if (!booking.relationshipManager) return () => assignAdvisor(booking, pickStaff.manager());
@@ -655,7 +657,7 @@ function nextAction(booking: AdminBooking, pickStaff: StaffPicker): (() => void)
   }
 
   if (!booking.deliveryValet) return () => assignValet(booking, "delivery", pickStaff.valet());
-  const deliveryStep = nextMilestone(VALET_MILESTONES, legProgress(booking, "delivery"));
+  const deliveryStep = nextMilestone(LEG_MILESTONES.delivery, legProgress(booking, "delivery"));
   if (deliveryStep) return () => markValetMilestone(booking, "delivery", deliveryStep);
 
   return () => complete(booking);

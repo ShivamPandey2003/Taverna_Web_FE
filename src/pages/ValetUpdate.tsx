@@ -29,7 +29,8 @@ import {
 } from "@/services/queries/staffQueries";
 import {
   ADVISOR_HANDOVER,
-  VALET_MILESTONES,
+  LEG_MILESTONES,
+  TRIP_END,
   type StaffBooking,
   type ValetLeg,
 } from "@/types/admin";
@@ -63,7 +64,7 @@ function ValetTrip({
   const labels = valetMilestoneLabels[leg];
   const route = tripRoute(booking, leg);
   const complete = isComplete(booking);
-  const next = valet && !complete ? nextMilestone(VALET_MILESTONES, progress) : null;
+  const next = valet && !complete ? nextMilestone(LEG_MILESTONES[leg], progress) : null;
 
   if (!valet) {
     return (
@@ -75,7 +76,7 @@ function ValetTrip({
 
   const milestones: Milestone[] = [
     { key: "assigned", label: "Valet assigned", done: true },
-    ...VALET_MILESTONES.map((key) => ({
+    ...LEG_MILESTONES[leg].map((key) => ({
       key,
       label: labels[key],
       done: !!progress[key],
@@ -84,9 +85,11 @@ function ValetTrip({
   ];
 
   // Until the valet arrives they head to the start; once they have the vehicle, to the end
+  // (the delivery trip has no "arrived" update, so there it's until they pick it up)
+  const atStart = LEG_MILESTONES[leg].includes("arrived") ? progress.arrived : progress.pickedUp;
   const heading = !next
     ? null
-    : !progress.arrived
+    : !atStart
       ? "from"
       : progress.pickedUp && !progress.reached
         ? "to"
@@ -121,7 +124,7 @@ function ValetTrip({
         {next ? (
           <RouteCard from={route.from} to={route.to} heading={heading} />
         ) : (
-          <TripDone booking={booking} leg={leg} deliveredAt={progress.delivered} />
+          <TripDone booking={booking} leg={leg} deliveredAt={progress[TRIP_END[leg]]} />
         )}
 
         <section className="card">
@@ -158,7 +161,7 @@ function TripDone({
   return (
     <StateScreen tone="success" icon={<CheckCircle size={32} />} title="Trip complete">
       {leg === "pickup"
-        ? `The vehicle was handed to ${booking.dealershipName}`
+        ? `The vehicle arrived at ${booking.dealershipName}`
         : `The vehicle was delivered to ${booking.customer.name}`}
       {deliveredAt && ` at ${formatTime(deliveredAt)}`}. Thanks! Nothing else to do here.
     </StateScreen>

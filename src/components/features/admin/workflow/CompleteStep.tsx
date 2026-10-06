@@ -23,7 +23,7 @@ export function CompleteStep({ booking }: { booking: AdminBooking }) {
     {
       label: "Pickup valet",
       value: booking.valet?.name ?? "—",
-      at: booking.pickupProgress?.delivered,
+      at: booking.pickupProgress?.reached,
     },
     {
       label: "Advisor",

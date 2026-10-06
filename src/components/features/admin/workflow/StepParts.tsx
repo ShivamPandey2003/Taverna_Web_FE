@@ -1,5 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { AngleDown, CheckCircle, Copy, CopySuccess, Lock, Plus, Search } from "reicon-react";
+import {
+  AngleDown,
+  CheckCircle,
+  Copy,
+  CopySuccess,
+  Link,
+  Lock,
+  Plus,
+  Search,
+  Share,
+} from "reicon-react";
 import { toast } from "sonner";
 import { cn } from "@/libs/utils";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -7,7 +17,8 @@ import { useAppDispatch } from "@/redux/hooks";
 import { openAddStaff } from "@/redux/modals/adminModal/adminModalSlice";
 import { useStaffOptions } from "@/services/queries/adminQueries";
 import { staffRoleLabels } from "@/components/features/staff/staff.utils";
-import type { StaffMember, StaffRole } from "@/types/admin";
+import type { AdminBooking, StaffMember, StaffRole } from "@/types/admin";
+import { VehicleSummary } from "../VehicleSummary";
 
 // "a valet", "an advisor"
 const withArticle = (word: string) => `${/^[aeiou]/i.test(word) ? "an" : "a"} ${word}`;
@@ -82,7 +93,7 @@ export function SectionCard({ children, className }: { children: ReactNode; clas
 export function AssignmentRow({
   role,
   title,
-  bookingLabel,
+  booking,
   assigned,
   link,
   saving,
@@ -93,8 +104,8 @@ export function AssignmentRow({
   role: StaffRole;
   // What they're assigned as, e.g. "Pickup valet"
   title: string;
-  // The booking they're assigned to, e.g. "PC-221428 · Alex - 2022 Jeep Grand Cherokee"
-  bookingLabel: string;
+  // The booking they're assigned to
+  booking: AdminBooking;
   assigned: StaffMember | null;
   // null when the booking has no link for this role
   link: string | null;
@@ -112,8 +123,8 @@ export function AssignmentRow({
   const warning = assigned ? changeWarning : undefined;
 
   return (
-    <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-      <SectionCard className="flex flex-col gap-2">
+    <div className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_auto]">
+      <SectionCard className="flex min-w-0 flex-col gap-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{title}</p>
         <StaffSelect
           role={role}
@@ -124,44 +135,62 @@ export function AssignmentRow({
         />
       </SectionCard>
 
-      <StaffLinkCard role={role} link={assigned ? link : null} />
+      <StaffLinkCard
+        role={role}
+        link={assigned ? link : null}
+        shareTitle={`${title} link for booking ${booking.id}`}
+      />
 
       {picked && (
         <ConfirmModal
           title={`${assigned ? "Change" : "Assign"} ${title.toLowerCase()}?`}
+          subtitle={`${booking.id} · ${booking.customer.name}`}
           confirmLabel={assigned ? `Change ${staffRoleLabels[role]}` : `Assign ${staffRoleLabels[role]}`}
           pendingLabel={assigned ? "Changing..." : "Assigning..."}
           pending={saving}
           tone={warning ? "danger" : "primary"}
           onConfirm={() => onAssign(picked, closeConfirm)}
           onClose={closeConfirm}
-          stacked
+          // Over the drawer only, so the bookings table stays visible
+          contained
         >
           <div className="space-y-4">
-            <div className="flex items-center gap-3 rounded-xl border border-gray-200 p-3">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-900 text-base font-semibold text-white">
-                {picked.name.charAt(0)}
-              </span>
-              <div className="min-w-0">
-                <p className="truncate text-base font-bold text-gray-900">{picked.name}</p>
-                <p className="truncate text-xs text-gray-500">
-                  {picked.phone} · {picked.email}
-                </p>
+            {/* The vehicle and the person, joined by a link on the right */}
+            <div className="flex">
+              <div className="grid min-w-0 flex-1 auto-rows-fr gap-3">
+                <VehicleSummary
+                  vehicle={booking.vehicle}
+                  className="rounded-xl border border-gray-200 p-3"
+                />
+
+                <div className="flex min-w-0 items-center gap-3 rounded-xl border border-gray-200 p-3">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-900 text-base font-semibold text-white">
+                    {picked.name.charAt(0)}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-base font-bold text-gray-900">{picked.name}</p>
+                    <p className="truncate text-xs text-gray-500">
+                      {picked.phone} · {picked.email}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative w-10 shrink-0" aria-hidden="true">
+                {/* Bracket from the middle of one card to the middle of the other
+                    (3px = a quarter of the gap between them) */}
+                <span className="absolute inset-y-[calc(25%-3px)] left-0 right-1/2 rounded-r-lg border-y border-r border-gray-300" />
+                <span className="absolute left-1/2 top-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-gray-300 bg-white text-gray-700">
+                  <Link size={14} />
+                </span>
               </div>
             </div>
 
-            <dl className="space-y-1.5">
-              <div className="flex gap-3">
-                <dt className="w-20 shrink-0 text-gray-500">Booking</dt>
-                <dd className="min-w-0 font-medium text-gray-900">{bookingLabel}</dd>
-              </div>
-              {assigned && (
-                <div className="flex gap-3">
-                  <dt className="w-20 shrink-0 text-gray-500">Replaces</dt>
-                  <dd className="min-w-0 font-medium text-gray-900">{assigned.name}</dd>
-                </div>
-              )}
-            </dl>
+            {assigned && (
+              <p>
+                Replaces <span className="font-medium text-gray-900">{assigned.name}</span>
+              </p>
+            )}
 
             {warning && (
               <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
@@ -180,11 +209,14 @@ export function CopyButton({
   value,
   label,
   className,
+  children,
 }: {
   value: string;
   // What's being copied, for the toast and screen readers, e.g. "link"
   label: string;
   className?: string;
+  // Text next to the icon, e.g. "Copy"; an icon-only button without it
+  children?: ReactNode;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -211,26 +243,90 @@ export function CopyButton({
       )}
     >
       {copied ? <CopySuccess size={15} className="text-black" /> : <Copy size={15} />}
+      {children}
     </button>
   );
 }
 
-// Personal link the valet / advisor opens to post updates for this booking
-function StaffLinkCard({ role, link }: { role: StaffRole; link: string | null }) {
-  const roleLabel = staffRoleLabels[role];
+// The assigned member inside the dropdown box: initial, name, then phone and email,
+// each with a button to copy it
+function SelectedStaff({ member }: { member: StaffMember }) {
+  // Above the box's own button, so a click copies instead of opening the list
+  const copyClass = "relative z-10 h-6 w-6";
 
   return (
-    <SectionCard className="flex min-w-0 flex-col gap-2">
+    <>
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-900 text-sm font-semibold text-white">
+        {member.name.charAt(0)}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold text-gray-900">{member.name}</span>
+        <span className="flex min-w-0 items-center text-xs text-gray-500">
+          <span className="shrink-0">{member.phone}</span>
+          <CopyButton value={member.phone} label="phone number" className={copyClass} />
+          <span className="mx-1 shrink-0">·</span>
+          <span className="min-w-0 truncate" title={member.email}>
+            {member.email}
+          </span>
+          <CopyButton value={member.email} label="email" className={copyClass} />
+        </span>
+      </span>
+    </>
+  );
+}
+
+const linkButtonClass =
+  "flex h-auto min-h-10 w-auto min-w-18 shrink-0 flex-col items-center justify-center gap-1 rounded-lg border border-gray-300 px-3 text-xs font-semibold text-gray-900 transition hover:border-gray-400 hover:bg-gray-50";
+
+// Personal link the valet / advisor opens to post updates for this booking. The
+// URL itself isn't shown: the admin copies it or sends it on.
+function StaffLinkCard({
+  role,
+  link,
+  shareTitle,
+}: {
+  role: StaffRole;
+  link: string | null;
+  // Goes with the link in the share sheet
+  shareTitle: string;
+}) {
+  const roleLabel = staffRoleLabels[role];
+
+  const handleShare = async () => {
+    if (!link) return;
+    // No share sheet in this browser: copying is the next best thing
+    if (!navigator.share) {
+      try {
+        await navigator.clipboard.writeText(link);
+        toast.success("Link copied");
+      } catch {
+        toast.error("Couldn't copy the link");
+      }
+      return;
+    }
+    try {
+      await navigator.share({ title: shareTitle, url: link });
+    } catch {
+      // The admin closed the share sheet
+    }
+  };
+
+  return (
+    <SectionCard className="flex flex-col gap-2">
       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
         {roleLabel} unique link
       </p>
 
       {link ? (
-        <div className="flex h-10 items-center gap-2 rounded-lg bg-gray-50 pl-3 pr-1">
-          <span className="min-w-0 flex-1 truncate text-sm text-blue-700" title={link}>
-            {link}
-          </span>
-          <CopyButton value={link} label="link" className="h-8 w-8 hover:bg-white" />
+        // Tiles as tall as the card, which follows the assignee card next to it
+        <div className="flex flex-1 gap-2">
+          <CopyButton value={link} label="link" className={linkButtonClass}>
+            Copy
+          </CopyButton>
+          <button type="button" onClick={handleShare} className={linkButtonClass}>
+            <Share size={15} className="text-gray-500" />
+            Share
+          </button>
         </div>
       ) : (
         <p className="flex h-10 items-center text-sm text-gray-400">
@@ -306,12 +402,19 @@ function StaffSelect({
   if (lockedReason) {
     return (
       <div
-        className="flex h-10 items-center justify-between gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3"
+        className={cn(
+          "flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3",
+          value ? "h-14" : "h-10",
+        )}
         title={lockedReason}
       >
-        <span className="truncate text-sm font-semibold text-gray-900">
-          {value?.name ?? `No ${roleLabel}`}
-        </span>
+        {value ? (
+          <SelectedStaff member={value} />
+        ) : (
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-gray-900">
+            No {roleLabel}
+          </span>
+        )}
         <Lock size={15} className="shrink-0 text-gray-400" />
       </div>
     );
@@ -319,30 +422,37 @@ function StaffSelect({
 
   return (
     <div ref={containerRef} className="relative">
-      <button
-        type="button"
-        disabled={saving}
-        onClick={() => setOpen((current) => !current)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
+      <div
         className={cn(
-          "flex h-10 w-full items-center justify-between gap-2 rounded-lg border px-3 text-left transition disabled:cursor-wait disabled:opacity-60",
+          "relative flex items-center gap-3 rounded-lg border px-3 transition",
+          value ? "h-14" : "h-10",
           open ? "border-gray-900" : "border-gray-300 hover:border-gray-400",
+          saving && "opacity-60",
         )}
       >
-        <span
-          className={cn(
-            "truncate text-sm",
-            value ? "font-semibold text-gray-900" : "text-gray-400",
-          )}
-        >
-          {saving ? "Saving..." : (value?.name ?? `Select ${withArticle(roleLabel)}`)}
-        </span>
+        {/* The whole box opens the list; the copy buttons sit above this button */}
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => setOpen((current) => !current)}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-label={value ? `Change ${roleLabel}` : `Select ${withArticle(roleLabel)}`}
+          className="absolute inset-0 rounded-lg disabled:cursor-wait"
+        />
+
+        {value && !saving ? (
+          <SelectedStaff member={value} />
+        ) : (
+          <span className="min-w-0 flex-1 truncate text-sm text-gray-400">
+            {saving ? "Saving..." : `Select ${withArticle(roleLabel)}`}
+          </span>
+        )}
         <AngleDown
           size={16}
           className={cn("shrink-0 text-gray-500 transition-transform", open && "rotate-180")}
         />
-      </button>
+      </div>
 
       {open && (
         <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-20 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.12)]">
@@ -395,7 +505,9 @@ function StaffSelect({
                       <span className="block truncate text-sm font-semibold text-gray-900">
                         {member.name}
                       </span>
-                      <span className="block text-xs text-gray-500">{member.phone}</span>
+                      <span className="block truncate text-xs text-gray-500">
+                        {member.phone} · {member.email}
+                      </span>
                     </span>
                     <span
                       className={cn(

@@ -4,6 +4,8 @@ import { Modal } from "./Modal";
 
 interface ConfirmModalProps {
   title: ReactNode;
+  // Shown under the title, e.g. the booking it's about
+  subtitle?: ReactNode;
   // What will happen, e.g. "Delete Jane Doe? This can't be undone."
   children: ReactNode;
   confirmLabel?: string;
@@ -15,6 +17,8 @@ interface ConfirmModalProps {
   onClose: () => void;
   // Renders above another open modal
   stacked?: boolean;
+  // Covers only the nearest positioned parent (e.g. the drawer) instead of the whole screen
+  contained?: boolean;
   // "danger" (red) for deletes and resets, "primary" (black) for a plain double-check
   tone?: "danger" | "primary";
 }
@@ -22,6 +26,7 @@ interface ConfirmModalProps {
 // Asks before an action that's destructive or easy to get wrong
 export function ConfirmModal({
   title,
+  subtitle,
   children,
   confirmLabel = "Delete",
   cancelLabel = "Cancel",
@@ -30,14 +35,17 @@ export function ConfirmModal({
   onConfirm,
   onClose,
   stacked,
+  contained,
   tone = "danger",
 }: ConfirmModalProps) {
   return (
     <Modal
       title={<h2>{title}</h2>}
+      subtitle={subtitle}
       onClose={onClose}
       width="max-w-[440px]"
       stacked={stacked}
+      contained={contained}
       footer={
         <>
           <button
