@@ -236,7 +236,7 @@ function NotAssigned({ booking }: { booking: StaffBooking }) {
 
   // Advisors are assigned once the vehicle reaches the dealership
   const { valet, progress } = valetTrip(booking, "pickup");
-  if (!progress.delivered) {
+  if (!progress.reached) {
     const reached = [...VALET_MILESTONES].reverse().find((key) => progress[key]);
     return (
       <StateScreen tone="pending" icon={<Driving size={30} />} title="Vehicle on its way">

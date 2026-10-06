@@ -14,7 +14,6 @@ import {
 } from "@/types/admin";
 import {
   advisorMilestoneLabels,
-  bookingLabel,
   formatCurrency,
   formatDateTime,
   isComplete,
@@ -93,7 +92,7 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
       <AssignmentRow
         role="manager"
         title="Advisor"
-        bookingLabel={bookingLabel(booking)}
+        booking={booking}
         assigned={advisor}
         link={staffLink(booking, "advisor")}
         saving={assignAdvisor.isPending}
@@ -118,7 +117,7 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
         <SectionCard>
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="text-sm font-bold text-gray-900">Service progress</h3>
-            <p className="text-xs text-gray-500">Each update is shared with the customer.</p>
+            {/* <p className="text-xs text-gray-500">Each update is shared with the customer.</p> */}
           </div>
 
           <MilestoneTracker milestones={milestones} />

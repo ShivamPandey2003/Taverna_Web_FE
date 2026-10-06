@@ -1,8 +1,13 @@
 import { toast } from "sonner";
 import { useAssignValet, useUpdateValetProgress } from "@/services/queries/adminQueries";
-import { VALET_MILESTONES, type AdminBooking, type StaffMember, type ValetLeg } from "@/types/admin";
 import {
-  bookingLabel,
+  LEG_MILESTONES,
+  TRIP_END,
+  type AdminBooking,
+  type StaffMember,
+  type ValetLeg,
+} from "@/types/admin";
+import {
   isComplete,
   legTitles,
   nextMilestone,
@@ -30,14 +35,14 @@ const nextStepLabels: Record<ValetLeg, string> = {
 };
 
 // Assign a valet, share their link, and follow the trip milestone by milestone.
-// The next workflow step stays locked until the vehicle is handed over.
+// The next workflow step stays locked until the vehicle reaches the other end.
 export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
   const assignValet = useAssignValet();
   const updateProgress = useUpdateValetProgress();
 
   const { valet, progress } = valetTrip(booking, leg);
   const labels = valetMilestoneLabels[leg];
-  const next = valet ? nextMilestone(VALET_MILESTONES, progress) : null;
+  const next = valet ? nextMilestone(LEG_MILESTONES[leg], progress) : null;
   const finished = !!valet && !next;
 
   const complete = isComplete(booking);
@@ -50,7 +55,7 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
 
   const milestones: Milestone[] = [
     { key: "assigned", label: "Valet assigned", done: !!valet },
-    ...VALET_MILESTONES.map((key) => ({
+    ...LEG_MILESTONES[leg].map((key) => ({
       key,
       label: labels[key],
       done: !!progress[key],
@@ -84,7 +89,7 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
       <AssignmentRow
         role="valet"
         title={legTitles[leg]}
-        bookingLabel={bookingLabel(booking)}
+        booking={booking}
         assigned={valet}
         link={staffLink(booking, leg)}
         saving={assignValet.isPending}
@@ -104,9 +109,9 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="text-sm font-bold text-gray-900">Trip progress</h3>
             <p className="text-xs text-gray-500">
-              {complete
+              {/* {complete
                 ? "Posted by the valet from their link."
-                : "The valet posts these from their link. You can also mark them here."}
+                : "The valet posts these from their link. You can also mark them here."} */}
             </p>
           </div>
 
@@ -128,7 +133,7 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
 
       {finished && (
         <StepDone
-          text={labels.delivered}
+          text={labels[TRIP_END[leg]]}
           actionLabel={complete ? undefined : nextStepLabels[leg]}
           onAction={onDone}
         />

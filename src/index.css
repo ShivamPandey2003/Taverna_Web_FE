@@ -60,6 +60,19 @@
     }
   }
 
+  /* Soft orange halo that breathes around the milestone that's up next */
+  --animate-step-pulse: step-pulse 1.8s ease-in-out infinite;
+
+  @keyframes step-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-status-pending) 24%, transparent);
+    }
+    50% {
+      box-shadow: 0 0 0 7px color-mix(in srgb, var(--color-status-pending) 6%, transparent);
+    }
+  }
+
   --animate-drawer-in: drawer-in 260ms cubic-bezier(0.22, 1, 0.36, 1);
 
   @keyframes drawer-in {

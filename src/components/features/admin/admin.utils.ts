@@ -1,11 +1,11 @@
-import { vehicleName } from "@/libs/utils";
 import { BookingStatus } from "@/types/booking";
-import type {
-  AdminBooking,
-  AdvisorMilestone,
-  StaffLinkRole,
-  ValetLeg,
-  ValetMilestone,
+import {
+  TRIP_END,
+  type AdminBooking,
+  type AdvisorMilestone,
+  type StaffLinkRole,
+  type ValetLeg,
+  type ValetMilestone,
 } from "@/types/admin";
 import type { ServiceId } from "@/types/service";
 import { WORKFLOW_STEPS, type WorkflowStep } from "@/redux/modals/adminModal/adminModalSlice";
@@ -16,10 +16,6 @@ export const serviceLabels: Record<ServiceId, string> = {
 };
 
 export const bookingStatuses = Object.values(BookingStatus);
-
-// "PC-221428 · Alex - 2022 Jeep Grand Cherokee"
-export const bookingLabel = (booking: AdminBooking) =>
-  `${booking.id} · ${booking.customer.name} - ${vehicleName(booking.vehicle)}`;
 
 export function formatDateTime(value: string | null) {
   if (!value) return "—";
@@ -48,7 +44,8 @@ export function formatCurrency(amount: number) {
   return amount.toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
 
-// What each valet milestone means on each trip
+// What each valet milestone means on each trip. The pickup trip only uses the
+// ones in LEG_MILESTONES.pickup.
 export const valetMilestoneLabels: Record<ValetLeg, Record<ValetMilestone, string>> = {
   pickup: {
     dispatched: "Valet dispatched",
@@ -96,10 +93,10 @@ export function nextMilestone<T extends string>(
   return order.find((key) => !log[key]) ?? null;
 }
 
-// A trip is done once the vehicle is handed over at the other end
+// A trip is done once its last milestone is posted
 const tripDone = (booking: AdminBooking, leg: ValetLeg) => {
   const { valet, progress } = valetTrip(booking, leg);
-  return !!valet && !!progress.delivered;
+  return !!valet && !!progress[TRIP_END[leg]];
 };
 
 // Personal link the staff member opens to post updates for this booking. Staff

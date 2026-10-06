@@ -63,10 +63,24 @@ export const VALET_MILESTONES = [
   // Driving the vehicle to its destination
   "enRoute",
   "reached",
-  // Vehicle handed over: to the dealership (pickup) or the customer (delivery)
+  // Vehicle handed over to the customer
   "delivered",
 ] as const;
 export type ValetMilestone = (typeof VALET_MILESTONES)[number];
+
+// The milestones of each trip, in order; neither uses every key. The pickup trip
+// ends once the vehicle reaches the dealership; the delivery trip goes from
+// dispatched straight to picked up, and from there to arriving at the customer.
+export const LEG_MILESTONES: Record<ValetLeg, readonly ValetMilestone[]> = {
+  pickup: ["dispatched", "arrived", "pickedUp", "reached"],
+  delivery: ["dispatched", "pickedUp", "reached", "delivered"],
+};
+
+// The milestone that finishes each trip
+export const TRIP_END: Record<ValetLeg, ValetMilestone> = {
+  pickup: "reached",
+  delivery: "delivered",
+};
 
 // Updates the advisor shares with the customer while the vehicle is serviced, in
 // order. The bill and payment that follow come from `invoice` and `payment`; then
@@ -93,6 +107,8 @@ export interface AdminBooking {
     model: string;
     year: number;
     vin: string;
+    // The vehicle's photo, when the API sends one
+    image?: string;
   };
   pickup: string;
   dealershipName: string;

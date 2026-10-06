@@ -11,7 +11,7 @@ import {
 } from "@/redux/modals/adminModal/adminModalSlice";
 import { useAdminBooking } from "@/services/queries/adminQueries";
 import { BookingStatusBadge } from "../BookingStatusBadge";
-import { firstOpenStep, isStepUnlocked } from "../admin.utils";
+import { firstOpenStep, isStepUnlocked, serviceLabels } from "../admin.utils";
 import { WorkflowStepper } from "./WorkflowStepper";
 import { ConfirmStep } from "./ConfirmStep";
 import { ValetStep } from "./ValetStep";
@@ -57,9 +57,15 @@ export function BookingWorkflowDrawer() {
           <span className="shrink-0 font-semibold text-gray-900">{workflowBookingId}</span>
           <CopyButton value={workflowBookingId} label="booking ID" />
           {booking && (
-            <span className="truncate">
-              · {booking.customer.name} - {vehicleName(booking.vehicle)}
-            </span>
+            <>
+              <span className="truncate">
+                · {booking.customer.name} - {vehicleName(booking.vehicle)}
+              </span>
+              {/* Booking type: the service that was booked */}
+              <span className="ml-1.5 inline-flex shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold text-gray-700 ring-1 ring-inset ring-gray-200">
+                {serviceLabels[booking.serviceId]}
+              </span>
+            </>
           )}
         </>
       }
@@ -92,8 +98,9 @@ export function BookingWorkflowDrawer() {
             </p>
           )} */}
 
-          {/* Keyed so each step's local state starts fresh */}
-          <div key={step} className="mt-5 border-t border-gray-200 pt-5">
+          {/* Keyed so each step's local state starts fresh, also when a row click
+              switches the drawer to another booking */}
+          <div key={`${booking.id}-${step}`}className="mt-5 border-t border-gray-200 pt-5">
             {step === "confirm" && (
               <ConfirmStep booking={booking} onDone={() => goToNextStep("confirm")} />
             )}

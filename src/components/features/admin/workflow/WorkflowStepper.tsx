@@ -46,7 +46,7 @@ export function WorkflowStepper({ booking, activeStep, onSelect }: WorkflowStepp
               onClick={() => onSelect(step)}
               title={unlocked ? undefined : "Finish the previous step first"}
               className={cn(
-                "flex h-full w-full flex-col items-center justify-center gap-2 rounded-xl border-2 p-3 text-center transition",
+                "flex h-full w-full flex-col items-center justify-center gap-2 rounded-xl border-2 px-1.5 py-3 text-center transition",
                 // A finished step stays green even while it's open, like the others
                 done
                   ? "border-status-active/40 bg-status-active/10 hover:border-status-active"

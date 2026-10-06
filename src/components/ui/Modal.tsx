@@ -14,6 +14,8 @@ interface ModalProps {
   width?: string;
   // Renders above another open modal
   stacked?: boolean;
+  // Covers only the nearest positioned parent (e.g. the drawer) instead of the whole screen
+  contained?: boolean;
 }
 
 // Centred dialog with a backdrop, a header with a close button and a scrolling body
@@ -25,9 +27,12 @@ export function Modal({
   footer,
   width = "max-w-[760px]",
   stacked = false,
+  contained = false,
 }: ModalProps) {
   return (
-    <div className={cn("fixed inset-0", stacked ? "z-[60]" : "z-50")}>
+    <div
+      className={cn("inset-0", contained ? "absolute" : "fixed", stacked ? "z-[60]" : "z-50")}
+    >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
