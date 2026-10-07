@@ -171,14 +171,14 @@ function AddressFormModal({
                   fill="black"
                 />
 
-                Use my current location
+                Use My Current Location
               </button>
             </div>
 
-            {/* Address details */}
+            {/* Address Details */}
             <div className="mt-5">
               <h3 className="text-xs font-bold text-gray-900">
-                Address details
+                Address Details
               </h3>
 
               {/* Type */}

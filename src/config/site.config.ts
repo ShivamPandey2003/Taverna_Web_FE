@@ -17,7 +17,7 @@ export const siteConfig = {
   ],
 
   hero: {
-    title: "Easy and quick car service booking at your fingertips",
+    title: "Easy and Quick Car Service Booking at Your Fingertips",
 
     description:
       "Taverna collects your vehicle, takes care of the service, and delivers it back to your doorstep. No dealership visits. No wasted time. Just convenient, reliable, and hassle-free vehicle care.",

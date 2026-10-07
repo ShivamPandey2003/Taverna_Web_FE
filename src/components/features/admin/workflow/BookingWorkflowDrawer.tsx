@@ -3,6 +3,7 @@ import { vehicleName } from "@/libs/utils";
 import { Drawer } from "@/components/ui/Drawer";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
+  closeAddStaff,
   closeBookingWorkflow,
   selectAdminModal,
   setWorkflowStep,
@@ -11,19 +12,20 @@ import {
 } from "@/redux/modals/adminModal/adminModalSlice";
 import { useAdminBooking } from "@/services/queries/adminQueries";
 import { BookingStatusBadge } from "../BookingStatusBadge";
-import { firstOpenStep, isStepUnlocked } from "../admin.utils";
+import { firstOpenStep, isStepUnlocked, serviceLabels } from "../admin.utils";
 import { WorkflowStepper } from "./WorkflowStepper";
 import { ConfirmStep } from "./ConfirmStep";
 import { ValetStep } from "./ValetStep";
 import { AdvisorStep } from "./AdvisorStep";
 import { CompleteStep } from "./CompleteStep";
 import { CopyButton } from "./StepParts";
+import { StaffFormModal } from "@/components/features/staff/StaffFormModal";
 
 // Confirm → pickup valet → advisor → delivery valet → complete, in a drawer from
 // the right. Each step unlocks once the one before it is finished.
 export function BookingWorkflowDrawer() {
   const dispatch = useAppDispatch();
-  const { workflowBookingId, activeStep } = useAppSelector(selectAdminModal);
+  const { workflowBookingId, activeStep, addStaff } = useAppSelector(selectAdminModal);
   const { data: booking, isPending, isError } = useAdminBooking(workflowBookingId);
 
   if (!workflowBookingId) {
@@ -49,7 +51,7 @@ export function BookingWorkflowDrawer() {
       title={
         <>
           <h2>Manage Booking</h2>
-          {booking && <BookingStatusBadge status={booking.status} />}
+          {booking && <BookingStatusBadge status={booking.status} size="md" />}
         </>
       }
       subtitle={
@@ -57,9 +59,15 @@ export function BookingWorkflowDrawer() {
           <span className="shrink-0 font-semibold text-gray-900">{workflowBookingId}</span>
           <CopyButton value={workflowBookingId} label="booking ID" />
           {booking && (
-            <span className="truncate">
-              · {booking.customer.name} - {vehicleName(booking.vehicle)}
-            </span>
+            <>
+              <span className="truncate">
+                · {booking.customer.name} - {vehicleName(booking.vehicle)}
+              </span>
+              {/* Booking type: the service that was booked */}
+              <span className="ml-1.5 inline-flex shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold text-gray-700 ring-1 ring-inset ring-gray-200">
+                {serviceLabels[booking.serviceId]}
+              </span>
+            </>
           )}
         </>
       }
@@ -92,8 +100,9 @@ export function BookingWorkflowDrawer() {
             </p>
           )} */}
 
-          {/* Keyed so each step's local state starts fresh */}
-          <div key={step} className="mt-5 border-t border-gray-200 pt-5">
+          {/* Keyed so each step's local state starts fresh, also when a row click
+              switches the drawer to another booking */}
+          <div key={`${booking.id}-${step}`}className="mt-5 border-t border-gray-200 pt-5">
             {step === "confirm" && (
               <ConfirmStep booking={booking} onDone={() => goToNextStep("confirm")} />
             )}
@@ -114,6 +123,16 @@ export function BookingWorkflowDrawer() {
           </div>
         </>
       )}
+
+      {/* Opened from the assign steps' dropdown. Over the drawer only, like the
+          assign confirmation, so the bookings table stays visible. */}
+      <StaffFormModal
+        open={!!addStaff}
+        role={addStaff?.role ?? "valet"}
+        defaultName={addStaff?.name}
+        onClose={() => dispatch(closeAddStaff())}
+        contained
+      />
     </Drawer>
   );
 }

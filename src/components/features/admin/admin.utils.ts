@@ -1,11 +1,11 @@
-import { vehicleName } from "@/libs/utils";
 import { BookingStatus } from "@/types/booking";
-import type {
-  AdminBooking,
-  AdvisorMilestone,
-  StaffLinkRole,
-  ValetLeg,
-  ValetMilestone,
+import {
+  TRIP_END,
+  type AdminBooking,
+  type AdvisorMilestone,
+  type StaffLinkRole,
+  type ValetLeg,
+  type ValetMilestone,
 } from "@/types/admin";
 import type { ServiceId } from "@/types/service";
 import { WORKFLOW_STEPS, type WorkflowStep } from "@/redux/modals/adminModal/adminModalSlice";
@@ -16,10 +16,6 @@ export const serviceLabels: Record<ServiceId, string> = {
 };
 
 export const bookingStatuses = Object.values(BookingStatus);
-
-// "PC-221428 · Alex - 2022 Jeep Grand Cherokee"
-export const bookingLabel = (booking: AdminBooking) =>
-  `${booking.id} · ${booking.customer.name} - ${vehicleName(booking.vehicle)}`;
 
 export function formatDateTime(value: string | null) {
   if (!value) return "—";
@@ -48,38 +44,37 @@ export function formatCurrency(amount: number) {
   return amount.toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
 
-// What each valet milestone means on each trip
+// What each valet milestone means on each trip. The pickup trip only uses the
+// ones in LEG_MILESTONES.pickup.
 export const valetMilestoneLabels: Record<ValetLeg, Record<ValetMilestone, string>> = {
   pickup: {
-    dispatched: "Valet dispatched",
-    arrived: "Arrived at customer",
-    pickedUp: "Picked up vehicle",
-    enRoute: "Heading to dealership",
-    reached: "Arrived at dealership",
-    delivered: "Handed to dealership",
+    dispatched: "Valet Dispatched",
+    arrived: "Arrived at Customer",
+    pickedUp: "Picked Up Vehicle",
+    enRoute: "Heading to Dealership",
+    reached: "Arrived at Dealership",
+    delivered: "Handed to Dealership",
   },
   delivery: {
-    dispatched: "Valet dispatched",
-    arrived: "Arrived at dealership",
-    pickedUp: "Picked up vehicle",
-    enRoute: "Heading to customer",
-    reached: "Arrived at customer",
-    delivered: "Delivered to customer",
+    dispatched: "Valet Dispatched",
+    arrived: "Arrived at Dealership",
+    pickedUp: "Picked Up Vehicle",
+    enRoute: "Heading to Customer",
+    reached: "Arrived at Customer",
+    delivered: "Delivered to Customer",
   },
 };
 
 // Updates the advisor shares with the customer
 export const advisorMilestoneLabels: Record<AdvisorMilestone, string> = {
-  inspecting: "Inspecting car",
-  inspected: "Inspection done",
-  inService: "Service in progress",
-  serviceDone: "Service done",
-  readyForDispatch: "Ready to dispatch",
+  inspecting: "Vehicle in Inspection",
+  inService: "Vehicle in Service",
+  readyForDispatch: "Ready to Dispatch",
 };
 
 export const legTitles: Record<ValetLeg, string> = {
-  pickup: "Pickup valet",
-  delivery: "Delivery valet",
+  pickup: "Pickup Valet",
+  delivery: "Delivery Valet",
 };
 
 // The valet and milestone log of one trip
@@ -96,20 +91,21 @@ export function nextMilestone<T extends string>(
   return order.find((key) => !log[key]) ?? null;
 }
 
-// A trip is done once the vehicle is handed over at the other end
+// A trip is done once its last milestone is posted
 const tripDone = (booking: AdminBooking, leg: ValetLeg) => {
   const { valet, progress } = valetTrip(booking, leg);
-  return !!valet && !!progress.delivered;
+  return !!valet && !!progress[TRIP_END[leg]];
 };
 
-// Personal link the staff member opens to post updates for this booking. Staff
-// never log in: the token at the end of the path signs them in. Must match the
-// staff routes in routes/index.tsx.
+// Personal link the staff member opens to post updates for this booking. Its
+// `gear` and `token` search params sign them in, so they skip the email + OTP
+// form. Must match the staff routes in routes/index.tsx and useStaffAuth.
 export function staffLink(booking: AdminBooking, role: StaffLinkRole) {
-  const token = booking.staffTokens?.[role];
-  if (!token) return null;
+  const auth = booking.staffTokens?.[role];
+  if (!auth) return null;
   const path = role === "advisor" ? `advisor/${booking.id}` : `valet/${role}/${booking.id}`;
-  return `${window.location.origin}/${path}/${encodeURIComponent(token)}`;
+  const search = new URLSearchParams({ gear: auth.gear, token: auth.token });
+  return `${window.location.origin}/${path}?${search}`;
 }
 
 export const isComplete = (booking: AdminBooking) =>

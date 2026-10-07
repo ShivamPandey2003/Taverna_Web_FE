@@ -72,9 +72,9 @@ export function BookingActions({ booking, canCancel }: BookingActionsProps) {
 
       {confirming && (
         <ConfirmModal
-          title="Cancel booking?"
-          confirmLabel="Cancel booking"
-          cancelLabel="Keep booking"
+          title="Cancel Booking?"
+          confirmLabel="Cancel Booking"
+          cancelLabel="Keep Booking"
           pendingLabel="Cancelling..."
           pending={cancelBooking.isPending}
           onConfirm={handleCancel}

@@ -3,6 +3,7 @@ import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { StaffLayout } from "@/layouts/StaffLayout";
 import { Account } from "@/pages/Account";
 import { AdminBookings } from "@/pages/AdminBookings";
+import { AdminOffers } from "@/pages/AdminOffers";
 import { AdminDealerships } from "@/pages/AdminDealerships";
 import { AdminAdvisors } from "@/pages/AdminAdvisors";
 import { AdminValets } from "@/pages/AdminValets";
@@ -81,19 +82,24 @@ const Router = createBrowserRouter([
         path: "advisors",
         element: <AdminAdvisors />,
       },
+      {
+        path: "offers",
+        element: <AdminOffers />,
+      },
     ],
   },
   {
     // Valet / advisor pages, opened from the link the admin shares (staffLink in
-    // admin.utils.ts). No login: the token at the end of the path signs them in.
+    // admin.utils.ts). Their sign-in is separate from the app's: the link's
+    // `gear` and `token` search params, or else an email + OTP form on the page.
     element: <StaffLayout />,
     children: [
       {
-        path: "valet/:leg/:bookingId/:token",
+        path: "valet/:leg/:bookingId",
         element: <ValetUpdate />,
       },
       {
-        path: "advisor/:bookingId/:token",
+        path: "advisor/:bookingId",
         element: <AdvisorUpdate />,
       },
     ],

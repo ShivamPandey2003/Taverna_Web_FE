@@ -9,10 +9,11 @@ import { BillForm } from "@/components/features/staffPortal/advisor/BillForm";
 import { BookingError, WrongLink } from "@/components/features/staffPortal/shared/BookingError";
 import { BookingHero } from "@/components/features/staffPortal/shared/BookingHero";
 import { BookingSkeleton } from "@/components/features/staffPortal/shared/BookingSkeleton";
-import { CustomerCard } from "@/components/features/staffPortal/shared/CustomerCard";
 import { MilestoneTimeline, type Milestone } from "@/components/features/staffPortal/shared/MilestoneTimeline";
+import { StaffLogin } from "@/components/features/staffPortal/shared/StaffLogin";
 import { StatusChip } from "@/components/features/staffPortal/shared/StatusChip";
 import { staffToast } from "@/components/features/staffPortal/shared/staffToast";
+import { useStaffAuth } from "@/components/features/staffPortal/shared/useStaffAuth";
 import { advisorActions } from "@/components/features/staffPortal/shared/workflow";
 import {
   advisorMilestoneLabels,
@@ -21,11 +22,10 @@ import {
   valetMilestoneLabels,
   valetTrip,
 } from "@/components/features/admin/admin.utils";
-import { firstName, formatTime } from "@/libs/utils";
+import { firstName, formatPickupTime, formatTime } from "@/libs/utils";
 import {
   useStaffAdvisorProgress,
   useStaffBooking,
-  useStaffConfirmPayment,
   useStaffGenerateInvoice,
   type StaffLinkParams,
 } from "@/services/queries/staffQueries";
@@ -36,27 +36,35 @@ import {
   type StaffBooking,
 } from "@/types/admin";
 
-// /advisor/:bookingId/:token — the link the admin shares with the booking's advisor
-// (staffLink in admin.utils.ts). The token signs the advisor in.
+// /advisor/:bookingId?gear=…&token=… — the link the admin shares with the
+// booking's advisor (staffLink in admin.utils.ts). The search params sign the
+// advisor in; without them the advisor signs in with email + OTP first.
 export function AdvisorUpdate() {
-  const { bookingId = "", token = "" } = useParams();
-  const link: StaffLinkParams = { id: bookingId, token };
+  const { bookingId = "" } = useParams();
+  const { auth, signedIn, signOut } = useStaffAuth();
+  const link: StaffLinkParams = { id: bookingId, ...auth };
   const booking = useStaffBooking(link);
 
+  if (!signedIn) return <StaffLogin />;
   if (booking.isPending) return <BookingSkeleton />;
-  if (booking.isError) return <BookingError error={booking.error} onRetry={() => booking.refetch()} />;
-  if (booking.data.linkRole && booking.data.linkRole !== "advisor") return <WrongLink />;
+  if (booking.isError) {
+    return (
+      <BookingError error={booking.error} onRetry={() => booking.refetch()} onSignIn={signOut} />
+    );
+  }
+  if (booking.data.linkRoles && !booking.data.linkRoles.includes("advisor")) {
+    return <WrongLink onSignIn={signOut} />;
+  }
 
   return <AdvisorService booking={booking.data} link={link} />;
 }
 
-// Inspecting → inspection done → service in progress → service done, then fill in and
-// generate the invoice; once it's paid (in the customer's app, or confirmed here by the
-// advisor), mark the vehicle ready to dispatch. Every update shows up on the customer's tracking page.
+// Inspecting → service in progress, then fill in and
+// generate the invoice, which ends the advisor's part: the payment and the handover
+// for delivery are the admin's. Every update shows up on the customer's tracking page.
 function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffLinkParams }) {
   const updateProgress = useStaffAdvisorProgress();
   const generateInvoice = useStaffGenerateInvoice();
-  const confirmPayment = useStaffConfirmPayment();
   const [billLines, setBillLines] = useState(() => [newBillLine()]);
 
   const advisor = booking.relationshipManager;
@@ -67,8 +75,8 @@ function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffL
   const ready = !!progress[ADVISOR_HANDOVER];
   const serviceStep = advisor && !complete ? nextMilestone(ADVISOR_MILESTONES, progress) : null;
   const canGenerateBill = !!advisor && !complete && !serviceStep && !invoice;
-  // The hold button's milestone: the next service update, or the handover once it's paid
-  const next = serviceStep ?? (advisor && !complete && paid && !ready ? ADVISOR_HANDOVER : null);
+  // The hold button's milestone
+  const next = serviceStep;
   // null until every row the advisor started has an item and a price
   const billReady = billItems(billLines);
   const customer = firstName(booking.customer.name);
@@ -82,25 +90,17 @@ function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffL
   }
 
   const milestones: Milestone[] = [
-    { key: "assigned", label: "Advisor assigned", done: true },
+    // "Advisor assigned" on the admin side; here the advisor reads it as their own job
+    { key: "assigned", label: "Vehicle Assigned", done: true, at: booking.assignedAt?.advisor },
     ...ADVISOR_MILESTONES.map((key) => ({
       key,
       label: advisorMilestoneLabels[key],
       done: !!progress[key],
       at: progress[key],
     })),
-    { key: "invoice", label: "Invoice generated", done: !!invoice, at: invoice?.issuedAt },
-    { key: "paid", label: "Payment confirmed", done: paid, at: payment?.updatedAt },
-    {
-      key: ADVISOR_HANDOVER,
-      label: advisorMilestoneLabels[ADVISOR_HANDOVER],
-      done: ready,
-      at: progress[ADVISOR_HANDOVER],
-    },
+    { key: "invoice", label: "Invoice Generated", done: !!invoice, at: invoice?.issuedAt },
   ];
-  // The customer can pay in the app; the advisor confirms here if they paid another way
-  const canConfirmPayment = !complete && !!invoice && !paid;
-  const hasAction = !!next || canGenerateBill || canConfirmPayment;
+  const hasAction = !!next || canGenerateBill;
 
   const markNext = () => {
     if (!next) return;
@@ -121,30 +121,29 @@ function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffL
     );
   };
 
-  const markPaid = () =>
-    confirmPayment.mutate(link, {
-      onSuccess: () => staffToast.success(`Payment confirmed for ${booking.id}`),
-    });
-
   return (
     <>
       <div className={hasAction ? "page-body page-body-with-action" : "page-body pb-8"}>
+        {/* First thing on the page: where the service stands */}
+        <section className="card">
+          <p className="eyebrow mb-4">Service progress</p>
+          <MilestoneTimeline milestones={milestones} direction="horizontal" />
+        </section>
+
         <BookingHero
-          title="Service updates"
+          title="Service Updates"
           booking={booking}
+          columns
+          when={{ label: "Booking date", value: formatPickupTime(booking.createdAt) }}
           status={
             ready || complete ? (
               <StatusChip tone="active">Done</StatusChip>
             ) : paid ? (
-              <StatusChip tone="pending">To dispatch</StatusChip>
+              <StatusChip tone="active">Paid</StatusChip>
             ) : invoice ? (
               <StatusChip tone="pending">Awaiting payment</StatusChip>
-            ) : progress.serviceDone ? (
-              <StatusChip tone="pending">Invoice to generate</StatusChip>
             ) : progress.inService ? (
               <StatusChip tone="active">In service</StatusChip>
-            ) : progress.inspected ? (
-              <StatusChip tone="active">Inspection done</StatusChip>
             ) : progress.inspecting ? (
               <StatusChip tone="active">Inspecting</StatusChip>
             ) : (
@@ -153,7 +152,13 @@ function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffL
           }
         />
 
-        {(ready || complete) && payment && <PaidSummary booking={booking} paidAt={payment.updatedAt} />}
+        {(invoice || complete) && (
+          <DoneSummary
+            booking={booking}
+            paidAt={paid ? payment?.updatedAt : undefined}
+            ready={ready}
+          />
+        )}
 
         {canGenerateBill && (
           <BillForm lines={billLines} onChange={setBillLines} disabled={generateInvoice.isPending} />
@@ -161,12 +166,6 @@ function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffL
 
         {invoice && <BillCard invoice={invoice} paid={paid} />}
 
-        <CustomerCard customer={booking.customer} />
-
-        <section className="card">
-          <p className="eyebrow mb-4">Service progress</p>
-          <MilestoneTimeline milestones={milestones} />
-        </section>
       </div>
 
       {hasAction && (
@@ -179,18 +178,10 @@ function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffL
                 pending={updateProgress.isPending}
                 onConfirm={markNext}
               />
-            ) : canConfirmPayment ? (
-              <HoldToConfirm
-                key="paid"
-                label="Confirm payment received"
-                pendingLabel="Confirming..."
-                pending={confirmPayment.isPending}
-                onConfirm={markPaid}
-              />
             ) : (
               <HoldToConfirm
                 key="bill"
-                label="Generate invoice"
+                label="Generate Invoice"
                 pendingLabel="Generating..."
                 pending={generateInvoice.isPending}
                 disabled={!billReady}
@@ -204,8 +195,18 @@ function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffL
   );
 }
 
-// After the handover: the advisor's part is over; show how the vehicle's return is going
-function PaidSummary({ booking, paidAt }: { booking: StaffBooking; paidAt: string }) {
+// Once the invoice is out the advisor's part is over; show how the rest is going
+function DoneSummary({
+  booking,
+  paidAt,
+  ready,
+}: {
+  booking: StaffBooking;
+  // When the invoice was paid, if it has been
+  paidAt?: string;
+  // The admin has marked the vehicle ready to dispatch
+  ready: boolean;
+}) {
   const { valet, progress } = valetTrip(booking, "delivery");
   const reached = [...VALET_MILESTONES].reverse().find((key) => progress[key]);
 
@@ -213,14 +214,18 @@ function PaidSummary({ booking, paidAt }: { booking: StaffBooking; paidAt: strin
     <StateScreen
       tone="success"
       icon={<CheckCircle size={32} />}
-      title={isComplete(booking) ? "Service complete" : "All done on your side"}
+      title={isComplete(booking) ? "Service Complete" : "All Done on Your Side"}
     >
-      Paid {formatTime(paidAt)}.{" "}
+      {paidAt && `Paid ${formatTime(paidAt)}. `}
       {isComplete(booking)
         ? "The vehicle is back with the customer."
-        : valet
-          ? `${valet.name} is bringing the vehicle back${reached ? `: ${valetMilestoneLabels.delivery[reached].toLowerCase()}` : ""}.`
-          : "The Taverna team is booking the delivery valet."}
+        : !paidAt
+          ? `The invoice is with ${firstName(booking.customer.name)}. The Taverna team confirms the payment and sends the vehicle back.`
+          : !ready
+            ? "The Taverna team is getting the vehicle ready to dispatch."
+            : valet
+              ? `${valet.name} is bringing the vehicle back${reached ? `: ${valetMilestoneLabels.delivery[reached].toLowerCase()}` : ""}.`
+              : "The Taverna team is booking the delivery valet."}
     </StateScreen>
   );
 }
@@ -228,7 +233,7 @@ function PaidSummary({ booking, paidAt }: { booking: StaffBooking; paidAt: strin
 function NotAssigned({ booking }: { booking: StaffBooking }) {
   if (isComplete(booking)) {
     return (
-      <StateScreen tone="success" icon={<CheckCircle size={32} />} title="Service complete">
+      <StateScreen tone="success" icon={<CheckCircle size={32} />} title="Service Complete">
         Booking {booking.id} is finished. Nothing else to do here.
       </StateScreen>
     );
@@ -236,10 +241,10 @@ function NotAssigned({ booking }: { booking: StaffBooking }) {
 
   // Advisors are assigned once the vehicle reaches the dealership
   const { valet, progress } = valetTrip(booking, "pickup");
-  if (!progress.delivered) {
+  if (!progress.reached) {
     const reached = [...VALET_MILESTONES].reverse().find((key) => progress[key]);
     return (
-      <StateScreen tone="pending" icon={<Driving size={30} />} title="Vehicle on its way">
+      <StateScreen tone="pending" icon={<Driving size={30} />} title="Vehicle on Its Way">
         {valet
           ? `${valet.name} is bringing the ${booking.vehicle.model} to ${booking.dealershipName}${reached ? ` (${valetMilestoneLabels.pickup[reached].toLowerCase()})` : ""}.`
           : `The ${booking.vehicle.model} hasn't been collected yet.`}{" "}
@@ -249,7 +254,7 @@ function NotAssigned({ booking }: { booking: StaffBooking }) {
   }
 
   return (
-    <StateScreen icon={<UserCircle size={30} />} title="No advisor assigned yet">
+    <StateScreen icon={<UserCircle size={30} />} title="No Advisor Assigned Yet">
       The vehicle is at {booking.dealershipName}. The Taverna team hasn't assigned an advisor for
       booking {booking.id} yet. This page updates by itself.
     </StateScreen>

@@ -56,7 +56,7 @@ export function getBookingDetailGroups(booking: Booking, user: AccountUser): Det
       ],
     },
     {
-      title: "User details",
+      title: "User Details",
       // Only what the account actually has
       details: [
         { label: "Name", value: user.name },

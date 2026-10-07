@@ -1,5 +1,6 @@
 import { siteConfig } from "@/config/site.config";
 import { Container } from "@/components/ui/Container";
+import { Logo } from "@/components/ui/Logo";
 
 export function Footer() {
   return (
@@ -11,15 +12,7 @@ export function Footer() {
 
           {/* Brand */}
           <div>
-            <div className="flex items-center gap-3">
-              <span className="text-xl font-bold text-primary">
-                T
-              </span>
-
-              <span className="font-bold">
-                {siteConfig.name}
-              </span>
-            </div>
+            <Logo />
 
             <p className="mt-5 max-w-xs text-xs leading-5 text-text-secondary">
               Taverna redefines vehicle maintenance by bringing professional, dealer-grade services right to your doorstep. From convenient vehicle pickup to expert servicing and safe return delivery, we handle every step with care and reliability.

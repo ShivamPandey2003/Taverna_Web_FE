@@ -27,7 +27,7 @@ export function ServiceTracking() {
     return (
       <div className="flex h-full min-h-0 flex-col items-center justify-center bg-[#f8f9fa] px-6 text-center">
         <h1 className="text-xl font-bold text-gray-900">
-          No active booking
+          No Active Booking
         </h1>
 
         <p className="mt-2 text-sm text-gray-500">

@@ -1,4 +1,4 @@
-import { ArrowRight, Check } from "reicon-react";
+import { Check } from "reicon-react";
 import { cn } from "@/libs/utils";
 import { formatShortDateTime } from "../admin.utils";
 
@@ -14,26 +14,27 @@ interface MilestoneTrackerProps {
   milestones: Milestone[];
 }
 
-// Row of circles joined by arrows: green once reached, orange for the one that's
-// up next, grey for the rest. Scrolls sideways when the drawer is narrow.
+// Row of circles joined by lines, spread across the full width: green once reached,
+// orange for the one that's up next, grey for the rest. Scrolls sideways when there
+// are more than fit.
 export function MilestoneTracker({ milestones }: MilestoneTrackerProps) {
   const nextIndex = milestones.findIndex((milestone) => !milestone.done);
 
   return (
-    <div className="-mx-1 overflow-x-auto px-1 pb-1">
-      <ol className="flex min-w-max items-start">
+    // Padded so the scroll area doesn't clip the halo around the step that's up next
+    <div className="-mx-2 -mt-2 overflow-x-auto px-2 pb-1 pt-2">
+      <ol className="flex w-full min-w-max items-start">
         {milestones.map((milestone, index) => {
           const isNext = index === nextIndex;
 
           return (
-            <li key={milestone.key} className="flex items-start">
+            <li key={milestone.key} className={cn("flex items-start", index > 0 && "flex-1")}>
+              {/* Stretches, so the row always fills the card's width */}
               {index > 0 && (
-                <ArrowRight
-                  size={18}
-                  strokeWidth={2.5}
+                <span
                   className={cn(
-                    "mx-1 mt-3 shrink-0",
-                    milestone.done ? "text-status-active" : "text-gray-300",
+                    "mx-1 mt-[21px] h-0.5 min-w-5 flex-1 rounded-full",
+                    milestone.done ? "bg-status-active" : "bg-gray-200",
                   )}
                 />
               )}
@@ -45,7 +46,7 @@ export function MilestoneTracker({ milestones }: MilestoneTrackerProps) {
                     milestone.done
                       ? "border-status-active bg-status-active/10 text-status-active"
                       : isNext
-                        ? "border-status-pending bg-status-pending/10 text-status-pending ring-4 ring-status-pending/15"
+                        ? "border-status-pending bg-status-pending/10 text-status-pending ring-4 ring-status-pending/15 motion-safe:animate-step-pulse"
                         : "border-gray-200 bg-gray-50 text-gray-400",
                   )}
                   aria-label={milestone.done ? "Done" : isNext ? "Up next" : "Not yet"}

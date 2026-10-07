@@ -6,8 +6,10 @@ import { BookingError, WrongLink } from "@/components/features/staffPortal/share
 import { BookingHero } from "@/components/features/staffPortal/shared/BookingHero";
 import { BookingSkeleton } from "@/components/features/staffPortal/shared/BookingSkeleton";
 import { MilestoneTimeline, type Milestone } from "@/components/features/staffPortal/shared/MilestoneTimeline";
+import { StaffLogin } from "@/components/features/staffPortal/shared/StaffLogin";
 import { StatusChip } from "@/components/features/staffPortal/shared/StatusChip";
 import { staffToast } from "@/components/features/staffPortal/shared/staffToast";
+import { useStaffAuth } from "@/components/features/staffPortal/shared/useStaffAuth";
 import { RouteCard } from "@/components/features/staffPortal/valet/RouteCard";
 import {
   isValetLeg,
@@ -21,7 +23,7 @@ import {
   valetMilestoneLabels,
   valetTrip,
 } from "@/components/features/admin/admin.utils";
-import { formatTime } from "@/libs/utils";
+import { formatPickupTime, formatTime } from "@/libs/utils";
 import {
   useStaffBooking,
   useStaffValetProgress,
@@ -29,22 +31,32 @@ import {
 } from "@/services/queries/staffQueries";
 import {
   ADVISOR_HANDOVER,
-  VALET_MILESTONES,
+  LEG_MILESTONES,
+  TRIP_END,
   type StaffBooking,
   type ValetLeg,
 } from "@/types/admin";
 
-// /valet/:leg/:bookingId/:token — the link the admin shares with the pickup or
-// delivery valet (staffLink in admin.utils.ts). The token signs the valet in.
+// /valet/:leg/:bookingId?gear=…&token=… — the link the admin shares with the
+// pickup or delivery valet (staffLink in admin.utils.ts). The search params sign
+// the valet in; without them the valet signs in with email + OTP first.
 export function ValetUpdate() {
-  const { leg, bookingId = "", token = "" } = useParams();
-  const link: StaffLinkParams = { id: bookingId, token };
+  const { leg, bookingId = "" } = useParams();
+  const { auth, signedIn, signOut } = useStaffAuth();
+  const link: StaffLinkParams = { id: bookingId, ...auth };
   const booking = useStaffBooking(link);
 
   if (!isValetLeg(leg)) return <Navigate to="/" replace />;
+  if (!signedIn) return <StaffLogin />;
   if (booking.isPending) return <BookingSkeleton />;
-  if (booking.isError) return <BookingError error={booking.error} onRetry={() => booking.refetch()} />;
-  if (booking.data.linkRole && booking.data.linkRole !== leg) return <WrongLink />;
+  if (booking.isError) {
+    return (
+      <BookingError error={booking.error} onRetry={() => booking.refetch()} onSignIn={signOut} />
+    );
+  }
+  if (booking.data.linkRoles && !booking.data.linkRoles.includes(leg)) {
+    return <WrongLink onSignIn={signOut} />;
+  }
 
   return <ValetTrip booking={booking.data} leg={leg} link={link} />;
 }
@@ -60,10 +72,26 @@ function ValetTrip({
 }) {
   const updateProgress = useStaffValetProgress();
   const { valet, progress } = valetTrip(booking, leg);
-  const labels = valetMilestoneLabels[leg];
+  // The valet reads the first two steps as their own trip, not as the admin's
+  // "Valet assigned" / "Valet dispatched"
+  const labels = { ...valetMilestoneLabels[leg], dispatched: "Trip Started" };
+  // The trip's date and time: when the customer asked to be picked up, or since
+  // when the serviced vehicle has been ready to go back
+  const readyAt = booking.advisorProgress?.[ADVISOR_HANDOVER];
+  const when =
+    leg === "pickup"
+      ? {
+          label: "Scheduled pickup",
+          value: booking.scheduledAt
+            ? formatPickupTime(booking.scheduledAt)
+            : "As soon as possible",
+        }
+      : readyAt
+        ? { label: "Ready for delivery since", value: formatPickupTime(readyAt) }
+        : undefined;
   const route = tripRoute(booking, leg);
   const complete = isComplete(booking);
-  const next = valet && !complete ? nextMilestone(VALET_MILESTONES, progress) : null;
+  const next = valet && !complete ? nextMilestone(LEG_MILESTONES[leg], progress) : null;
 
   if (!valet) {
     return (
@@ -73,20 +101,21 @@ function ValetTrip({
     );
   }
 
-  const milestones: Milestone[] = [
-    { key: "assigned", label: "Valet assigned", done: true },
-    ...VALET_MILESTONES.map((key) => ({
-      key,
-      label: labels[key],
-      done: !!progress[key],
-      at: progress[key],
-    })),
-  ];
+  // Starts at "Trip Started": being assigned isn't a step the valet takes (the
+  // admin's tracker still shows it)
+  const milestones: Milestone[] = LEG_MILESTONES[leg].map((key) => ({
+    key,
+    label: labels[key],
+    done: !!progress[key],
+    at: progress[key],
+  }));
 
   // Until the valet arrives they head to the start; once they have the vehicle, to the end
+  // (the delivery trip has no "arrived" update, so there it's until they pick it up)
+  const atStart = LEG_MILESTONES[leg].includes("arrived") ? progress.arrived : progress.pickedUp;
   const heading = !next
     ? null
-    : !progress.arrived
+    : !atStart
       ? "from"
       : progress.pickedUp && !progress.reached
         ? "to"
@@ -103,9 +132,16 @@ function ValetTrip({
   return (
     <>
       <div className={next ? "page-body page-body-with-action" : "page-body pb-8"}>
+        {/* First thing on the page: where the trip stands */}
+        <section className="card">
+          <p className="eyebrow mb-4">PICKUP PROGRESS</p>
+          <MilestoneTimeline milestones={milestones} direction="horizontal" />
+        </section>
+
         <BookingHero
           title={tripTitles[leg]}
           booking={booking}
+          when={when}
           status={
             !next ? (
               <StatusChip tone="active">Done</StatusChip>
@@ -121,13 +157,8 @@ function ValetTrip({
         {next ? (
           <RouteCard from={route.from} to={route.to} heading={heading} />
         ) : (
-          <TripDone booking={booking} leg={leg} deliveredAt={progress.delivered} />
+          <TripDone booking={booking} leg={leg} deliveredAt={progress[TRIP_END[leg]]} />
         )}
-
-        <section className="card">
-          <p className="eyebrow mb-4">Trip progress</p>
-          <MilestoneTimeline milestones={milestones} />
-        </section>
       </div>
 
       {next && (
@@ -156,9 +187,9 @@ function TripDone({
   deliveredAt?: string;
 }) {
   return (
-    <StateScreen tone="success" icon={<CheckCircle size={32} />} title="Trip complete">
+    <StateScreen tone="success" icon={<CheckCircle size={32} />} title="Trip Complete">
       {leg === "pickup"
-        ? `The vehicle was handed to ${booking.dealershipName}`
+        ? `The vehicle arrived at ${booking.dealershipName}`
         : `The vehicle was delivered to ${booking.customer.name}`}
       {deliveredAt && ` at ${formatTime(deliveredAt)}`}. Thanks! Nothing else to do here.
     </StateScreen>
@@ -169,7 +200,7 @@ function TripDone({
 function NotAssigned({ booking, leg }: { booking: StaffBooking; leg: ValetLeg }) {
   if (isComplete(booking)) {
     return (
-      <StateScreen tone="success" icon={<CheckCircle size={32} />} title="Service complete">
+      <StateScreen tone="success" icon={<CheckCircle size={32} />} title="Service Complete">
         Booking {booking.id} is finished. Nothing else to do here.
       </StateScreen>
     );
@@ -178,7 +209,7 @@ function NotAssigned({ booking, leg }: { booking: StaffBooking; leg: ValetLeg })
   // The delivery trip can only start once the advisor marks the paid-up vehicle ready
   if (leg === "delivery" && !booking.advisorProgress?.[ADVISOR_HANDOVER]) {
     return (
-      <StateScreen tone="pending" icon={<Hourglass size={30} />} title="Vehicle still in service">
+      <StateScreen tone="pending" icon={<Hourglass size={30} />} title="Vehicle Still in Service">
         The vehicle is at {booking.dealershipName}. The delivery trip opens once the service is
         paid for and the advisor marks the vehicle ready to dispatch. This page updates by itself.
       </StateScreen>
@@ -186,7 +217,7 @@ function NotAssigned({ booking, leg }: { booking: StaffBooking; leg: ValetLeg })
   }
 
   return (
-    <StateScreen icon={<UserCircle size={30} />} title="No valet assigned yet">
+    <StateScreen icon={<UserCircle size={30} />} title="No Valet Assigned Yet">
       The Taverna team hasn't assigned the {tripTitles[leg].toLowerCase()} for booking {booking.id}{" "}
       yet. This page updates by itself.
     </StateScreen>

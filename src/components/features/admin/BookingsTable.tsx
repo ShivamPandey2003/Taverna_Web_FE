@@ -20,13 +20,21 @@ import { formatShortDateTime, serviceLabels } from "./admin.utils";
 const columns: { label: string; sortField?: BookingSortField }[] = [
   { label: "Booking ID", sortField: "id" },
   { label: "Customer", sortField: "customer" },
+  { label: "Contact" },
   { label: "Vehicle" },
   { label: "Service" },
-  { label: "Created", sortField: "createdAt" },
+  // { label: "Created", sortField: "createdAt" },
   { label: "Scheduled", sortField: "scheduledAt" },
   { label: "Status", sortField: "status" },
   { label: "Actions" },
 ];
+
+// A Book Now booking has no scheduled time: the pickup is expected this long
+// after it was made
+const ASAP_PICKUP_MINUTES = 45;
+
+const asapPickupTime = (createdAt: string) =>
+  new Date(new Date(createdAt).getTime() + ASAP_PICKUP_MINUTES * 60_000).toISOString();
 
 export function BookingsTable() {
   const dispatch = useAppDispatch();
@@ -48,7 +56,14 @@ export function BookingsTable() {
           <thead className="sticky top-0 border-b border-gray-200 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
             <tr>
               {columns.map((column) => (
-                <th key={column.label} className="whitespace-nowrap px-4 py-2.5">
+                <th
+                  key={column.label}
+                  className={cn(
+                    "whitespace-nowrap px-4 py-2.5",
+                    // Sits over the centred Manage button
+                    column.label === "Actions" && "text-center",
+                  )}
+                >
                   {column.sortField ? (
                     <SortButton
                       label={column.label}
@@ -83,7 +98,7 @@ export function BookingsTable() {
                     onClick={() => refetch()}
                     className="mt-3 text-sm font-semibold text-gray-900 underline underline-offset-4 hover:text-black"
                   >
-                    Try again
+                    Try Again
                   </button>
                 </td>
               </tr>
@@ -125,6 +140,10 @@ export function BookingsTable() {
                   {booking.customer.name}
                 </td>
 
+                <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                  {booking.customer.phone}
+                </td>
+
                 <td
                   className="max-w-[220px] truncate px-4 py-2 text-gray-900"
                   title={`VIN ${booking.vehicle.vin}`}
@@ -136,19 +155,19 @@ export function BookingsTable() {
                   {serviceLabels[booking.serviceId]}
                 </td>
 
-                <td className="whitespace-nowrap px-4 py-2 text-gray-700">
+                {/* <td className="whitespace-nowrap px-4 py-2 text-gray-700">
                   {formatShortDateTime(booking.createdAt)}
-                </td>
+                </td> */}
 
                 <td className="whitespace-nowrap px-4 py-2 text-gray-700">
-                  {booking.scheduledAt ? formatShortDateTime(booking.scheduledAt) : "ASAP"}
+                  {formatShortDateTime(booking.scheduledAt ?? asapPickupTime(booking.createdAt))}
                 </td>
 
                 <td className="px-4 py-2">
                   <BookingStatusBadge status={booking.status} />
                 </td>
 
-                <td className="px-4 py-2 text-right">
+                <td className="px-4 py-2 text-center">
                   <button
                     type="button"
                     onClick={(event) => {

@@ -104,6 +104,18 @@ export const adminApi = {
       () => request<AdminBooking>("put", `/admin/bookings/${id}/complete`),
     ),
 
+  // Sends the offers CSV as multipart form data; the server parses and stores it.
+  // The path is a proposal: agree it with the backend. `rowCount` only feeds the mock.
+  uploadOffers: (file: File, rowCount: number) =>
+    callApi(
+      () => mockServer.uploadOffers(rowCount),
+      () => {
+        const form = new FormData();
+        form.append("file", file);
+        return request<{ imported: number }>("post", "/admin/offers/upload", form);
+      },
+    ),
+
   listStaff: (role: StaffRole, params: StaffListParams) =>
     callApi(
       () => mockServer.listStaff(role, params),

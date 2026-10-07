@@ -20,6 +20,7 @@ export const adminNavigation: NavItem[] = [
   { label: "Dealerships", path: "/admin/dealerships", icon: Building },
   { label: "Valets", path: "/admin/valets", icon: Car },
   { label: "Advisors", path: "/admin/advisors", icon: Users },
+  { label: "Offers", path: "/admin/offers", icon: Tag },
 ];
 
 // Paths that must match exactly so child routes don't also highlight them

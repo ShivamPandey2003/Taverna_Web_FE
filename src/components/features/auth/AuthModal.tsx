@@ -103,8 +103,9 @@ export function AuthModal() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
 
-      {/* Modal */}
-      <div className="relative flex max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+      {/* Modal. Never shorter than it is with the login form (about 420px), so a
+          shorter step like the OTP one doesn't make it shrink. */}
+      <div className="relative flex max-h-[90vh] min-h-[min(420px,90vh)] w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl">
 
         {/* Close */}
         <button
@@ -140,7 +141,7 @@ export function AuthModal() {
             </div>
 
             <h2 className="max-w-sm text-3xl font-bold leading-tight">
-              Your car deserves concierge-level care.
+              Your Car Deserves Concierge-Level Care.
             </h2>
 
             <p className="mt-3 max-w-sm text-sm leading-5 text-white/80">
@@ -165,8 +166,8 @@ export function AuthModal() {
 
                   <h1 className="mt-2 text-3xl font-bold tracking-tight text-gray-950">
                     {mode === "login"
-                      ? "Welcome back"
-                      : "Create your account"}
+                      ? "Welcome Back"
+                      : "Create Your Account"}
                   </h1>
 
                   <p className="mt-2 text-sm text-gray-500">
@@ -187,7 +188,7 @@ export function AuthModal() {
                         : "text-gray-500"
                     }`}
                   >
-                    Log in
+                    Log In
                   </button>
 
                   <button
@@ -199,7 +200,7 @@ export function AuthModal() {
                         : "text-gray-500"
                     }`}
                   >
-                    Sign up
+                    Sign Up
                   </button>
                 </div>
 

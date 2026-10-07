@@ -17,7 +17,7 @@ export function ProcessSection() {
           </span> */}
 
           <h2 className="mt-3 text-3xl font-bold tracking-tight">
-            How service at Taverna works
+            How Service at Taverna Works
           </h2>
 
           <p className="mt-4 text-sm leading-6 text-text-secondary">

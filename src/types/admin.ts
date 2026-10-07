@@ -55,6 +55,18 @@ export const VALET_LEGS: readonly ValetLeg[] = ["pickup", "delivery"];
 // Who a staff link is for: one of the two valets, or the advisor
 export type StaffLinkRole = ValetLeg | "advisor";
 
+// What the valet / advisor pages sign in with. It has nothing to do with the
+// app's own login (AuthSession): it comes from the link's `gear` and `token`
+// search params, or from the staff email + OTP sign-in.
+export interface StaffAuth {
+  // The auth token
+  gear: string;
+  // Encrypted staff type ("valet" or "advisor"); only the server can read it
+  token: string;
+}
+
+export type StaffType = "valet" | "advisor";
+
 export const VALET_MILESTONES = [
   "dispatched",
   // At the pickup point: the customer (pickup) or the dealership (delivery)
@@ -63,15 +75,29 @@ export const VALET_MILESTONES = [
   // Driving the vehicle to its destination
   "enRoute",
   "reached",
-  // Vehicle handed over: to the dealership (pickup) or the customer (delivery)
+  // Vehicle handed over to the customer
   "delivered",
 ] as const;
 export type ValetMilestone = (typeof VALET_MILESTONES)[number];
 
+// The milestones of each trip, in order; neither uses every key. The pickup trip
+// ends once the vehicle reaches the dealership; the delivery trip goes from
+// dispatched straight to picked up, and from there to arriving at the customer.
+export const LEG_MILESTONES: Record<ValetLeg, readonly ValetMilestone[]> = {
+  pickup: ["dispatched", "arrived", "pickedUp", "reached"],
+  delivery: ["dispatched", "pickedUp", "reached", "delivered"],
+};
+
+// The milestone that finishes each trip
+export const TRIP_END: Record<ValetLeg, ValetMilestone> = {
+  pickup: "reached",
+  delivery: "delivered",
+};
+
 // Updates the advisor shares with the customer while the vehicle is serviced, in
 // order. The bill and payment that follow come from `invoice` and `payment`; then
 // the advisor hands the vehicle over for the delivery valet (`ADVISOR_HANDOVER`).
-export const ADVISOR_MILESTONES = ["inspecting", "inspected", "inService", "serviceDone"] as const;
+export const ADVISOR_MILESTONES = ["inspecting", "inService"] as const;
 export const ADVISOR_HANDOVER = "readyForDispatch";
 export type AdvisorMilestone = (typeof ADVISOR_MILESTONES)[number] | typeof ADVISOR_HANDOVER;
 
@@ -93,6 +119,8 @@ export interface AdminBooking {
     model: string;
     year: number;
     vin: string;
+    // The vehicle's photo, when the API sends one
+    image?: string;
   };
   pickup: string;
   dealershipName: string;
@@ -115,16 +143,21 @@ export interface AdminBooking {
   // Brings the vehicle back once the bill is paid
   deliveryValet?: StaffMember | null;
   deliveryProgress?: MilestoneLog<ValetMilestone>;
+  // When each valet / the advisor was assigned (ISO strings), for the first
+  // step of their progress
+  assignedAt?: Partial<Record<StaffLinkRole, string>>;
   completedAt?: string | null;
-  // Token that goes in each staff link (see staffLink in admin.utils.ts). Only
-  // admin responses carry it; it's what signs the valet / advisor in.
-  staffTokens?: Partial<Record<StaffLinkRole, string>>;
+  // What goes in each staff link's search params (see staffLink in
+  // admin.utils.ts). Only admin responses carry it; it's what signs the valet /
+  // advisor in without the email + OTP form.
+  staffTokens?: Partial<Record<StaffLinkRole, StaffAuth>>;
 }
 
 // A booking as the staff link endpoints return it
 export interface StaffBooking extends AdminBooking {
-  // Whose link the token belongs to; a valet's link can't open the advisor's page
-  linkRole?: StaffLinkRole;
+  // The pages of this booking the signed-in staff member may use; a valet can't
+  // open the advisor's page, nor the pickup valet the delivery trip
+  linkRoles?: StaffLinkRole[];
   // The valet's directions fall back to the dealership's name without it
   dealershipAddress?: string;
 }

@@ -87,7 +87,7 @@ export function BillForm({ lines, onChange, disabled = false }: BillFormProps) {
         className="btn btn-secondary btn-sm btn-block mt-3 border-dashed"
       >
         <Add size={18} />
-        Add row
+        Add Row
       </button>
 
       <div className="mt-4 flex justify-between gap-4 border-b border-border pb-3 text-sm">

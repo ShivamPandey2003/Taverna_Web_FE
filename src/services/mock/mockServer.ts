@@ -4,18 +4,21 @@ import {
   ADVISOR_HANDOVER,
   ADVISOR_MILESTONES,
   INVOICE_TAX_RATE,
-  VALET_MILESTONES,
+  LEG_MILESTONES,
+  TRIP_END,
   type AdminBooking,
   type AdvisorMilestone,
   type BookingListParams,
   type Invoice,
   type InvoiceLine,
   type Paginated,
+  type StaffAuth,
   type StaffBooking,
   type StaffLinkRole,
   type StaffListParams,
   type StaffMember,
   type StaffRole,
+  type StaffType,
   type ValetLeg,
   type ValetMilestone,
 } from "@/types/admin";
@@ -69,6 +72,12 @@ function createRandom(seed: number) {
   };
 }
 
+// Seed bookings 42 and up: never touched by the workflow, so the admin always
+// has some In-queue ones to confirm
+const SEED_HISTORY = 42;
+const SEED_IN_QUEUE = 10;
+const seedBookingId = (index: number) => `PC-${String(482900 + index)}`;
+
 function seedBookings(): AdminBooking[] {
   const random = createRandom(42);
   const pick = <T,>(items: readonly T[]) => items[Math.floor(random() * items.length)];
@@ -109,13 +118,18 @@ function seedBookings(): AdminBooking[] {
   const now = Date.now();
   const day = 24 * 60 * 60 * 1000;
 
-  return Array.from({ length: 42 }, (_, index): AdminBooking => {
-    const [name, email, phone] = pick(customers);
+  return Array.from({ length: SEED_HISTORY + SEED_IN_QUEUE }, (_, index): AdminBooking => {
+    const inQueue = index >= SEED_HISTORY;
+    // Not the demo customer, who has to be free to book
+    const [name, email, phone] = pick(inQueue ? customers.slice(1) : customers);
     const [brand, model, year] = pick(vehicles);
-    const createdAt = new Date(now - Math.floor(random() * 30 * day)).toISOString();
+    // In-queue bookings are fresh: placed within the last two days
+    const createdAt = new Date(
+      now - Math.floor(random() * (inQueue ? 2 : 30) * day),
+    ).toISOString();
 
     const booking: AdminBooking = {
-      id: `PC-${String(482900 + index)}`,
+      id: seedBookingId(index),
       customer: {
         id: email === "alex@gmail.com" ? "u-alex" : `u-${index}`,
         name,
@@ -141,8 +155,9 @@ function seedBookings(): AdminBooking[] {
       valet: null,
       relationshipManager: null,
       payment: null,
-      staffTokens: mockStaffTokens(`PC-${String(482900 + index)}`),
+      staffTokens: mockStaffTokens(seedBookingId(index)),
     };
+    if (inQueue) return booking;
 
     // Walk the booking some way through the workflow; 40% are finished history.
     // The demo customer's are all finished, so they can book right away.
@@ -192,7 +207,23 @@ function loadDb(): MockDb {
       // every valet and advisor on an active booking (so none could be deleted)
       saved.bookings.forEach((booking) => {
         // Bookings saved before staff links carried a token
-        booking.staffTokens ??= mockStaffTokens(booking.id);
+        // Always rebuilt: they were plain strings before the staff sign-in
+        booking.staffTokens = mockStaffTokens(booking.id);
+        // Saved while the status was still spelled "Service complete"
+        if ((booking.status as string) === "Service complete") {
+          booking.status = BookingStatus.SERVICE_COMPLETE;
+        }
+        // Dispatched before "Valet On Road" existed
+        if (booking.status === BookingStatus.VALET_ASSIGNED && booking.pickupProgress?.dispatched) {
+          booking.status = BookingStatus.VALET_ON_ROAD;
+        }
+        if (
+          booking.status === BookingStatus.VEHICLE_RETURN &&
+          booking.deliveryProgress?.dispatched &&
+          !booking.deliveryProgress.reached
+        ) {
+          booking.status = BookingStatus.VALET_ON_ROAD;
+        }
         if (booking.payment?.status === "paid" && booking.status === BookingStatus.VALET_ASSIGNED) {
           booking.status = BookingStatus.SERVICE_COMPLETE;
         }
@@ -201,24 +232,46 @@ function loadDb(): MockDb {
           const at = booking.payment?.updatedAt ?? booking.createdAt;
           const all = <T extends string>(keys: readonly T[]) =>
             Object.fromEntries(keys.map((key) => [key, at])) as Record<T, string>;
-          booking.pickupProgress = all(VALET_MILESTONES);
+          booking.pickupProgress = all(LEG_MILESTONES.pickup);
           booking.advisorProgress = all([...ADVISOR_MILESTONES, ADVISOR_HANDOVER]);
           booking.deliveryValet ??= booking.valet;
-          booking.deliveryProgress = all(VALET_MILESTONES);
+          booking.deliveryProgress = all(LEG_MILESTONES.delivery);
           booking.completedAt = at;
         }
-        // The advisor's single "checked in" update became inspecting + inspection done,
-        // and they now hand the vehicle over before the delivery valet takes it
+        // The advisor's single "checked in" update became "inspecting", and they
+        // now hand the vehicle over before the delivery valet takes it
         const advisorLog = booking.advisorProgress as Record<string, string> | undefined;
         if (advisorLog?.checkedIn) {
           advisorLog.inspecting ??= advisorLog.checkedIn;
-          advisorLog.inspected ??= advisorLog.checkedIn;
           delete advisorLog.checkedIn;
         }
         if (advisorLog && !advisorLog.readyForDispatch && booking.deliveryValet) {
           advisorLog.readyForDispatch = booking.payment?.updatedAt ?? booking.createdAt;
         }
       });
+      // Saved before assignment times were recorded: the nearest known time stands in
+      saved.bookings.forEach((booking) => {
+        const at = booking.assignedAt ?? {};
+        if (booking.valet) {
+          at.pickup ??= booking.pickupProgress?.dispatched ?? booking.confirmedAt ?? booking.createdAt;
+        }
+        if (booking.relationshipManager) {
+          at.advisor ??=
+            booking.advisorProgress?.inspecting ?? booking.pickupProgress?.reached ?? booking.createdAt;
+        }
+        if (booking.deliveryValet) {
+          at.delivery ??=
+            booking.deliveryProgress?.dispatched ??
+            booking.advisorProgress?.readyForDispatch ??
+            booking.createdAt;
+        }
+        booking.assignedAt = at;
+      });
+      // DBs saved before the seed had its In-queue bookings
+      const savedIds = new Set(saved.bookings.map((booking) => booking.id));
+      saved.bookings.unshift(
+        ...seed.bookings.slice(SEED_HISTORY).filter((booking) => !savedIds.has(booking.id)),
+      );
       return saved;
     }
   } catch {
@@ -311,37 +364,74 @@ function findBooking(id: string) {
   return booking;
 }
 
-// One token per staff link. The real API issues signed tokens; these only have to
-// be the same on every load, so a copied link keeps working.
-function mockStaffTokens(bookingId: string): Record<StaffLinkRole, string> {
-  const token = (role: StaffLinkRole) => `mock-${role}-${bookingId.toLowerCase()}`;
-  return { pickup: token("pickup"), advisor: token("advisor"), delivery: token("delivery") };
+const STAFF_TYPES: StaffType[] = ["valet", "advisor"];
+const STAFF_LINK_ROLES: StaffLinkRole[] = ["pickup", "advisor", "delivery"];
+
+const linkRoleType = (role: StaffLinkRole): StaffType => (role === "advisor" ? "advisor" : "valet");
+
+// Stand-in for the encrypted staff type (the `token` search param); the real API
+// encrypts it so it can't be read or changed in the browser
+const mockStaffTypeToken = (type: StaffType) => `mock-enc-${type}`;
+
+// The auth token (`gear`) of someone who signed in with email + OTP
+const mockStaffGear = (member: StaffMember) => `mock-staff-${member.id}`;
+
+// What goes in each staff link. The real API issues signed tokens; these only have
+// to be the same on every load, so a copied link keeps working.
+function mockStaffTokens(bookingId: string): Record<StaffLinkRole, StaffAuth> {
+  const auth = (role: StaffLinkRole): StaffAuth => ({
+    gear: `mock-${role}-${bookingId.toLowerCase()}`,
+    token: mockStaffTypeToken(linkRoleType(role)),
+  });
+  return { pickup: auth("pickup"), advisor: auth("advisor"), delivery: auth("delivery") };
 }
 
-// The booking a staff link opens, and whose link it is. Staff aren't logged in:
-// the token from the link is all that's checked.
-function findStaffBooking(token: string, id: string) {
-  const booking = db.bookings.find((item) => item.id === id);
-  const roles = Object.keys(booking?.staffTokens ?? {}) as StaffLinkRole[];
-  const role = roles.find((key) => booking?.staffTokens?.[key] === token);
-  if (!booking || !role) {
-    throw new Error("This link isn't valid. Ask the Taverna team for a new one.");
-  }
-  return { booking, role };
+function findStaffByEmail(email: string) {
+  const match = (member: StaffMember) => member.email.toLowerCase() === email.trim().toLowerCase();
+  const valet = db.valets.find(match);
+  if (valet) return { member: valet, type: "valet" as StaffType };
+  const advisor = db.relationshipManagers.find(match);
+  return advisor ? { member: advisor, type: "advisor" as StaffType } : null;
 }
 
-function assertStaffRole(actual: StaffLinkRole, expected: StaffLinkRole) {
-  if (actual !== expected) {
-    throw new Error("This link can't be used for that update.");
+// The booking a staff page opens, and which of its pages the caller may use.
+// `gear` is either a link's token (good for that one page of that booking) or a
+// signed-in staff member's (good for whatever they're assigned to on it).
+function findStaffBooking(auth: StaffAuth, id: string) {
+  const type = STAFF_TYPES.find((item) => mockStaffTypeToken(item) === auth.token);
+  if (!type) throw new Error("This link isn't valid. Sign in again to continue.");
+  const booking = findBooking(id);
+  const ofType = STAFF_LINK_ROLES.filter((role) => linkRoleType(role) === type);
+
+  const linked = ofType.filter((role) => booking.staffTokens?.[role]?.gear === auth.gear);
+  if (linked.length) return { booking, roles: linked };
+
+  const member = (type === "valet" ? db.valets : db.relationshipManagers).find(
+    (item) => mockStaffGear(item) === auth.gear,
+  );
+  if (!member) throw new Error("Your sign-in has expired. Sign in again to continue.");
+  const assigned: Record<StaffLinkRole, StaffMember | null | undefined> = {
+    pickup: booking.valet,
+    advisor: booking.relationshipManager,
+    delivery: booking.deliveryValet,
+  };
+  const roles = ofType.filter((role) => assigned[role]?.id === member.id);
+  if (!roles.length) throw new Error("You're not assigned to this booking.");
+  return { booking, roles };
+}
+
+function assertStaffRole(roles: StaffLinkRole[], expected: StaffLinkRole) {
+  if (!roles.includes(expected)) {
+    throw new Error("You can't make that update on this booking.");
   }
 }
 
 // What staff get back: the booking with the dealership's address for directions,
-// and without the other links' tokens
-function staffView(booking: AdminBooking, linkRole: StaffLinkRole): StaffBooking {
+// and without the links' tokens
+function staffView(booking: AdminBooking, linkRoles: StaffLinkRole[]): StaffBooking {
   return {
     ...booking,
-    linkRole,
+    linkRoles,
     staffTokens: undefined,
     dealershipAddress: db.dealerships.find((item) => item.name === booking.dealershipName)
       ?.address,
@@ -461,13 +551,13 @@ function nextMilestone<T extends string>(order: readonly T[], log: Partial<Recor
 }
 
 const legDone = (booking: AdminBooking, leg: ValetLeg) =>
-  !!legValet(booking, leg) && !!legProgress(booking, leg).delivered;
+  !!legValet(booking, leg) && !!legProgress(booking, leg)[TRIP_END[leg]];
 
-// Status the customer sees once a pickup milestone is reached; the whole
-// delivery trip reads as "Vehicle Return"
+// Status the customer sees once a pickup milestone is reached. The delivery
+// trip reads as "Vehicle Return", except while its valet is on the road.
 const pickupStatuses: Record<ValetMilestone, BookingStatus> = {
-  dispatched: BookingStatus.VALET_ASSIGNED,
-  arrived: BookingStatus.VALET_ASSIGNED,
+  dispatched: BookingStatus.VALET_ON_ROAD,
+  arrived: BookingStatus.VALET_ON_ROAD,
   pickedUp: BookingStatus.VEHICLE_PICKED_UP,
   enRoute: BookingStatus.VEHICLE_PICKED_UP,
   reached: BookingStatus.VEHICLE_ARRIVED,
@@ -476,9 +566,7 @@ const pickupStatuses: Record<ValetMilestone, BookingStatus> = {
 
 const advisorStatuses: Record<AdvisorMilestone, BookingStatus> = {
   inspecting: BookingStatus.VEHICLE_ARRIVED,
-  inspected: BookingStatus.VEHICLE_ARRIVED,
   inService: BookingStatus.IN_SERVICE,
-  serviceDone: BookingStatus.IN_SERVICE,
   readyForDispatch: BookingStatus.VEHICLE_RETURN,
 };
 
@@ -501,6 +589,7 @@ function assignValet(booking: AdminBooking, leg: ValetLeg, valet: StaffMember) {
     throw new Error("This valet already has the vehicle, so they can't be changed.");
   }
 
+  booking.assignedAt = { ...booking.assignedAt, [leg]: clock() };
   // A new valet starts the trip over
   if (leg === "pickup") {
     booking.valet = { ...valet };
@@ -510,6 +599,8 @@ function assignValet(booking: AdminBooking, leg: ValetLeg, valet: StaffMember) {
   } else {
     booking.deliveryValet = { ...valet };
     booking.deliveryProgress = {};
+    // Back from "Valet On Road" if the valet who was replaced had set off
+    booking.status = BookingStatus.VEHICLE_RETURN;
   }
 }
 
@@ -517,7 +608,7 @@ function markValetMilestone(booking: AdminBooking, leg: ValetLeg, milestone: Val
   assertNotComplete(booking);
   if (!legValet(booking, leg)) throw new Error("Assign a valet first.");
   const log = legProgress(booking, leg);
-  if (nextMilestone(VALET_MILESTONES, log) !== milestone) {
+  if (nextMilestone(LEG_MILESTONES[leg], log) !== milestone) {
     throw new Error("Valet updates have to be made in order.");
   }
 
@@ -529,7 +620,14 @@ function markValetMilestone(booking: AdminBooking, leg: ValetLeg, milestone: Val
     booking.etaMinutes = milestone === "dispatched" ? 30 : null;
   } else {
     booking.deliveryProgress = next;
-    booking.etaMinutes = milestone === "enRoute" ? 30 : null;
+    // "Valet On Road" from setting off until they reach the customer, then
+    // "Vehicle Return" again. Set directly: it sits earlier in the status order.
+    booking.status =
+      milestone === "reached" || milestone === "delivered"
+        ? BookingStatus.VEHICLE_RETURN
+        : BookingStatus.VALET_ON_ROAD;
+    // Countdown while the valet drives the vehicle back to the customer
+    booking.etaMinutes = milestone === "pickedUp" ? 30 : null;
   }
 }
 
@@ -539,6 +637,7 @@ function assignAdvisor(booking: AdminBooking, advisor: StaffMember) {
     throw new Error("The vehicle has to reach the dealership before assigning an advisor.");
   }
   booking.relationshipManager = { ...advisor };
+  booking.assignedAt = { ...booking.assignedAt, advisor: clock() };
 }
 
 function markAdvisorMilestone(booking: AdminBooking, milestone: AdvisorMilestone) {
@@ -560,8 +659,8 @@ function markAdvisorMilestone(booking: AdminBooking, milestone: AdvisorMilestone
 
 function generateBill(booking: AdminBooking, items = standardItems(booking)) {
   assertNotComplete(booking);
-  if (!booking.advisorProgress?.serviceDone) {
-    throw new Error("Finish the service before generating the bill.");
+  if (!booking.advisorProgress?.inService) {
+    throw new Error("Start the service before generating the bill.");
   }
   booking.invoice ??= createInvoice(items);
   advanceStatusTo(booking, BookingStatus.BILL_GENERATED);
@@ -592,7 +691,7 @@ function complete(booking: AdminBooking) {
 
 // How many actions take a booking from new to complete (bill, payment and handover included)
 const WORKFLOW_ACTIONS =
-  1 + 2 * (1 + VALET_MILESTONES.length) + 1 + ADVISOR_MILESTONES.length + 3 + 1;
+  1 + (1 + LEG_MILESTONES.pickup.length) + (1 + LEG_MILESTONES.delivery.length) + 1 + ADVISOR_MILESTONES.length + 3 + 1;
 
 type StaffPicker = Record<StaffRole, () => StaffMember>;
 
@@ -603,7 +702,7 @@ function nextAction(booking: AdminBooking, pickStaff: StaffPicker): (() => void)
   if (!booking.confirmedAt) return () => confirm(booking);
 
   if (!booking.valet) return () => assignValet(booking, "pickup", pickStaff.valet());
-  const pickupStep = nextMilestone(VALET_MILESTONES, legProgress(booking, "pickup"));
+  const pickupStep = nextMilestone(LEG_MILESTONES.pickup, legProgress(booking, "pickup"));
   if (pickupStep) return () => markValetMilestone(booking, "pickup", pickupStep);
 
   if (!booking.relationshipManager) return () => assignAdvisor(booking, pickStaff.manager());
@@ -616,7 +715,7 @@ function nextAction(booking: AdminBooking, pickStaff: StaffPicker): (() => void)
   }
 
   if (!booking.deliveryValet) return () => assignValet(booking, "delivery", pickStaff.valet());
-  const deliveryStep = nextMilestone(VALET_MILESTONES, legProgress(booking, "delivery"));
+  const deliveryStep = nextMilestone(LEG_MILESTONES.delivery, legProgress(booking, "delivery"));
   if (deliveryStep) return () => markValetMilestone(booking, "delivery", deliveryStep);
 
   return () => complete(booking);
@@ -873,44 +972,65 @@ export const mockServer = {
     return booking;
   },
 
-  // ---- Staff links (the valet / advisor pages; signed in by the link's token) ----
-  getStaffBooking(token: string, id: string) {
-    const { booking, role } = findStaffBooking(token, id);
-    return staffView(booking, role);
+  // The mock keeps no offers: it only says how many rows it was sent
+  uploadOffers(rowCount: number) {
+    requireAdmin();
+    return { imported: rowCount };
   },
 
-  staffUpdateValetProgress(token: string, id: string, leg: ValetLeg, milestone: ValetMilestone) {
-    const { booking, role } = findStaffBooking(token, id);
-    assertStaffRole(role, leg);
+  // ---- Staff pages (valet / advisor; signed in by the link's search params or
+  // by email + OTP, never by the app's session) ----
+  sendStaffOtp(email: string) {
+    if (!findStaffByEmail(email)) {
+      throw new Error("No valet or advisor account found for this email.");
+    }
+    return { sent: true };
+  },
+
+  // Like the app's login, the mock accepts any 6-digit code
+  verifyStaffOtp(email: string): StaffAuth {
+    const found = findStaffByEmail(email);
+    if (!found) throw new Error("No valet or advisor account found for this email.");
+    return { gear: mockStaffGear(found.member), token: mockStaffTypeToken(found.type) };
+  },
+
+  getStaffBooking(auth: StaffAuth, id: string) {
+    const { booking, roles } = findStaffBooking(auth, id);
+    return staffView(booking, roles);
+  },
+
+  staffUpdateValetProgress(auth: StaffAuth, id: string, leg: ValetLeg, milestone: ValetMilestone) {
+    const { booking, roles } = findStaffBooking(auth, id);
+    assertStaffRole(roles, leg);
     markValetMilestone(booking, leg, milestone);
     persist();
-    return staffView(booking, role);
+    return staffView(booking, roles);
   },
 
-  staffUpdateAdvisorProgress(token: string, id: string, milestone: AdvisorMilestone) {
-    const { booking, role } = findStaffBooking(token, id);
-    assertStaffRole(role, "advisor");
+  staffUpdateAdvisorProgress(auth: StaffAuth, id: string, milestone: AdvisorMilestone) {
+    const { booking, roles } = findStaffBooking(auth, id);
+    assertStaffRole(roles, "advisor");
     markAdvisorMilestone(booking, milestone);
     persist();
-    return staffView(booking, role);
+    return staffView(booking, roles);
   },
 
   // The advisor types the bill's rows; tax and totals are added here
-  staffGenerateInvoice(token: string, id: string, items: InvoiceLine[]) {
-    const { booking, role } = findStaffBooking(token, id);
-    assertStaffRole(role, "advisor");
+  staffGenerateInvoice(auth: StaffAuth, id: string, items: InvoiceLine[]) {
+    const { booking, roles } = findStaffBooking(auth, id);
+    assertStaffRole(roles, "advisor");
     generateBill(booking, items);
     persist();
-    return staffView(booking, role);
+    return staffView(booking, roles);
   },
 
   // The advisor has checked that the customer paid another way
-  staffConfirmPayment(token: string, id: string) {
-    const { booking, role } = findStaffBooking(token, id);
-    assertStaffRole(role, "advisor");
+  staffConfirmPayment(auth: StaffAuth, id: string) {
+    const { booking, roles } = findStaffBooking(auth, id);
+    assertStaffRole(roles, "advisor");
     markPaid(booking);
     persist();
-    return staffView(booking, role);
+    return staffView(booking, roles);
   },
 
   // ---- Staff (valets and advisors) ----

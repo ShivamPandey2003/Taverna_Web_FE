@@ -21,7 +21,7 @@ export function BookingsToolbar() {
       <SearchInput
         value={search}
         onSearch={(value) => dispatch(setSearch(value))}
-        placeholder="Search by booking ID, customer, email, phone or VIN"
+        placeholder="Search by booking id, customer name and phone no"
       />
 
       {/* Status */}
@@ -33,7 +33,7 @@ export function BookingsToolbar() {
         className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-gray-400"
         aria-label="Filter by status"
       >
-        <option value="all">All statuses</option>
+        <option value="all">All Status</option>
         {bookingStatuses.map((item) => (
           <option key={item} value={item}>
             {item}
@@ -64,7 +64,7 @@ export function BookingsToolbar() {
           onClick={() => dispatch(resetFilters())}
           className="h-9 rounded-lg px-3 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
         >
-          Clear filters
+          Clear Filters
         </button>
       )}
     </div>

@@ -110,13 +110,13 @@ export function SavedVehicleDetailsModal({
             Book a New Service
           </button>
 
-          {/* Remove vehicle */}
+          {/* Remove Vehicle */}
           {/* <button
             type="button"
             onClick={onRemoveVehicle}
             className="mt-4 block w-full text-center text-sm font-semibold text-gray-700 transition hover:text-red-600"
           >
-            Remove vehicle
+            Remove Vehicle
           </button> */}
         </div>
       </div>

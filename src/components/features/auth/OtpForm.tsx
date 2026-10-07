@@ -51,7 +51,7 @@ export function OtpForm({
         </button>
 
         <h2 className="text-2xl font-bold tracking-tight">
-          Check your email
+          Check Your Email
         </h2>
 
         <p className="mt-2 text-sm leading-5 text-gray-500">
@@ -90,7 +90,7 @@ export function OtpForm({
       >
         {isSubmitting
           ? "Verifying..."
-          : "Verify & continue"}
+          : "Verify & Continue"}
       </button>
 
       <button
