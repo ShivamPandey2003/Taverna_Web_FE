@@ -1,6 +1,7 @@
 import { Outlet, useMatch } from "react-router";
 import { WifiOff } from "reicon-react";
 import { valetTrip } from "@/components/features/admin/admin.utils";
+import { useStaffAuth } from "@/components/features/staffPortal/shared/useStaffAuth";
 import { isValetLeg } from "@/components/features/staffPortal/shared/workflow";
 import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/libs/utils";
@@ -10,13 +11,11 @@ import { useStaffBooking } from "@/services/queries/staffQueries";
 // Who the open link is for: the trip's valet or the booking's advisor.
 // Shares the page's booking query, so it costs no extra request.
 function useStaffName() {
-  const valetMatch = useMatch("/valet/:leg/:bookingId/:token");
-  const advisorMatch = useMatch("/advisor/:bookingId/:token");
+  const valetMatch = useMatch("/valet/:leg/:bookingId");
+  const advisorMatch = useMatch("/advisor/:bookingId");
   const params = valetMatch?.params ?? advisorMatch?.params;
-  const { data: booking } = useStaffBooking({
-    id: params?.bookingId ?? "",
-    token: params?.token ?? "",
-  });
+  const { auth } = useStaffAuth();
+  const { data: booking } = useStaffBooking({ id: params?.bookingId ?? "", ...auth });
 
   if (!booking) return null;
   if (advisorMatch) return booking.relationshipManager?.name ?? null;
@@ -29,7 +28,7 @@ function useStaffName() {
 export function StaffLayout() {
   const online = useOnlineStatus();
   const staffName = useStaffName();
-  const wide = !!useMatch("/advisor/:bookingId/:token");
+  const wide = !!useMatch("/advisor/:bookingId");
 
   return (
     <div className={cn("staff-app min-h-dvh bg-section text-text", wide && "staff-wide")}>

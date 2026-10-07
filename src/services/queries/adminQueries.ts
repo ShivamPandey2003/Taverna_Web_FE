@@ -196,3 +196,9 @@ export const useGenerateInvoice = () =>
 
 export const useConfirmPayment = () =>
   useBookingMutation((id: string) => adminApi.confirmPayment(id));
+
+export const useUploadOffers = () =>
+  useMutation({
+    mutationFn: ({ file, rowCount }: { file: File; rowCount: number }) =>
+      adminApi.uploadOffers(file, rowCount),
+  });

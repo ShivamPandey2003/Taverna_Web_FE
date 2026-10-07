@@ -35,11 +35,11 @@ export function getNetworkErrorMessage(): string {
   return NETWORK_MESSAGE;
 }
 
-// Staff open their pages from a link instead of logging in, so an auth failure
-// means the link (its token) is no good
+// Staff have their own sign-in (the link's search params, or email + OTP), so an
+// auth failure means signing in again, not the app's session expiring
 const STAFF_LINK_MESSAGES: Record<number, string> = {
-  401: "This link has expired. Ask the Taverna team for a new one.",
-  403: "This link isn't valid for you. Ask the Taverna team for a new one.",
+  401: "Your sign-in has expired. Sign in again to continue.",
+  403: "You don't have access to this booking. Sign in again or ask the Taverna team.",
   404: "We couldn't find this booking.",
   409: "This booking changed in the meantime. Refresh and try again.",
 };

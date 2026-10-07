@@ -55,6 +55,18 @@ export const VALET_LEGS: readonly ValetLeg[] = ["pickup", "delivery"];
 // Who a staff link is for: one of the two valets, or the advisor
 export type StaffLinkRole = ValetLeg | "advisor";
 
+// What the valet / advisor pages sign in with. It has nothing to do with the
+// app's own login (AuthSession): it comes from the link's `gear` and `token`
+// search params, or from the staff email + OTP sign-in.
+export interface StaffAuth {
+  // The auth token
+  gear: string;
+  // Encrypted staff type ("valet" or "advisor"); only the server can read it
+  token: string;
+}
+
+export type StaffType = "valet" | "advisor";
+
 export const VALET_MILESTONES = [
   "dispatched",
   // At the pickup point: the customer (pickup) or the dealership (delivery)
@@ -135,15 +147,17 @@ export interface AdminBooking {
   // step of their progress
   assignedAt?: Partial<Record<StaffLinkRole, string>>;
   completedAt?: string | null;
-  // Token that goes in each staff link (see staffLink in admin.utils.ts). Only
-  // admin responses carry it; it's what signs the valet / advisor in.
-  staffTokens?: Partial<Record<StaffLinkRole, string>>;
+  // What goes in each staff link's search params (see staffLink in
+  // admin.utils.ts). Only admin responses carry it; it's what signs the valet /
+  // advisor in without the email + OTP form.
+  staffTokens?: Partial<Record<StaffLinkRole, StaffAuth>>;
 }
 
 // A booking as the staff link endpoints return it
 export interface StaffBooking extends AdminBooking {
-  // Whose link the token belongs to; a valet's link can't open the advisor's page
-  linkRole?: StaffLinkRole;
+  // The pages of this booking the signed-in staff member may use; a valet can't
+  // open the advisor's page, nor the pickup valet the delivery trip
+  linkRoles?: StaffLinkRole[];
   // The valet's directions fall back to the dealership's name without it
   dealershipAddress?: string;
 }
