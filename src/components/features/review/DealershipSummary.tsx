@@ -3,7 +3,8 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectBookingDealership } from "@/redux/booking/bookingSlice";
 import { openReviewModal } from "@/redux/modals/reviewModal/reviewModalSlice";
 
-export function DealershipSummary() {
+// `loading` is true while the review page is still finding the closest dealership
+export function DealershipSummary({ loading = false }: { loading?: boolean }) {
   const dispatch = useAppDispatch();
   const dealership = useAppSelector(selectBookingDealership);
 
@@ -36,7 +37,11 @@ export function DealershipSummary() {
             {dealership.address}
           </p>
         </div>
-      </div> : <p className="text-sm text-gray-500">No dealership selected. Choose one to continue.</p>}
+      </div> : <p className="text-sm text-gray-500">
+        {loading
+          ? "Finding your closest dealership..."
+          : "No dealership selected. Choose one to continue."}
+      </p>}
     </BookingSummaryCard>
   );
 }

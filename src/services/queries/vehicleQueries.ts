@@ -4,6 +4,7 @@ import type { Vehicle } from "@/types/vehicle";
 
 export const vehicleKeys = {
   list: ["vehicles"] as const,
+  overview: (vehicleId: string) => ["vehicles", vehicleId, "overview"] as const,
 };
 
 // The customer's saved vehicles. useSyncVehicles copies the result into Redux,
@@ -14,6 +15,17 @@ export function useVehicles(enabled = true) {
     queryFn: vehicleApi.list,
     enabled,
     // The API layer toasts every failure, so retrying would repeat the toast
+    retry: false,
+  });
+}
+
+// One vehicle with its service history, for the details modal. Only runs while
+// a vehicle is open there.
+export function useVehicleOverview(vehicleId: string | null) {
+  return useQuery({
+    queryKey: vehicleKeys.overview(vehicleId ?? ""),
+    queryFn: () => vehicleApi.overview(vehicleId as string),
+    enabled: Boolean(vehicleId),
     retry: false,
   });
 }

@@ -16,6 +16,7 @@ import { SelectVehicleModal } from "@/components/features/booking/SelectVehicleM
 import { AddAddressModal } from "@/components/features/addresses/AddAddressModal";
 import { ServiceInProgressNotice } from "@/components/features/booking/ServiceInProgressNotice";
 import { useServiceInProgress } from "@/components/features/tracking/serviceStatus";
+import { useClosestDealership } from "@/hooks/useClosestDealership";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   selectBooking,
@@ -49,6 +50,8 @@ export function PickupDelivery() {
   const address = useAppSelector(selectBookingAddress);
   const dealership = useAppSelector(selectBookingDealership);
   const activeModal = useAppSelector(selectReviewModal);
+  // Selects the dealership closest to the customer when none is chosen yet
+  const { loading: findingDealership } = useClosestDealership();
 
   const hasPickup = !!address || pickupLocation?.type === "current";
   const [booking, setBooking] = useState(false);
@@ -155,7 +158,7 @@ export function PickupDelivery() {
 
           {/* The concern box stretches so both columns end level */}
           <div className="flex flex-col gap-5">
-            <DealershipSummary />
+            <DealershipSummary loading={findingDealership} />
             {service.id !== "loaner-only" && <ScheduleSummary />}
             <ConcernInput />
           </div>

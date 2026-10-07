@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { X, Car, Discover } from "reicon-react";
 import type { Dealership } from "@/types/dealership";
-import { dealerships } from "./dealership.data";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
-  selectBooking,
+  selectBookingDealership,
   setSelectedDealership,
 } from "@/redux/booking/bookingSlice";
+import { useAllDealerships } from "@/services/queries/dealershipQueries";
 
 interface SelectDealershipModalProps {
   open: boolean;
@@ -26,10 +26,12 @@ export function SelectDealershipModal({
 
 function SelectDealershipContent({ onClose }: { onClose: () => void }) {
   const dispatch = useAppDispatch();
-  const { selectedDealershipId } = useAppSelector(selectBooking);
+  const selectedDealership = useAppSelector(selectBookingDealership);
+  // Every dealership, not only the ones near the customer
+  const { data: dealerships = [], isLoading } = useAllDealerships();
 
   const [selectedId, setSelectedId] = useState<string | null>(
-    selectedDealershipId
+    selectedDealership?.id ?? null
   );
 
   const selectedDealershipData = dealerships.find(
@@ -41,7 +43,7 @@ function SelectDealershipContent({ onClose }: { onClose: () => void }) {
       return;
     }
 
-    dispatch(setSelectedDealership(selectedDealershipData.id));
+    dispatch(setSelectedDealership(selectedDealershipData));
     onClose();
   };
 
@@ -83,16 +85,22 @@ function SelectDealershipContent({ onClose }: { onClose: () => void }) {
           </p>
 
           {/* Dealerships */}
-          <div className="mt-6 grid grid-cols-2 gap-4">
-            {dealerships.map((dealership) => (
-              <DealershipCard
-                key={dealership.id}
-                dealership={dealership}
-                selected={dealership.id === selectedId}
-                onSelect={() => setSelectedId(dealership.id)}
-              />
-            ))}
-          </div>
+          {dealerships.length === 0 ? (
+            <p className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-500">
+              {isLoading ? "Loading dealerships..." : "No dealerships available."}
+            </p>
+          ) : (
+            <div className="mt-6 grid max-h-[50vh] grid-cols-2 gap-4 overflow-y-auto">
+              {dealerships.map((dealership) => (
+                <DealershipCard
+                  key={dealership.id}
+                  dealership={dealership}
+                  selected={dealership.id === selectedId}
+                  onSelect={() => setSelectedId(dealership.id)}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Divider */}
           <div className="my-6 h-px bg-gray-200" />
@@ -138,14 +146,16 @@ function DealershipCard({
       type="button"
       onClick={onSelect}
       className={[
-        "overflow-hidden rounded-2xl border text-left transition",
+        // A button centres its content, so a card stretched to its taller
+        // neighbour's height would push the photo down: stack from the top instead
+        "flex flex-col overflow-hidden rounded-2xl border text-left transition",
         selected
           ? "border-2 border-black"
           : "border-gray-200 hover:border-gray-400",
       ].join(" ")}
     >
       {/* Image */}
-      <div className="h-[120px] w-full overflow-hidden bg-gray-100">
+      <div className="h-[120px] w-full shrink-0 overflow-hidden bg-gray-100">
         <img
           src={dealership.image}
           alt={dealership.name}

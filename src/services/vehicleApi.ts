@@ -1,7 +1,12 @@
 import { toast } from "sonner";
 import PlaceholderImage from "@/assets/jeep-grand-cherokee.webp";
 import { request } from "./apiClient";
-import type { Vehicle, VerifiedVehicle } from "@/types/vehicle";
+import type {
+  Vehicle,
+  VehicleOverview,
+  VehicleServiceRecord,
+  VerifiedVehicle,
+} from "@/types/vehicle";
 
 // POST vehicles/verify-vin
 interface VinLookupResponse {
@@ -53,6 +58,54 @@ function toVehicle(vehicle: VehicleResponse): Vehicle {
   };
 }
 
+// A row of serviceHistory in vehicles/:id/overview. The API has only returned an
+// empty list so far, so these field names are a guess: tighten them (and
+// toServiceRecord) once a real row is seen.
+interface ServiceHistoryResponse {
+  id?: string;
+  bookingId?: string;
+  date?: string;
+  serviceDate?: string;
+  completedAt?: string;
+  createdAt?: string;
+  dealership?: string | { name?: string };
+  dealershipName?: string;
+  mileage?: number | null;
+  currentMileage?: number | null;
+  amount?: number | string | null;
+  total?: number | string | null;
+  status?: string;
+}
+
+function formatDate(value?: string) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function formatAmount(value?: number | string | null) {
+  const amount = Number(value);
+  return value == null || value === "" || Number.isNaN(amount)
+    ? "—"
+    : amount.toLocaleString("en-US", { style: "currency", currency: "USD" });
+}
+
+function toServiceRecord(row: ServiceHistoryResponse, index: number): VehicleServiceRecord {
+  const dealership =
+    typeof row.dealership === "string" ? row.dealership : row.dealership?.name;
+
+  return {
+    id: row.id ?? row.bookingId ?? String(index),
+    date: formatDate(row.date ?? row.serviceDate ?? row.completedAt ?? row.createdAt),
+    dealership: dealership ?? row.dealershipName ?? "—",
+    mileage: formatMiles(row.mileage ?? row.currentMileage ?? null) ?? "—",
+    amount: formatAmount(row.amount ?? row.total),
+    status: row.status?.toLowerCase().startsWith("cancel") ? "CANCELLED" : "COMPLETED",
+  };
+}
+
 export const vehicleApi = {
   // Decodes a VIN into vehicle details; nothing is saved yet
   verifyVin: async (vin: string): Promise<VerifiedVehicle> => {
@@ -97,5 +150,18 @@ export const vehicleApi = {
   list: async () => {
     const { vehicles } = await request<{ vehicles: VehicleResponse[] }>("get", "vehicles/list");
     return vehicles.filter((vehicle) => vehicle.isActive !== false).map(toVehicle);
+  },
+
+  // One saved vehicle with its past services
+  overview: async (vehicleId: string): Promise<VehicleOverview> => {
+    const { vehicle, serviceHistory } = await request<{
+      vehicle: VehicleResponse;
+      serviceHistory: ServiceHistoryResponse[] | null;
+    }>("get", `vehicles/${vehicleId}/overview`);
+
+    return {
+      vehicle: toVehicle(vehicle),
+      serviceHistory: (serviceHistory ?? []).map(toServiceRecord),
+    };
   },
 };

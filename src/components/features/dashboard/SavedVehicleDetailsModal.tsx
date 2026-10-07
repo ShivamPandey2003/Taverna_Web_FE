@@ -1,7 +1,7 @@
 import { X } from "reicon-react";
 import { useNavigate } from "react-router";
 // import { toast } from "sonner";
-import type { Vehicle } from "@/types/vehicle";
+import type { Vehicle, VehicleServiceRecord } from "@/types/vehicle";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectVehicleById } from "@/redux/vehicle/vehicleSlice";
 import { setSelectedVehicle } from "@/redux/booking/bookingSlice";
@@ -10,37 +10,34 @@ import {
   selectDashboardModal,
 } from "@/redux/modals/dashboardModal/dashboardModalSlice";
 import { VehicleTitle } from "@/components/features/dashboard/VehicleTitle";
+import { useVehicleOverview } from "@/services/queries/vehicleQueries";
 import { maskedVin } from "@/libs/utils";
 
-interface ServiceHistory {
-  id: string;
-  date: string;
-  dealership: string;
-  mileage: string;
-  amount: string;
-  status: "COMPLETED" | "CANCELLED";
-}
-
 interface SavedVehicleDetailsModalProps {
-  serviceHistory?: ServiceHistory[];
   onViewHistory?: () => void;
 }
 
 // Details of a vehicle already in the user's list
 export function SavedVehicleDetailsModal({
-  serviceHistory = [],
   onViewHistory,
 }: SavedVehicleDetailsModalProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { viewVehicleId } = useAppSelector(selectDashboardModal);
-  const vehicle = useAppSelector((state) =>
+  const savedVehicle = useAppSelector((state) =>
     selectVehicleById(state, viewVehicleId)
   );
+  const { data: overview, isLoading } = useVehicleOverview(savedVehicle?.id ?? null);
 
-  if (!vehicle) {
+  if (!savedVehicle) {
     return null;
   }
+
+  // The list's copy shows straight away; the overview replaces it once loaded.
+  // Mileage the customer typed in is only in Redux, so keep it when the API has none.
+  const vehicle: Vehicle = overview
+    ? { ...overview.vehicle, miles: overview.vehicle.miles ?? savedVehicle.miles }
+    : savedVehicle;
 
   const onClose = () => dispatch(closeVehicleDetails());
 
@@ -94,7 +91,8 @@ export function SavedVehicleDetailsModal({
 
           {/* Service history */}
           <ServiceHistorySection
-            history={serviceHistory}
+            history={overview?.serviceHistory ?? []}
+            loading={isLoading}
             onViewHistory={onViewHistory}
           />
 
@@ -212,12 +210,14 @@ function VehicleStat({
 }
 
 interface ServiceHistorySectionProps {
-  history: ServiceHistory[];
+  history: VehicleServiceRecord[];
+  loading: boolean;
   onViewHistory?: () => void;
 }
 
 function ServiceHistorySection({
   history,
+  loading,
   onViewHistory,
 }: ServiceHistorySectionProps) {
   return (
@@ -242,7 +242,9 @@ function ServiceHistorySection({
         {history.length === 0 ? (
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
             <p className="text-sm text-gray-500">
-              No service history available.
+              {loading
+                ? "Loading service history..."
+                : "No service history available."}
             </p>
           </div>
         ) : (
@@ -259,7 +261,7 @@ function ServiceHistorySection({
 }
 
 interface ServiceHistoryCardProps {
-  service: ServiceHistory;
+  service: VehicleServiceRecord;
 }
 
 function ServiceHistoryCard({

@@ -38,7 +38,7 @@ export function SignupForm({
     >
       <AuthInput
         label="Full name"
-        placeholder="Sagar Kumar"
+        placeholder="John Smith"
         autoComplete="name"
         {...register("fullname")}
         error={errors.fullname?.message}
@@ -56,7 +56,7 @@ export function SignupForm({
       <AuthInput
         label="Phone number"
         type="tel"
-        placeholder="9170579911"
+        placeholder="9545550100"
         autoComplete="tel"
         {...register("phone")}
         error={errors.phone?.message}

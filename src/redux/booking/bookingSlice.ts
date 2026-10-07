@@ -1,12 +1,12 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
-import { dealerships } from "@/components/features/review/dealership.data";
 import { services } from "@/components/features/booking/booking.data";
 import { bookingCreated } from "@/redux/tracking/trackingSlice";
 import { logout } from "@/redux/auth/authSlice";
 import { selectVehicleById } from "@/redux/vehicle/vehicleSlice";
 import { selectAddressById, selectDefaultAddress } from "@/redux/address/addressSlice";
 import type { PickupLocation } from "@/types/booking";
+import type { Dealership } from "@/types/dealership";
 import type { ServiceId } from "@/types/service";
 
 // The booking currently being put together (Book Service -> Review)
@@ -15,7 +15,9 @@ type BookingState = {
   selectedServiceId: ServiceId;
   // null means "use the default saved address"
   pickupLocation: PickupLocation | null;
-  selectedDealershipId: string;
+  // A copy, not an id: dealerships come from the API and aren't kept in Redux.
+  // null until the review page finds the closest one or the customer picks one.
+  selectedDealership: Dealership | null;
   driveable: boolean;
   concern: string;
   // Pickup time the customer scheduled (ISO); null books for as soon as possible
@@ -26,7 +28,7 @@ const initialState: BookingState = {
   selectedVehicleId: null,
   selectedServiceId: "pickup-delivery",
   pickupLocation: null,
-  selectedDealershipId: dealerships[0].id,
+  selectedDealership: null,
   driveable: true,
   concern: "",
   scheduledAt: null,
@@ -45,8 +47,8 @@ const bookingSlice = createSlice({
     setPickupLocation: (state, action: PayloadAction<PickupLocation>) => {
       state.pickupLocation = action.payload;
     },
-    setSelectedDealership: (state, action: PayloadAction<string>) => {
-      state.selectedDealershipId = action.payload;
+    setSelectedDealership: (state, action: PayloadAction<Dealership>) => {
+      state.selectedDealership = action.payload;
     },
     setDriveable: (state, action: PayloadAction<boolean>) => {
       state.driveable = action.payload;
@@ -100,8 +102,6 @@ export const selectBookingAddress = (state: RootState) => {
 };
 
 export const selectBookingDealership = (state: RootState) =>
-  dealerships.find(
-    (dealership) => dealership.id === state.booking.selectedDealershipId,
-  ) ?? null;
+  state.booking.selectedDealership;
 
 export default bookingSlice.reducer;
