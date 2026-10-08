@@ -55,6 +55,18 @@ export const VALET_LEGS: readonly ValetLeg[] = ["pickup", "delivery"];
 // Who a staff link is for: one of the two valets, or the advisor
 export type StaffLinkRole = ValetLeg | "advisor";
 
+// What the valet / advisor pages sign in with. It has nothing to do with the
+// app's own login (AuthSession): it comes from the link's `gear` and `token`
+// search params, or from the staff email + OTP sign-in.
+export interface StaffAuth {
+  // The auth token
+  gear: string;
+  // Encrypted staff type ("valet" or "advisor"); only the server can read it
+  token: string;
+}
+
+export type StaffType = "valet" | "advisor";
+
 export const VALET_MILESTONES = [
   "dispatched",
   // At the pickup point: the customer (pickup) or the dealership (delivery)
@@ -80,6 +92,22 @@ export const LEG_MILESTONES: Record<ValetLeg, readonly ValetMilestone[]> = {
 export const TRIP_END: Record<ValetLeg, ValetMilestone> = {
   pickup: "reached",
   delivery: "delivered",
+};
+
+// How the vehicle gets to the dealership, picked by the admin in the Vehicle
+// Intake step. Only "valet" has a valet and a trip to follow; with the other two
+// the admin just confirms that the vehicle arrived (`pickupProgress.reached`).
+export const INTAKE_METHODS = ["valet", "towTruck", "selfDrive"] as const;
+export type IntakeMethod = (typeof INTAKE_METHODS)[number];
+
+// The choices on each trip, which depend on the service that was booked: with
+// Pickup & Delivery the dealership moves the vehicle (a valet, or a tow truck on
+// the way in); with Loaner Only the customer brings and collects it themselves,
+// which the admin confirms (`pickupProgress.reached` / `deliveryProgress.delivered`).
+// A trip with a single choice needs no picking: see `legMethod` in admin.utils.ts.
+export const LEG_METHODS: Record<ServiceId, Record<ValetLeg, readonly IntakeMethod[]>> = {
+  "pickup-delivery": { pickup: ["valet", "towTruck"], delivery: ["valet"] },
+  "loaner-only": { pickup: ["selfDrive"], delivery: ["selfDrive"] },
 };
 
 // Updates the advisor shares with the customer while the vehicle is serviced, in
@@ -113,6 +141,9 @@ export interface AdminBooking {
   pickup: string;
   dealershipName: string;
   driveable: boolean;
+  // Only for a vehicle that isn't driveable: false when the customer took the tow
+  // truck off (they get the vehicle to the dealership themselves)
+  towTruck?: boolean;
   concern: string;
   scheduledAt: string | null;
   createdAt: string;
@@ -120,6 +151,8 @@ export interface AdminBooking {
   // Minutes until the valet reaches the customer, sent while they're on the way
   etaMinutes?: number | null;
   confirmedAt: string | null;
+  // Not picked yet when missing (bookings from before it existed have a valet instead)
+  intakeMethod?: IntakeMethod | null;
   // Pickup valet (the API calls it just "valet")
   valet: StaffMember | null;
   pickupProgress?: MilestoneLog<ValetMilestone>;
@@ -128,6 +161,8 @@ export interface AdminBooking {
   payment: PaymentInfo | null;
   // Set when the bill is generated
   invoice?: Invoice | null;
+  // How the vehicle goes back: "valet" or "selfDrive" (the customer collects it)
+  handoverMethod?: IntakeMethod | null;
   // Brings the vehicle back once the bill is paid
   deliveryValet?: StaffMember | null;
   deliveryProgress?: MilestoneLog<ValetMilestone>;
@@ -135,15 +170,17 @@ export interface AdminBooking {
   // step of their progress
   assignedAt?: Partial<Record<StaffLinkRole, string>>;
   completedAt?: string | null;
-  // Token that goes in each staff link (see staffLink in admin.utils.ts). Only
-  // admin responses carry it; it's what signs the valet / advisor in.
-  staffTokens?: Partial<Record<StaffLinkRole, string>>;
+  // What goes in each staff link's search params (see staffLink in
+  // admin.utils.ts). Only admin responses carry it; it's what signs the valet /
+  // advisor in without the email + OTP form.
+  staffTokens?: Partial<Record<StaffLinkRole, StaffAuth>>;
 }
 
 // A booking as the staff link endpoints return it
 export interface StaffBooking extends AdminBooking {
-  // Whose link the token belongs to; a valet's link can't open the advisor's page
-  linkRole?: StaffLinkRole;
+  // The pages of this booking the signed-in staff member may use; a valet can't
+  // open the advisor's page, nor the pickup valet the delivery trip
+  linkRoles?: StaffLinkRole[];
   // The valet's directions fall back to the dealership's name without it
   dealershipAddress?: string;
 }

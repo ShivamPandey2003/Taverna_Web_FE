@@ -1,8 +1,10 @@
 import { BookingStatus } from "@/types/booking";
 import {
+  LEG_METHODS,
   TRIP_END,
   type AdminBooking,
   type AdvisorMilestone,
+  type IntakeMethod,
   type StaffLinkRole,
   type ValetLeg,
   type ValetMilestone,
@@ -77,6 +79,23 @@ export const legTitles: Record<ValetLeg, string> = {
   delivery: "Delivery Valet",
 };
 
+export const intakeMethodLabels: Record<IntakeMethod, string> = {
+  valet: "Valet",
+  towTruck: "Tow Truck",
+  selfDrive: "Self-Drive",
+};
+
+// How the vehicle makes a trip; null until the admin picks. A booking that
+// already has the trip's valet counts as "valet", and a trip with only one
+// choice for the booked service (LEG_METHODS) has it picked from the start.
+export function legMethod(booking: AdminBooking, leg: ValetLeg): IntakeMethod | null {
+  const saved = leg === "pickup" ? booking.intakeMethod : booking.handoverMethod;
+  if (saved) return saved;
+  if (valetTrip(booking, leg).valet) return "valet";
+  const options = LEG_METHODS[booking.serviceId][leg];
+  return options.length === 1 ? options[0] : null;
+}
+
 // The valet and milestone log of one trip
 export function valetTrip(booking: AdminBooking, leg: ValetLeg) {
   return leg === "pickup"
@@ -92,19 +111,24 @@ export function nextMilestone<T extends string>(
 }
 
 // A trip is done once its last milestone is posted
+// A trip is done once the vehicle is at the other end: taken by the valet (their
+// last milestone), a tow truck or the customer (confirmed by the admin)
 const tripDone = (booking: AdminBooking, leg: ValetLeg) => {
   const { valet, progress } = valetTrip(booking, leg);
-  return !!valet && !!progress[TRIP_END[leg]];
+  const method = legMethod(booking, leg);
+  if (!method || (method === "valet" && !valet)) return false;
+  return !!progress[TRIP_END[leg]];
 };
 
-// Personal link the staff member opens to post updates for this booking. Staff
-// never log in: the token at the end of the path signs them in. Must match the
-// staff routes in routes/index.tsx.
+// Personal link the staff member opens to post updates for this booking. Its
+// `gear` and `token` search params sign them in, so they skip the email + OTP
+// form. Must match the staff routes in routes/index.tsx and useStaffAuth.
 export function staffLink(booking: AdminBooking, role: StaffLinkRole) {
-  const token = booking.staffTokens?.[role];
-  if (!token) return null;
+  const auth = booking.staffTokens?.[role];
+  if (!auth) return null;
   const path = role === "advisor" ? `advisor/${booking.id}` : `valet/${role}/${booking.id}`;
-  return `${window.location.origin}/${path}/${encodeURIComponent(token)}`;
+  const search = new URLSearchParams({ gear: auth.gear, token: auth.token });
+  return `${window.location.origin}/${path}?${search}`;
 }
 
 export const isComplete = (booking: AdminBooking) =>

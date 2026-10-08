@@ -10,8 +10,10 @@ import { BookingError, WrongLink } from "@/components/features/staffPortal/share
 import { BookingHero } from "@/components/features/staffPortal/shared/BookingHero";
 import { BookingSkeleton } from "@/components/features/staffPortal/shared/BookingSkeleton";
 import { MilestoneTimeline, type Milestone } from "@/components/features/staffPortal/shared/MilestoneTimeline";
+import { StaffLogin } from "@/components/features/staffPortal/shared/StaffLogin";
 import { StatusChip } from "@/components/features/staffPortal/shared/StatusChip";
 import { staffToast } from "@/components/features/staffPortal/shared/staffToast";
+import { useStaffAuth } from "@/components/features/staffPortal/shared/useStaffAuth";
 import { advisorActions } from "@/components/features/staffPortal/shared/workflow";
 import {
   advisorMilestoneLabels,
@@ -34,16 +36,25 @@ import {
   type StaffBooking,
 } from "@/types/admin";
 
-// /advisor/:bookingId/:token — the link the admin shares with the booking's advisor
-// (staffLink in admin.utils.ts). The token signs the advisor in.
+// /advisor/:bookingId?gear=…&token=… — the link the admin shares with the
+// booking's advisor (staffLink in admin.utils.ts). The search params sign the
+// advisor in; without them the advisor signs in with email + OTP first.
 export function AdvisorUpdate() {
-  const { bookingId = "", token = "" } = useParams();
-  const link: StaffLinkParams = { id: bookingId, token };
+  const { bookingId = "" } = useParams();
+  const { auth, signedIn, signOut } = useStaffAuth();
+  const link: StaffLinkParams = { id: bookingId, ...auth };
   const booking = useStaffBooking(link);
 
+  if (!signedIn) return <StaffLogin />;
   if (booking.isPending) return <BookingSkeleton />;
-  if (booking.isError) return <BookingError error={booking.error} onRetry={() => booking.refetch()} />;
-  if (booking.data.linkRole && booking.data.linkRole !== "advisor") return <WrongLink />;
+  if (booking.isError) {
+    return (
+      <BookingError error={booking.error} onRetry={() => booking.refetch()} onSignIn={signOut} />
+    );
+  }
+  if (booking.data.linkRoles && !booking.data.linkRoles.includes("advisor")) {
+    return <WrongLink onSignIn={signOut} />;
+  }
 
   return <AdvisorService booking={booking.data} link={link} />;
 }

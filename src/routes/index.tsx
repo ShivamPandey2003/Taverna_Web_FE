@@ -3,6 +3,7 @@ import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { StaffLayout } from "@/layouts/StaffLayout";
 import { Account } from "@/pages/Account";
 import { AdminBookings } from "@/pages/AdminBookings";
+import { AdminOffers } from "@/pages/AdminOffers";
 import { AdminDealerships } from "@/pages/AdminDealerships";
 import { AdminAdvisors } from "@/pages/AdminAdvisors";
 import { AdminValets } from "@/pages/AdminValets";
@@ -13,6 +14,7 @@ import Home from "@/pages/Home";
 import { PickupDelivery } from "@/pages/PickupDelivery";
 import { Specials } from "@/pages/Specials";
 import { ServiceTracking } from "@/pages/Tracking";
+import { StaffTasks } from "@/pages/StaffTasks";
 import { ValetUpdate } from "@/pages/ValetUpdate";
 import { createBrowserRouter } from "react-router";
 
@@ -47,7 +49,8 @@ const Router = createBrowserRouter([
         element:<PickupDelivery/>
       },
       {
-        path:"book-service/tracking",
+        // One booking's tracking; without an id, the newest that's still running
+        path:"book-service/tracking/:bookingId?",
         element:<ServiceTracking/>
       },
       {
@@ -81,19 +84,33 @@ const Router = createBrowserRouter([
         path: "advisors",
         element: <AdminAdvisors />,
       },
+      {
+        path: "offers",
+        element: <AdminOffers />,
+      },
     ],
   },
   {
     // Valet / advisor pages, opened from the link the admin shares (staffLink in
-    // admin.utils.ts). No login: the token at the end of the path signs them in.
+    // admin.utils.ts). Their sign-in is separate from the app's: the link's
+    // `gear` and `token` search params, or else an email + OTP form on the page.
     element: <StaffLayout />,
     children: [
+      // The signed-in staff member's task list; a task opens its page below
       {
-        path: "valet/:leg/:bookingId/:token",
+        path: "valet",
+        element: <StaffTasks />,
+      },
+      {
+        path: "advisor",
+        element: <StaffTasks />,
+      },
+      {
+        path: "valet/:leg/:bookingId",
         element: <ValetUpdate />,
       },
       {
-        path: "advisor/:bookingId/:token",
+        path: "advisor/:bookingId",
         element: <AdvisorUpdate />,
       },
     ],

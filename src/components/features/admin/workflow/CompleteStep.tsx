@@ -3,7 +3,13 @@ import { toast } from "sonner";
 // import { cn } from "@/libs/utils";
 import { useCompleteBooking } from "@/services/queries/adminQueries";
 import type { AdminBooking } from "@/types/admin";
-import { formatCurrency, formatDateTime, isComplete } from "../admin.utils";
+import {
+  formatCurrency,
+  formatDateTime,
+  intakeMethodLabels,
+  isComplete,
+  legMethod,
+} from "../admin.utils";
 import { ActionButton, SectionCard } from "./StepParts";
 
 // Last step. Before completion it offers "Mark Service Complete"; afterwards it
@@ -11,6 +17,8 @@ import { ActionButton, SectionCard } from "./StepParts";
 export function CompleteStep({ booking }: { booking: AdminBooking }) {
   const completeBooking = useCompleteBooking();
   const complete = isComplete(booking);
+  const method = legMethod(booking, "pickup");
+  const handover = legMethod(booking, "delivery");
 
   const handleComplete = () => {
     completeBooking.mutate(booking.id, {
@@ -21,8 +29,9 @@ export function CompleteStep({ booking }: { booking: AdminBooking }) {
   const rows: { label: string; value: string; at?: string | null }[] = [
     { label: "Booking confirmed", value: "By the dealership", at: booking.confirmedAt },
     {
-      label: "Pickup valet",
-      value: booking.valet?.name ?? "—",
+      label: method && method !== "valet" ? "Vehicle intake" : "Pickup valet",
+      value:
+        method && method !== "valet" ? intakeMethodLabels[method] : (booking.valet?.name ?? "—"),
       at: booking.pickupProgress?.reached,
     },
     {
@@ -36,8 +45,11 @@ export function CompleteStep({ booking }: { booking: AdminBooking }) {
       at: booking.payment?.updatedAt,
     },
     {
-      label: "Delivery valet",
-      value: booking.deliveryValet?.name ?? "—",
+      label: handover && handover !== "valet" ? "Vehicle handover" : "Delivery valet",
+      value:
+        handover && handover !== "valet"
+          ? intakeMethodLabels[handover]
+          : (booking.deliveryValet?.name ?? "—"),
       at: booking.deliveryProgress?.delivered,
     },
   ];

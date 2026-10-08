@@ -27,7 +27,7 @@ export function BookingActions({ booking, canCancel }: BookingActionsProps) {
   const handleCancel = () =>
     cancelBooking.mutate(booking.id, {
       onSuccess: () => {
-        dispatch(clearActiveBooking());
+        dispatch(clearActiveBooking(booking.id));
         toast.success("Booking cancelled");
         navigate("/dashboard");
       },

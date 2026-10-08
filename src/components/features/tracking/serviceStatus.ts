@@ -13,11 +13,12 @@ import {
 } from "reicon-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
-  activeBookingRestored,
-  selectActiveBooking,
+  activeBookingsRestored,
+  selectActiveBookings,
+  setBookingStatus,
 } from "@/redux/tracking/trackingSlice";
 import { selectVehicles } from "@/redux/vehicle/vehicleSlice";
-import { useMyBooking, useMyOpenBooking } from "@/services/queries/bookingQueries";
+import { useMyOpenBookings } from "@/services/queries/bookingQueries";
 import { dealerships } from "@/components/features/review/dealership.data";
 import defaultVehicleImage from "@/assets/jeep-grand-cherokee.webp";
 import { statusColors, type StatusColor } from "@/libs/statusColors";
@@ -26,6 +27,10 @@ import { BookingStatus, type Booking } from "@/types/booking";
 import type { Vehicle } from "@/types/vehicle";
 
 export const TRACKING_PATH = "/dashboard/book-service/tracking";
+// The tracking page of one booking; the bare path shows the newest running one.
+// Must match the route in routes/index.tsx.
+export const trackingPath = (bookingId: string) => `${TRACKING_PATH}/${bookingId}`;
+export const TRACKING_ROUTE = `${TRACKING_PATH}/:bookingId?`;
 
 // An icon for each booking status, shown beside its name
 export const statusIcons: Record<BookingStatus, typeof People> = {
@@ -104,35 +109,47 @@ export function getTrackingStage(booking: AdminBooking, status: BookingStatus): 
   return "waiting";
 }
 
-// The customer's current booking with its live status. The Redux snapshot covers
-// the first render and API failures; the API (polled) brings admin progress in.
-export function useActiveService() {
-  const booking = useAppSelector(selectActiveBooking);
-  const { data: live } = useMyBooking(booking?.id ?? null);
-
-  if (!booking) {
-    return null;
-  }
-
-  const status = live?.status ?? booking.status;
-
-  return {
-    booking,
-    status,
-    display: getStatusDisplay(status, live?.etaMinutes),
-  };
+// One of the customer's tracked bookings with its live status
+export interface ActiveService {
+  booking: Booking;
+  status: BookingStatus;
+  display: StatusDisplay;
 }
 
-// True while the customer has a booking that isn't complete; they can't book another.
-// The API answer survives reloads; the Redux snapshot covers the gap right after booking
-// (before the next poll) and API failures. The server enforces the same rule.
-export function useServiceInProgress() {
-  const service = useActiveService();
-  const { data: openBooking } = useMyOpenBooking();
+export const isOpenService = (service: ActiveService) =>
+  service.status !== BookingStatus.SERVICE_COMPLETE;
 
-  const snapshotOpen = !!service && service.status !== BookingStatus.SERVICE_COMPLETE;
+// Every booking the customer is tracking (one per vehicle), newest first, with
+// its live status. The Redux snapshots cover the first render and API failures;
+// the open-bookings list (polled) brings admin progress in.
+export function useActiveServices(): ActiveService[] {
+  const bookings = useAppSelector(selectActiveBookings);
+  const { data: open } = useMyOpenBookings();
 
-  return !!openBooking || snapshotOpen;
+  return bookings.map((booking) => {
+    const live = open?.find((item) => item.id === booking.id);
+    const status = live?.status ?? booking.status;
+    return { booking, status, display: getStatusDisplay(status, live?.etaMinutes) };
+  });
+}
+
+// The booking the tracking page shows: the one in its URL, or without one the
+// newest that's still running (else the newest of all)
+export function pickTrackedService(services: ActiveService[], bookingId?: string) {
+  if (bookingId) return services.find((service) => service.booking.id === bookingId) ?? null;
+  return services.find(isOpenService) ?? services[0] ?? null;
+}
+
+// The unfinished service of one vehicle, if it has one: that vehicle can't be
+// booked again until it's complete (other vehicles can). The server enforces the
+// same rule.
+export function useVehicleService(vin: string | undefined) {
+  const services = useActiveServices();
+  if (!vin) return null;
+  return (
+    services.find((service) => service.booking.vehicle.vin === vin && isOpenService(service)) ??
+    null
+  );
 }
 
 // Tracking data for a booking from the API, using the customer's saved vehicle and the
@@ -161,6 +178,7 @@ function toTrackingBooking(booking: AdminBooking, vehicles: Vehicle[]): Booking 
     pickup: { label: booking.pickup },
     dealership,
     driveable: booking.driveable,
+    towTruck: booking.towTruck,
     concern: booking.concern,
     scheduledAt: booking.scheduledAt,
     createdAt: booking.createdAt,
@@ -168,18 +186,40 @@ function toTrackingBooking(booking: AdminBooking, vehicles: Vehicle[]): Booking 
   };
 }
 
-// Puts the customer's open booking back into Redux when it's missing there (after a
-// reload, or a booking made on another device) so tracking, the toast and the sidebar
-// card keep working
-export function useSyncActiveBooking(enabled: boolean) {
+// Keeps the tracked bookings in Redux in step with the customer's open bookings
+// from the API: puts back the ones missing there (after a reload, or made on
+// another device), follows their status, and marks as complete the ones the API
+// no longer lists. Tracking, the toast and the booking pages read them from Redux.
+export function useSyncActiveBookings(enabled: boolean) {
   const dispatch = useAppDispatch();
-  const activeBooking = useAppSelector(selectActiveBooking);
+  const activeBookings = useAppSelector(selectActiveBookings);
   const vehicles = useAppSelector(selectVehicles);
-  const { data: openBooking } = useMyOpenBooking(enabled);
+  const { data: openBookings, dataUpdatedAt } = useMyOpenBookings(enabled);
 
   useEffect(() => {
-    if (enabled && openBooking && openBooking.id !== activeBooking?.id) {
-      dispatch(activeBookingRestored(toTrackingBooking(openBooking, vehicles)));
+    if (!enabled || !openBookings) return;
+
+    const tracked = new Set(activeBookings.map((booking) => booking.id));
+    const missing = openBookings.filter((booking) => !tracked.has(booking.id));
+    if (missing.length > 0) {
+      dispatch(
+        activeBookingsRestored(missing.map((booking) => toTrackingBooking(booking, vehicles))),
+      );
     }
-  }, [dispatch, enabled, openBooking, activeBooking?.id, vehicles]);
+
+    activeBookings.forEach((booking) => {
+      const live = openBookings.find((item) => item.id === booking.id);
+      if (live) {
+        if (live.status !== booking.status) {
+          dispatch(setBookingStatus({ id: booking.id, status: live.status }));
+        }
+        return;
+      }
+      // Not open any more. A booking made after the list was fetched just isn't in it yet.
+      const listedSince = Date.parse(booking.createdAt) < dataUpdatedAt;
+      if (listedSince && booking.status !== BookingStatus.SERVICE_COMPLETE) {
+        dispatch(setBookingStatus({ id: booking.id, status: BookingStatus.SERVICE_COMPLETE }));
+      }
+    });
+  }, [dispatch, enabled, openBookings, dataUpdatedAt, activeBookings, vehicles]);
 }

@@ -5,31 +5,62 @@ import { staffApi } from "../staffApi";
 import type {
   AdvisorMilestone,
   InvoiceLine,
+  StaffAuth,
   StaffBooking,
   ValetLeg,
   ValetMilestone,
 } from "@/types/admin";
 
-// What a staff link carries in its route: the booking and the token that signs
-// the valet / advisor in
-export interface StaffLinkParams {
+// What a staff page works with: the booking from its route and the sign-in from
+// stored staff sign-in (see useStaffAuth)
+export interface StaffLinkParams extends StaffAuth {
   id: string;
-  token: string;
 }
 
 export const staffKeys = {
-  booking: ({ id, token }: StaffLinkParams) => ["staff", "booking", id, token] as const,
+  bookings: ({ gear, token }: StaffAuth) => ["staff", "bookings", gear, token] as const,
+  booking: ({ id, gear, token }: StaffLinkParams) =>
+    ["staff", "booking", id, gear, token] as const,
 };
+
+// Email + OTP sign-in of the staff pages, for when the link carries no sign-in.
+// Failures are toasted here, like the other staff mutations.
+export function useStaffSendOtp() {
+  return useMutation({
+    mutationFn: (email: string) => staffApi.sendOtp(email),
+    onError: (error) => staffToast.error(errorMessage(error)),
+  });
+}
+
+export function useStaffVerifyOtp() {
+  return useMutation({
+    mutationFn: ({ email, otp }: { email: string; otp: string }) =>
+      staffApi.verifyOtp(email, otp),
+    onError: (error) => staffToast.error(errorMessage(error)),
+  });
+}
 
 // The admin can reassign staff or change the booking at any time, so keep the
 // page fresh while it's open (and when the staff member comes back to it)
 const REFRESH_MS = 15_000;
 
+// The task list: every booking the signed-in staff member is assigned to
+export function useStaffBookings(auth: StaffAuth) {
+  return useQuery({
+    queryKey: staffKeys.bookings(auth),
+    queryFn: () => staffApi.listBookings(auth),
+    enabled: !!auth.gear && !!auth.token,
+    refetchInterval: REFRESH_MS,
+    refetchOnWindowFocus: true,
+    retry: 1,
+  });
+}
+
 export function useStaffBooking(link: StaffLinkParams) {
   return useQuery({
     queryKey: staffKeys.booking(link),
-    queryFn: () => staffApi.getBooking(link.token, link.id),
-    enabled: !!link.id && !!link.token,
+    queryFn: () => staffApi.getBooking(link, link.id),
+    enabled: !!link.id && !!link.gear && !!link.token,
     refetchInterval: REFRESH_MS,
     refetchOnWindowFocus: true,
     retry: 1,
@@ -56,24 +87,24 @@ function useStaffMutation<TInput extends StaffLinkParams>(
 export function useStaffValetProgress() {
   return useStaffMutation(
     (input: StaffLinkParams & { leg: ValetLeg; milestone: ValetMilestone }) =>
-      staffApi.updateValetProgress(input.token, input.id, input.leg, input.milestone),
+      staffApi.updateValetProgress(input, input.id, input.leg, input.milestone),
   );
 }
 
 export function useStaffAdvisorProgress() {
   return useStaffMutation((input: StaffLinkParams & { milestone: AdvisorMilestone }) =>
-    staffApi.updateAdvisorProgress(input.token, input.id, input.milestone),
+    staffApi.updateAdvisorProgress(input, input.id, input.milestone),
   );
 }
 
 export function useStaffGenerateInvoice() {
   return useStaffMutation((input: StaffLinkParams & { items: InvoiceLine[] }) =>
-    staffApi.generateInvoice(input.token, input.id, input.items),
+    staffApi.generateInvoice(input, input.id, input.items),
   );
 }
 
 export function useStaffConfirmPayment() {
   return useStaffMutation((input: StaffLinkParams) =>
-    staffApi.confirmPayment(input.token, input.id),
+    staffApi.confirmPayment(input, input.id),
   );
 }

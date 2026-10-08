@@ -3,40 +3,64 @@ import { mockServer } from "./mock/mockServer";
 import type {
   AdvisorMilestone,
   InvoiceLine,
+  StaffAuth,
   StaffBooking,
   ValetLeg,
   ValetMilestone,
 } from "@/types/admin";
 
-// Endpoints the valet / advisor links call. They mirror the admin endpoints
-// (adminApi.ts) under /staff. Staff never log in: every call takes the token
-// from the link's route and sends it as the Bearer token. Agree the final paths
-// with the backend.
+// Endpoints the valet / advisor pages call. They mirror the admin endpoints
+// (adminApi.ts) under /staff. Staff have their own sign-in, separate from the
+// app's: every call takes the page's StaffAuth (from the link's search params or
+// the email + OTP form) and sends `gear` as the Bearer token with the encrypted
+// staff type next to it. Agree the final paths with the backend.
 export const staffApi = {
-  getBooking: (token: string, id: string) =>
+  // Emails a one-time password to a valet or advisor
+  sendOtp: (email: string) =>
     callStaffApi(
-      () => mockServer.getStaffBooking(token, id),
-      () => staffRequest<StaffBooking>(token, "get", `/staff/bookings/${id}`),
+      () => mockServer.sendStaffOtp(email),
+      () => staffRequest<{ sent: boolean }>(null, "post", "/staff/auth/login", { email }),
+    ),
+
+  // Returns what the link's search params would have carried
+  verifyOtp: (email: string, otp: string) =>
+    callStaffApi(
+      () => mockServer.verifyStaffOtp(email),
+      () => staffRequest<StaffAuth>(null, "post", "/staff/auth/verify_otp", { email, otp }),
+    ),
+
+  // Every booking the signed-in valet / advisor is assigned to; `linkRoles` says
+  // which of each booking's pages are theirs (proposed path)
+  listBookings: (auth: StaffAuth) =>
+    callStaffApi(
+      () => mockServer.listStaffBookings(auth),
+      () => staffRequest<StaffBooking[]>(auth, "get", "/staff/bookings"),
+    ),
+
+  getBooking: (auth: StaffAuth, id: string) =>
+    callStaffApi(
+      () => mockServer.getStaffBooking(auth, id),
+      () => staffRequest<StaffBooking>(auth, "get", `/staff/bookings/${id}`),
     ),
 
   // Marks the next milestone of a valet trip (milestones go in order)
-  updateValetProgress: (token: string, id: string, leg: ValetLeg, milestone: ValetMilestone) =>
+  updateValetProgress: (auth: StaffAuth, id: string, leg: ValetLeg, milestone: ValetMilestone) =>
     callStaffApi(
-      () => mockServer.staffUpdateValetProgress(token, id, leg, milestone),
+      () => mockServer.staffUpdateValetProgress(auth, id, leg, milestone),
       () =>
-        staffRequest<StaffBooking>(token, "put", `/staff/bookings/${id}/valet/progress`, {
+        staffRequest<StaffBooking>(auth, "put", `/staff/bookings/${id}/valet/progress`, {
           leg,
           milestone,
         }),
     ),
 
   // Service updates the advisor shares with the customer (in order)
-  updateAdvisorProgress: (token: string, id: string, milestone: AdvisorMilestone) =>
+  updateAdvisorProgress: (auth: StaffAuth, id: string, milestone: AdvisorMilestone) =>
     callStaffApi(
-      () => mockServer.staffUpdateAdvisorProgress(token, id, milestone),
+      () => mockServer.staffUpdateAdvisorProgress(auth, id, milestone),
       () =>
         staffRequest<StaffBooking>(
-          token,
+          auth,
           "put",
           `/staff/bookings/${id}/relationship-manager/progress`,
           { milestone },
@@ -44,16 +68,16 @@ export const staffApi = {
     ),
 
   // Sends the customer the bill the advisor filled in; the server adds tax and totals it
-  generateInvoice: (token: string, id: string, items: InvoiceLine[]) =>
+  generateInvoice: (auth: StaffAuth, id: string, items: InvoiceLine[]) =>
     callStaffApi(
-      () => mockServer.staffGenerateInvoice(token, id, items),
-      () => staffRequest<StaffBooking>(token, "post", `/staff/bookings/${id}/invoice`, { items }),
+      () => mockServer.staffGenerateInvoice(auth, id, items),
+      () => staffRequest<StaffBooking>(auth, "post", `/staff/bookings/${id}/invoice`, { items }),
     ),
 
   // The advisor has checked that the customer paid the invoice
-  confirmPayment: (token: string, id: string) =>
+  confirmPayment: (auth: StaffAuth, id: string) =>
     callStaffApi(
-      () => mockServer.staffConfirmPayment(token, id),
-      () => staffRequest<StaffBooking>(token, "put", `/staff/bookings/${id}/payment/confirm`),
+      () => mockServer.staffConfirmPayment(auth, id),
+      () => staffRequest<StaffBooking>(auth, "put", `/staff/bookings/${id}/payment/confirm`),
     ),
 };

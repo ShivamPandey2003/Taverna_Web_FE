@@ -1,44 +1,61 @@
 import { Outlet, useMatch } from "react-router";
 import { WifiOff } from "reicon-react";
 import { valetTrip } from "@/components/features/admin/admin.utils";
+import { StaffMenu } from "@/components/features/staffPortal/shared/StaffMenu";
+import { useStaffAuth } from "@/components/features/staffPortal/shared/useStaffAuth";
 import { isValetLeg } from "@/components/features/staffPortal/shared/workflow";
 import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/libs/utils";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { useStaffBooking } from "@/services/queries/staffQueries";
+import { useStaffBooking, useStaffBookings } from "@/services/queries/staffQueries";
+import type { StaffBooking, StaffLinkRole } from "@/types/admin";
 
-// Who the open link is for: the trip's valet or the booking's advisor.
-// Shares the page's booking query, so it costs no extra request.
-function useStaffName() {
-  const valetMatch = useMatch("/valet/:leg/:bookingId/:token");
-  const advisorMatch = useMatch("/advisor/:bookingId/:token");
-  const params = valetMatch?.params ?? advisorMatch?.params;
-  const { data: booking } = useStaffBooking({
-    id: params?.bookingId ?? "",
-    token: params?.token ?? "",
-  });
-
-  if (!booking) return null;
-  if (advisorMatch) return booking.relationshipManager?.name ?? null;
-  const leg = valetMatch?.params.leg;
-  return isValetLeg(leg) ? (valetTrip(booking, leg).valet?.name ?? null) : null;
+// The booking's valet / advisor behind one of its pages
+function staffOn(booking: StaffBooking, role: StaffLinkRole) {
+  return role === "advisor" ? booking.relationshipManager : valetTrip(booking, role).valet;
 }
 
-// Chrome of the valet / advisor pages: brand bar (with the staff member's name)
-// and an offline warning. `staff-app` switches on the staff theme (see index.css).
+// Who is signed in, read off what they're assigned to: the open booking's page,
+// or on the task list their first task. Shares the pages' queries, so it costs
+// no extra request. null when there's nothing to read it from.
+function useStaffMember() {
+  const valetMatch = useMatch("/valet/:leg/:bookingId");
+  const advisorMatch = useMatch("/advisor/:bookingId");
+  const params = valetMatch?.params ?? advisorMatch?.params;
+  const { auth } = useStaffAuth();
+  const { data: booking } = useStaffBooking({ id: params?.bookingId ?? "", ...auth });
+  // Only fetched on the task list
+  const { data: bookings } = useStaffBookings(params ? { gear: "", token: "" } : auth);
+
+  if (booking) {
+    if (advisorMatch) return staffOn(booking, "advisor");
+    const leg = valetMatch?.params.leg;
+    return isValetLeg(leg) ? staffOn(booking, leg) : null;
+  }
+  const first = bookings?.find((item) => item.linkRoles?.length);
+  return first?.linkRoles ? staffOn(first, first.linkRoles[0]) : null;
+}
+
+// Chrome of the valet / advisor pages: brand bar (with the signed-in staff
+// member's menu) and an offline warning. `staff-app` switches on the staff theme (see index.css).
 export function StaffLayout() {
   const online = useOnlineStatus();
-  const staffName = useStaffName();
-  const wide = !!useMatch("/advisor/:bookingId/:token");
+  const member = useStaffMember();
+  const wide = !!useMatch("/advisor/:bookingId");
+  // On a booking page: the way back to the task list, in the avatar menu
+  const onValetPage = !!useMatch("/valet/:leg/:bookingId");
+  const tasksPath = wide ? "/advisor" : onValetPage ? "/valet" : null;
+  const { signedIn, signOut } = useStaffAuth();
 
   return (
-    <div className={cn("staff-app min-h-dvh bg-section text-text", wide && "staff-wide")}>
+    <div className={cn(
+        "staff-app min-h-dvh bg-section text-text",
+        wide && "staff-wide",
+      )}>
       <header className="sticky top-0 z-20 border-b border-border bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-[var(--staff-width)] items-center justify-between gap-3 px-4">
           <Logo />
-          <span className="chip chip-muted min-w-0">
-            <span className="truncate">{staffName ?? "Staff"}</span>
-          </span>
+          {signedIn && <StaffMenu member={member} tasksPath={tasksPath} onSignOut={signOut} />}
         </div>
 
         {!online && (

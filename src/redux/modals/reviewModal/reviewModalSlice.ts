@@ -8,7 +8,9 @@ export type ReviewModal =
   | "location"
   | "addAddress"
   | "dealership"
-  | "schedule";
+  | "schedule"
+  // Confirmation before the tow truck is taken off a vehicle that can't be driven
+  | "removeTow";
 
 type ReviewModalState = {
   activeModal: ReviewModal | null;

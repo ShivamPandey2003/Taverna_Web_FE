@@ -19,9 +19,9 @@ export function AdminDealerships() {
               Dealerships
             </h1>
 
-            <p className="text-sm text-gray-500">
+            {/* <p className="text-sm text-gray-500">
               Locations customers can choose when they book a service.
-            </p>
+            </p> */}
           </div>
 
           <button

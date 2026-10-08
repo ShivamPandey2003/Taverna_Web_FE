@@ -4,11 +4,13 @@ import { logout } from "@/redux/auth/authSlice";
 import type { Booking, BookingStatus } from "@/types/booking";
 
 type TrackingState = {
-  activeBooking: Booking | null;
+  // The customer's bookings being tracked, newest first: one per vehicle at most
+  // while it's unfinished. A finished one stays (as "Service Complete") until reload.
+  activeBookings: Booking[];
 };
 
 const initialState: TrackingState = {
-  activeBooking: null,
+  activeBookings: [],
 };
 
 const trackingSlice = createSlice({
@@ -16,19 +18,26 @@ const trackingSlice = createSlice({
   initialState,
   reducers: {
     bookingCreated: (state, action: PayloadAction<Booking>) => {
-      state.activeBooking = action.payload;
+      state.activeBookings = [
+        action.payload,
+        ...state.activeBookings.filter((booking) => booking.id !== action.payload.id),
+      ];
     },
-    // Rebuilt from the API (e.g. after a reload). Unlike bookingCreated, other slices ignore it.
-    activeBookingRestored: (state, action: PayloadAction<Booking>) => {
-      state.activeBooking = action.payload;
+    // Rebuilt from the API (e.g. after a reload). Unlike bookingCreated, other slices
+    // ignore it. Bookings already tracked are left alone.
+    activeBookingsRestored: (state, action: PayloadAction<Booking[]>) => {
+      const known = new Set(state.activeBookings.map((booking) => booking.id));
+      state.activeBookings.push(...action.payload.filter((booking) => !known.has(booking.id)));
     },
-    setBookingStatus: (state, action: PayloadAction<BookingStatus>) => {
-      if (state.activeBooking) {
-        state.activeBooking.status = action.payload;
-      }
+    setBookingStatus: (state, action: PayloadAction<{ id: string; status: BookingStatus }>) => {
+      const booking = state.activeBookings.find((item) => item.id === action.payload.id);
+      if (booking) booking.status = action.payload.status;
     },
-    clearActiveBooking: (state) => {
-      state.activeBooking = null;
+    // A cancelled booking is gone for good
+    clearActiveBooking: (state, action: PayloadAction<string>) => {
+      state.activeBookings = state.activeBookings.filter(
+        (booking) => booking.id !== action.payload,
+      );
     },
   },
   extraReducers: (builder) => {
@@ -39,12 +48,11 @@ const trackingSlice = createSlice({
 
 export const {
   bookingCreated,
-  activeBookingRestored,
+  activeBookingsRestored,
   setBookingStatus,
   clearActiveBooking,
 } = trackingSlice.actions;
 
-export const selectActiveBooking = (state: RootState) =>
-  state.tracking.activeBooking;
+export const selectActiveBookings = (state: RootState) => state.tracking.activeBookings;
 
 export default trackingSlice.reducer;

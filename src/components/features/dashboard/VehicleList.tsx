@@ -11,7 +11,9 @@ export function VehicleList() {
   const vehicles = useAppSelector(selectVehicles);
 
   return (
-    <div className=" mt-4 px-10 grid grid-cols-1 gap-5 xl:grid-cols-2 2xl:grid-cols-3">
+    // Columns as wide as a card (it caps at 380px), as many as fit: equal-width
+    // columns left a wide empty strip beside each card
+    <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(min(100%,320px),380px))] gap-5 px-10">
       {vehicles.map((vehicle) => (
         <VehicleCard
           key={vehicle.id}

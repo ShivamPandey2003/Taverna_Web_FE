@@ -8,7 +8,7 @@ import {
 import { useAdminBooking } from "@/services/queries/adminQueries";
 import type { AdminBooking, StaffMember } from "@/types/admin";
 import { BookingStatusBadge } from "../BookingStatusBadge";
-import { formatCurrency, formatDateTime } from "../admin.utils";
+import { formatCurrency, formatDateTime, intakeMethodLabels, legMethod } from "../admin.utils";
 import { BookingOverview } from "./BookingOverview";
 
 // Read-only view of a booking; the workflow steps live in BookingWorkflowDrawer
@@ -79,14 +79,20 @@ const staffLine = (member: StaffMember | null) =>
 
 // Who is handling the booking and where payment stands
 function BookingHandling({ booking }: { booking: AdminBooking }) {
+  const method = legMethod(booking, "pickup");
+  const handover = legMethod(booking, "delivery");
   const rows: { label: string; value: string }[] = [
     {
       label: "Confirmed",
       value: booking.confirmedAt ? formatDateTime(booking.confirmedAt) : "Not confirmed yet",
     },
-    { label: "Pickup valet", value: staffLine(booking.valet) },
+    method && method !== "valet"
+      ? { label: "Vehicle intake", value: intakeMethodLabels[method] }
+      : { label: "Pickup valet", value: staffLine(booking.valet) },
     { label: "Advisor", value: staffLine(booking.relationshipManager) },
-    { label: "Delivery valet", value: staffLine(booking.deliveryValet ?? null) },
+    handover && handover !== "valet"
+      ? { label: "Vehicle handover", value: intakeMethodLabels[handover] }
+      : { label: "Delivery valet", value: staffLine(booking.deliveryValet ?? null) },
     {
       label: "Payment",
       value: booking.payment

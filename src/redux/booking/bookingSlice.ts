@@ -17,6 +17,9 @@ type BookingState = {
   pickupLocation: PickupLocation | null;
   selectedDealershipId: string;
   driveable: boolean;
+  // A vehicle that can't be driven gets a tow truck unless the customer takes it
+  // off (it only counts while `driveable` is false)
+  towTruck: boolean;
   concern: string;
   // Pickup time the customer scheduled (ISO); null books for as soon as possible
   scheduledAt: string | null;
@@ -28,6 +31,7 @@ const initialState: BookingState = {
   pickupLocation: null,
   selectedDealershipId: dealerships[0].id,
   driveable: true,
+  towTruck: true,
   concern: "",
   scheduledAt: null,
 };
@@ -50,6 +54,11 @@ const bookingSlice = createSlice({
     },
     setDriveable: (state, action: PayloadAction<boolean>) => {
       state.driveable = action.payload;
+      // Answering again starts from the default: towed in
+      state.towTruck = true;
+    },
+    setTowTruck: (state, action: PayloadAction<boolean>) => {
+      state.towTruck = action.payload;
     },
     setConcern: (state, action: PayloadAction<string>) => {
       state.concern = action.payload;
@@ -63,6 +72,7 @@ const bookingSlice = createSlice({
     builder
       .addCase(bookingCreated, (state) => {
         state.driveable = true;
+        state.towTruck = true;
         state.concern = "";
         state.scheduledAt = null;
       })
@@ -76,6 +86,7 @@ export const {
   setPickupLocation,
   setSelectedDealership,
   setDriveable,
+  setTowTruck,
   setConcern,
   setScheduledAt,
 } = bookingSlice.actions;

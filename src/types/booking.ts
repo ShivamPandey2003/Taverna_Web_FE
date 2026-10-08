@@ -31,6 +31,8 @@ export interface Booking {
   pickup: Pick<Address, "address" | "city" | "state" | "zip"> | { label: string };
   dealership: Dealership;
   driveable: boolean;
+  // Only for a vehicle that isn't driveable: false when the customer took the tow truck off
+  towTruck?: boolean;
   concern: string;
   // ISO strings keep the Redux state serializable
   scheduledAt: string | null;

@@ -6,8 +6,10 @@ import { BookingError, WrongLink } from "@/components/features/staffPortal/share
 import { BookingHero } from "@/components/features/staffPortal/shared/BookingHero";
 import { BookingSkeleton } from "@/components/features/staffPortal/shared/BookingSkeleton";
 import { MilestoneTimeline, type Milestone } from "@/components/features/staffPortal/shared/MilestoneTimeline";
+import { StaffLogin } from "@/components/features/staffPortal/shared/StaffLogin";
 import { StatusChip } from "@/components/features/staffPortal/shared/StatusChip";
 import { staffToast } from "@/components/features/staffPortal/shared/staffToast";
+import { useStaffAuth } from "@/components/features/staffPortal/shared/useStaffAuth";
 import { RouteCard } from "@/components/features/staffPortal/valet/RouteCard";
 import {
   isValetLeg,
@@ -35,17 +37,26 @@ import {
   type ValetLeg,
 } from "@/types/admin";
 
-// /valet/:leg/:bookingId/:token — the link the admin shares with the pickup or
-// delivery valet (staffLink in admin.utils.ts). The token signs the valet in.
+// /valet/:leg/:bookingId?gear=…&token=… — the link the admin shares with the
+// pickup or delivery valet (staffLink in admin.utils.ts). The search params sign
+// the valet in; without them the valet signs in with email + OTP first.
 export function ValetUpdate() {
-  const { leg, bookingId = "", token = "" } = useParams();
-  const link: StaffLinkParams = { id: bookingId, token };
+  const { leg, bookingId = "" } = useParams();
+  const { auth, signedIn, signOut } = useStaffAuth();
+  const link: StaffLinkParams = { id: bookingId, ...auth };
   const booking = useStaffBooking(link);
 
   if (!isValetLeg(leg)) return <Navigate to="/" replace />;
+  if (!signedIn) return <StaffLogin />;
   if (booking.isPending) return <BookingSkeleton />;
-  if (booking.isError) return <BookingError error={booking.error} onRetry={() => booking.refetch()} />;
-  if (booking.data.linkRole && booking.data.linkRole !== leg) return <WrongLink />;
+  if (booking.isError) {
+    return (
+      <BookingError error={booking.error} onRetry={() => booking.refetch()} onSignIn={signOut} />
+    );
+  }
+  if (booking.data.linkRoles && !booking.data.linkRoles.includes(leg)) {
+    return <WrongLink onSignIn={signOut} />;
+  }
 
   return <ValetTrip booking={booking.data} leg={leg} link={link} />;
 }

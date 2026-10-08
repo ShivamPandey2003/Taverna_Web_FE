@@ -5,7 +5,7 @@ import { SelectedVehicleCard } from "@/components/features/booking/SelectedVehic
 import { SelectVehicleModal } from "@/components/features/booking/SelectVehicleModal";
 import { ServicesList } from "@/components/features/booking/ServicesList";
 import { ServiceInProgressNotice } from "@/components/features/booking/ServiceInProgressNotice";
-import { useServiceInProgress } from "@/components/features/tracking/serviceStatus";
+import { useVehicleService } from "@/components/features/tracking/serviceStatus";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectVehicles } from "@/redux/vehicle/vehicleSlice";
 import {
@@ -25,7 +25,8 @@ export function BookService() {
   const vehicles = useAppSelector(selectVehicles);
   const selectedVehicle = useAppSelector(selectBookingVehicle);
   const { selectVehicleOpen } = useAppSelector(selectBookServiceModal);
-  const serviceInProgress = useServiceInProgress();
+  // One service per vehicle at a time: set while the picked vehicle has one running
+  const vehicleService = useVehicleService(selectedVehicle?.vin);
 
   // With one vehicle pick it automatically; with several ask the user
   useEffect(() => {
@@ -60,10 +61,10 @@ export function BookService() {
           </p>
         </header>
 
-        {/* One service at a time: booking unlocks once the current one is complete */}
-        {serviceInProgress && (
+        {/* Booking this vehicle unlocks once its current service is complete */}
+        {vehicleService && (
           <div className="mt-4">
-            <ServiceInProgressNotice />
+            <ServiceInProgressNotice service={vehicleService} />
           </div>
         )}
 
@@ -100,7 +101,7 @@ export function BookService() {
             Services For You
           </h2>
 
-          <ServicesList disabled={serviceInProgress} />
+          <ServicesList disabled={!!vehicleService} />
         </section>
 
       </div>

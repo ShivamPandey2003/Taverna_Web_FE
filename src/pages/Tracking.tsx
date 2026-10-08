@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { InvoiceCard } from "@/components/features/tracking/InvoiceCard";
 import { StaffContactCard } from "@/components/features/tracking/StaffContactCard";
 import { TrackingMap } from "@/components/features/tracking/TrackingMap";
@@ -8,17 +8,19 @@ import { BookingDetailsCard } from "@/components/features/tracking/BookingDetail
 import {
   getStatusDisplay,
   getTrackingStage,
+  pickTrackedService,
+  useActiveServices,
 } from "@/components/features/tracking/serviceStatus";
 import { formatPickupTime } from "@/libs/utils";
-import { useAppSelector } from "@/redux/hooks";
-import { selectActiveBooking } from "@/redux/tracking/trackingSlice";
 import { USE_MOCK_API } from "@/services/apiClient";
 import { useMyBooking, useSimulateNextStatus } from "@/services/queries/bookingQueries";
 import { BookingStatus as Status } from "@/types/booking";
 
 export function ServiceTracking() {
   const navigate = useNavigate();
-  const booking = useAppSelector(selectActiveBooking);
+  // The booking in the URL; without one, the newest that's still running
+  const { bookingId } = useParams();
+  const booking = pickTrackedService(useActiveServices(), bookingId)?.booking ?? null;
   // Live copy from the API; the Redux snapshot covers the first render and API failures
   const { data: liveBooking } = useMyBooking(booking?.id ?? null);
   const simulateNextStatus = useSimulateNextStatus();
