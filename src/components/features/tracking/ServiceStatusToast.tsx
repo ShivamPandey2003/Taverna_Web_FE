@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useMatch, useNavigate } from "react-router";
 import { ServiceStatusIndicator } from "./ServiceStatusIndicator";
 import {
@@ -11,14 +12,36 @@ import {
 import { cn, maskedVin, vehicleName } from "@/libs/utils";
 
 // The customer's running services, floating in the bottom-right corner: one round
-// bubble per booking showing just the vehicle. Hovering (or focusing) a bubble
-// widens it into the vehicle and where its service stands; a click opens its
-// tracking page. It can't be closed: a bubble goes away once its service is
-// complete. On the tracking page the booking being looked at is left out, so what
-// remains are the ways to the other ones.
+// bubble per booking showing just the vehicle. Hovering a bubble opens a small
+// card above it with that vehicle and where its service stands; a click opens
+// its tracking page. It can't be dismissed: a bubble goes away once its service
+// is complete. On the tracking page the booking being looked at is left out, so
+// what remains are the ways to the other ones.
 export function ServiceStatusToast() {
   const services = useActiveServices();
   const trackingMatch = useMatch(TRACKING_ROUTE);
+  const rootRef = useRef<HTMLDivElement>(null);
+  // The booking whose card is open, one at a time
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  // A card opened by a tap (no hover there) closes on a tap outside or Escape
+  useEffect(() => {
+    if (!openId) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpenId(null);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenId(null);
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [openId]);
 
   const viewedId = trackingMatch
     ? pickTrackedService(services, trackingMatch.params.bookingId)?.booking.id
@@ -32,34 +55,84 @@ export function ServiceStatusToast() {
   }
 
   return (
-    // Newest on the right; a widening bubble pushes the others to the left
+    // Newest on the right
     <div
-      role="status"
-      aria-live="polite"
+      ref={rootRef}
       className="fixed right-4 bottom-4 z-40 flex max-w-[calc(100vw-32px)] animate-toast-in flex-row-reverse flex-wrap-reverse items-center gap-3 sm:right-6"
     >
       {shown.map((service) => (
-        <ServiceBubble key={service.booking.id} service={service} />
+        <ServiceBubble
+          key={service.booking.id}
+          service={service}
+          open={openId === service.booking.id}
+          onOpenChange={(open) => setOpenId(open ? service.booking.id : null)}
+        />
       ))}
     </div>
   );
 }
 
-// One booking: the vehicle's photo, widening on hover / focus to its name, VIN
-// and status. Opens its tracking page.
-function ServiceBubble({ service }: { service: ActiveService }) {
+interface ServiceBubbleProps {
+  service: ActiveService;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+// One booking: the vehicle's photo, with a card above it (name, VIN and status)
+// while hovered. Both open the booking's tracking page.
+function ServiceBubble({ service, open, onOpenChange }: ServiceBubbleProps) {
   const navigate = useNavigate();
   const { booking, display } = service;
   const { vehicle } = booking;
 
+  const openTracking = () => {
+    onOpenChange(false);
+    navigate(trackingPath(booking.id));
+  };
+
   return (
-    <button
-      type="button"
-      onClick={() => navigate(trackingPath(booking.id))}
-      aria-label={`${vehicleName(vehicle)}, ${display.label}: ${display.message}. Open tracking`}
-      className="group flex h-16 max-w-full items-center rounded-full border border-gray-100 bg-white text-left shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
+    <div
+      className="relative"
+      onPointerEnter={(event) => event.pointerType === "mouse" && onOpenChange(true)}
+      onPointerLeave={(event) => event.pointerType === "mouse" && onOpenChange(false)}
     >
-      <span className="relative flex h-16 w-16 shrink-0 items-center justify-center">
+      {open && (
+        // The padding bridges the gap to the bubble, so the mouse can cross it
+        <div className="absolute right-0 bottom-full w-[340px] max-w-[calc(100vw-32px)] pb-3">
+          <button
+            type="button"
+            onClick={openTracking}
+            className="flex w-full animate-toast-in items-center gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-3 text-left shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition hover:bg-gray-50"
+          >
+            <img src={vehicle.image} alt="" className="h-10 w-14 shrink-0 object-contain" />
+
+            <span className="block min-w-0 flex-1">
+              <span className="block truncate text-sm font-bold leading-tight text-gray-900">
+                {vehicleName(vehicle)}
+              </span>
+              <span className="mt-0.5 block truncate text-[11px] text-gray-500">
+                VIN: {maskedVin(vehicle.vin)}
+              </span>
+            </span>
+
+            <ServiceStatusIndicator display={display} size="sm" />
+          </button>
+        </div>
+      )}
+
+      <button
+        type="button"
+        // A mouse click goes straight to tracking (the card is already showing);
+        // a tap or the keyboard opens the card first, which then leads there
+        onClick={(event) => {
+          const { pointerType } = event.nativeEvent as PointerEvent;
+          if (pointerType === "mouse" || open) openTracking();
+          else onOpenChange(true);
+        }}
+        aria-expanded={open}
+        aria-label={`${vehicleName(vehicle)}, ${display.label}: ${display.message}. Open tracking`}
+        className="relative flex h-16 w-16 items-center justify-center rounded-full border border-gray-100 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition hover:shadow-[0_8px_30px_rgba(0,0,0,0.2)]"
+      >
         <img src={vehicle.image} alt="" className="h-12 w-14 object-contain" />
         {/* The status colour, so a closed bubble still hints where the service stands */}
         <span
@@ -68,24 +141,7 @@ function ServiceBubble({ service }: { service: ActiveService }) {
             display.color.text,
           )}
         />
-      </span>
-
-      {/* Closed until hovered or focused. The content keeps its width so the text
-          doesn't reflow while the bubble widens. */}
-      <span className="block max-w-0 overflow-hidden opacity-0 transition-[max-width,opacity] duration-300 ease-out group-hover:max-w-[320px] group-hover:opacity-100 group-focus-visible:max-w-[320px] group-focus-visible:opacity-100">
-        <span className="flex w-[320px] items-center gap-3 pr-4 pl-1">
-          <span className="block min-w-0 flex-1">
-            <span className="block truncate text-[15px] font-bold leading-tight text-gray-900">
-              {vehicleName(vehicle)}
-            </span>
-            <span className="block truncate text-[11px] text-gray-500">
-              VIN: {maskedVin(vehicle.vin)}
-            </span>
-          </span>
-
-          <ServiceStatusIndicator display={display} />
-        </span>
-      </span>
-    </button>
+      </button>
+    </div>
   );
 }
