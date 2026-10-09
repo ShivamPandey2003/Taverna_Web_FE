@@ -1,7 +1,6 @@
 import { toast } from "sonner";
-import { callApi, request } from "./apiClient";
-import { mockServer } from "./mock/mockServer";
-import type { AuthSession, AuthUser, UserRole } from "@/types/auth";
+import { request } from "./apiClient";
+import type { AuthSession, UserRole } from "@/types/auth";
 
 export interface SignupPayload {
   fullname: string;
@@ -83,10 +82,4 @@ export const authApi = {
 
   // Revokes the tokens of the logged-in account (needs only the access token)
   logout: () => request<unknown>("post", "auth/logout"),
-
-  updateMe: (patch: Partial<Pick<AuthUser, "name" | "phone">>) =>
-    callApi(
-      () => mockServer.updateMe(patch),
-      () => request<AuthUser>("put", "/users/me", patch),
-    ),
 };

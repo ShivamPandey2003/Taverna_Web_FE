@@ -9,6 +9,7 @@ import type { Address, AddressType } from "@/types/address";
 import { useLocation } from "@/hooks/useLocation";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectAddresses } from "@/redux/address/addressSlice";
+import { useAddresses } from "@/services/queries/addressQueries";
 import {
   selectBooking,
   selectBookingAddress,
@@ -44,6 +45,12 @@ function SelectLocationContent({
 }: Omit<SelectLocationModalProps, "open">) {
   const dispatch = useAppDispatch();
   const addresses = useAppSelector(selectAddresses);
+  const {
+    isPending: loadingAddresses,
+    isError: addressesFailed,
+    isFetching: fetchingAddresses,
+    refetch: refetchAddresses,
+  } = useAddresses();
   const { pickupLocation } = useAppSelector(selectBooking);
   const bookingAddress = useAppSelector(selectBookingAddress);
   const {
@@ -204,11 +211,40 @@ function SelectLocationContent({
             </h3>
 
             <div className="mt-3 space-y-3 min-h-0 h-[40vh] overflow-auto">
-              {addresses.length === 0 && (
-                <p className="text-sm text-gray-500">
-                  No saved addresses yet.
-                </p>
-              )}
+              {addresses.length === 0 &&
+                (loadingAddresses ? (
+                  // First load: placeholders the shape of the address rows
+                  <div className="space-y-3" role="status" aria-label="Loading your addresses">
+                    {[0, 1].map((item) => (
+                      <div
+                        key={item}
+                        className="flex animate-pulse items-center gap-4 rounded-xl border border-gray-200 px-3 py-3"
+                      >
+                        <div className="h-10 w-10 shrink-0 rounded-xl bg-gray-200" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3 w-1/2 rounded bg-gray-200" />
+                          <div className="h-3 w-1/3 rounded bg-gray-100" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : addressesFailed ? (
+                  <p className="text-sm text-gray-500">
+                    We couldn't load your addresses.{" "}
+                    <button
+                      type="button"
+                      onClick={() => refetchAddresses()}
+                      disabled={fetchingAddresses}
+                      className="font-semibold text-gray-900 underline underline-offset-4 disabled:opacity-50"
+                    >
+                      {fetchingAddresses ? "Retrying..." : "Try Again"}
+                    </button>
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    No saved addresses yet.
+                  </p>
+                ))}
               {addresses.map((address) => (
                 <SavedAddressCard
                   key={address.id}

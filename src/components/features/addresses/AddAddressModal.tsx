@@ -2,17 +2,20 @@ import { Map2, Pin, MapArrowSquare, X } from 'reicon-react';
 import { useForm, useWatch, type UseFormRegisterReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { Spinner } from '@/components/ui/Spinner';
 import { cn } from '@/libs/utils';
 import { addressSchema, type AddressFormData } from '@/schema/address.schema';
 import type { Address, AddressType } from '@/types/address';
-import { useAppDispatch, useAppSelector } from '@/redux/hooks';
+import { useAppSelector } from '@/redux/hooks';
+import { selectAddressById, selectAddresses } from '@/redux/address/addressSlice';
+import { GeocodeError } from '@/services/geocodeApi';
 import {
-  addAddress,
-  editAddress,
-  selectAddressById,
-} from '@/redux/address/addressSlice';
+  useCreateAddress,
+  useGeocodeAddress,
+  useUpdateAddress,
+} from '@/services/queries/addressQueries';
 
-// Visibility is owned by the page's modal slice; the address itself is saved to the address slice
+// Visibility is owned by the page's modal slice; the address itself is saved through the API
 interface AddAddressModalProps {
   open: boolean;
   // Id of the address to edit; omit to add a new one
@@ -48,16 +51,28 @@ function AddressFormModal({
   onClose,
   onSaved,
 }: Omit<AddAddressModalProps, "open">) {
-  const dispatch = useAppDispatch();
   const existing = useAppSelector((state) =>
     selectAddressById(state, addressId ?? null)
   );
+  const hasAddresses = useAppSelector(selectAddresses).length > 0;
+  const createAddress = useCreateAddress();
+  const updateAddress = useUpdateAddress();
+  const geocodeAddress = useGeocodeAddress();
+  // Saving has two steps: finding where the address is, then storing it
+  const locating = geocodeAddress.isPending;
+  const saving = locating || createAddress.isPending || updateAddress.isPending;
+
+  // Nothing closes the form while it's saving
+  const close = () => {
+    if (!saving) onClose();
+  };
 
   const {
     register,
     handleSubmit,
     control,
     setValue,
+    setError,
     formState: { errors },
   } = useForm<AddressFormData>({
     resolver: zodResolver(addressSchema),
@@ -73,19 +88,63 @@ function AddressFormModal({
 
   const selectedType = useWatch({ control, name: "type" });
 
-  const onSubmit = (data: AddressFormData) => {
-    if (existing) {
-      const updated = { ...existing, ...data };
-      dispatch(editAddress(updated));
-      toast.success("Address updated");
-      onSaved?.(updated);
-    } else {
-      const { payload } = dispatch(addAddress(data));
-      toast.success("Address added");
-      onSaved?.(payload);
+  // The API needs the address's latitude and longitude. An edit that leaves the
+  // street, city, state and ZIP alone keeps the ones it has.
+  const findCoordinates = async (data: AddressFormData) => {
+    const moved =
+      !existing ||
+      existing.address !== data.address ||
+      existing.city !== data.city ||
+      existing.state !== data.state ||
+      existing.zip !== data.zip;
+
+    if (!moved && existing.latitude != null && existing.longitude != null) {
+      return { latitude: existing.latitude, longitude: existing.longitude };
+    }
+    return geocodeAddress.mutateAsync(data);
+  };
+
+  // The form stays open with what was typed whenever a step fails
+  const onSubmit = async (data: AddressFormData) => {
+    let coordinates;
+    try {
+      coordinates = await findCoordinates(data);
+    } catch (error) {
+      // Not our API, so nothing has reported this yet
+      if (error instanceof GeocodeError && error.reason === "notFound") {
+        setError("address", {
+          message: "We couldn't find this address. Check the street, city, state and ZIP code.",
+        });
+      } else {
+        toast.error("We couldn't look up this address. Check your connection and try again.");
+      }
+      return;
     }
 
-    onClose();
+    try {
+      if (existing) {
+        const { id, ...current } = existing;
+        const updated = await updateAddress.mutateAsync({
+          id,
+          address: { ...current, ...data, ...coordinates },
+        });
+        toast.success("Address updated");
+        onSaved?.(updated);
+      } else {
+        // The first saved address becomes the default one
+        const added = await createAddress.mutateAsync({
+          ...data,
+          ...coordinates,
+          isDefault: !hasAddresses,
+        });
+        toast.success("Address added");
+        onSaved?.(added);
+      }
+
+      onClose();
+    } catch {
+      // already toasted by the API layer
+    }
   };
 
   return (
@@ -93,7 +152,7 @@ function AddressFormModal({
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40"
-        onClick={onClose}
+        onClick={close}
       />
 
       {/* Modal wrapper */}
@@ -111,8 +170,9 @@ function AddressFormModal({
 
             <button
               type="button"
-              onClick={onClose}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 hover:text-gray-900"
+              onClick={close}
+              disabled={saving}
+              className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
               aria-label="Close"
             >
               <X size={15} />
@@ -175,8 +235,8 @@ function AddressFormModal({
               </button>
             </div>
 
-            {/* Address Details */}
-            <div className="mt-5">
+            {/* Address Details; locked while saving */}
+            <fieldset disabled={saving} className={cn("mt-5 transition", saving && "opacity-60")}>
               <h3 className="text-xs font-bold text-gray-900">
                 Address Details
               </h3>
@@ -260,14 +320,22 @@ function AddressFormModal({
                   />
                 </div>
               </div>
-            </div>
+            </fieldset>
 
             {/* Save */}
             <button
               type="submit"
-              className="mt-5 h-11 w-full rounded-lg bg-[#111827] text-xs font-semibold text-white transition hover:bg-black"
+              disabled={saving}
+              className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111827] text-xs font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-80"
             >
-              Save Address
+              {saving && <Spinner className="h-3.5 w-3.5" />}
+              {locating
+                ? "Locating Address..."
+                : saving
+                  ? "Saving..."
+                  : existing
+                    ? "Update Address"
+                    : "Save Address"}
             </button>
           </form>
         </div>

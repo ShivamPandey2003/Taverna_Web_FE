@@ -3,6 +3,8 @@ import { Outlet } from "react-router";
 import { Navbar } from "@/components/global/Navbar";
 import { ServiceStatusToast } from "@/components/features/tracking/ServiceStatusToast";
 import { useSyncActiveBookings } from "@/components/features/tracking/serviceStatus";
+import { useSyncAddresses } from "@/hooks/useSyncAddresses";
+import { useSyncProfile } from "@/hooks/useSyncProfile";
 import { useSyncVehicles } from "@/hooks/useSyncVehicles";
 import { useAppSelector } from "@/redux/hooks";
 import { selectIsAdmin } from "@/redux/auth/authSlice";
@@ -13,6 +15,10 @@ export function DashboardLayout() {
   useSyncActiveBookings(!isAdmin);
   // Customers' saved vehicles, for every dashboard page
   useSyncVehicles(!isAdmin);
+  // And their saved addresses
+  useSyncAddresses(!isAdmin);
+  // And their profile, which the login only gives part of
+  useSyncProfile(!isAdmin);
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">

@@ -67,7 +67,12 @@ store.subscribe(() => {
   if (auth.session) {
     authStorage.save({
       ...auth.session,
-      user: { ...auth.session.user, name: account.user.name, phone: account.user.phone },
+      user: {
+        ...auth.session.user,
+        name: account.user.name,
+        email: account.user.email,
+        phone: account.user.phone,
+      },
     });
   } else {
     authStorage.clear();

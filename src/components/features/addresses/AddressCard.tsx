@@ -1,38 +1,44 @@
+import { Building, HomeSmile, Pen, Pin, Star, Trash2 } from "reicon-react";
 
-import { Building, HomeSmile, Pen, Pin, Star, Trash2 } from 'reicon-react';
-
-import type { Address } from "@/types/address";
+import { Spinner } from "@/components/ui/Spinner";
+import { cn } from "@/libs/utils";
+import type { Address, AddressType } from "@/types/address";
 
 interface AddressCardProps {
   address: Address;
   onEdit?: (address: Address) => void;
   onDelete?: (address: Address) => void;
   onSetDefault?: (address: Address) => void;
+  // This address is being made the default
+  settingDefault?: boolean;
+  // A change to the addresses is being saved: its actions wait
+  disabled?: boolean;
 }
+
+const typeIcons: Record<AddressType, typeof Pin> = {
+  home: HomeSmile,
+  work: Building,
+  other: Pin,
+};
 
 export function AddressCard({
   address,
   onEdit,
   onDelete,
   onSetDefault,
+  settingDefault = false,
+  disabled = false,
 }: AddressCardProps) {
-  const getTypeIcon = () => {
-    switch (address.type) {
-      case "home":
-        return HomeSmile;
-
-      case "work":
-        return Building;
-
-      default:
-        return Pin;
-    }
-  };
-
-  const TypeIcon = getTypeIcon();
+  const TypeIcon = typeIcons[address.type];
 
   return (
-    <article className="rounded-xl border border-gray-200 bg-white px-3 py-3.5">
+    <article
+      aria-busy={settingDefault}
+      className={cn(
+        "rounded-xl border border-gray-200 bg-white px-3 py-3.5 transition",
+        settingDefault && "border-gray-400",
+      )}
+    >
       {/* Top */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -58,6 +64,7 @@ export function AddressCard({
       <div className="mt-3">
         <p className="text-xs font-bold text-gray-900">
           {address.address}
+          {address.apartment ? `, ${address.apartment}` : ""}
         </p>
 
         <p className="mt-0.5 text-[11px] text-gray-500">
@@ -70,7 +77,8 @@ export function AddressCard({
         <button
           type="button"
           onClick={() => onEdit?.(address)}
-          className="flex items-center gap-1 text-[11px] font-medium text-gray-600 transition hover:text-gray-900"
+          disabled={disabled}
+          className="flex items-center gap-1 text-[11px] font-medium text-gray-600 transition hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Pen size={13} />
           Edit
@@ -79,21 +87,30 @@ export function AddressCard({
         <button
           type="button"
           onClick={() => onDelete?.(address)}
-          className="flex items-center gap-1 text-[11px] font-medium text-gray-600 transition hover:text-red-600"
+          disabled={disabled}
+          className="flex items-center gap-1 text-[11px] font-medium text-gray-600 transition hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Trash2 size={13} />
           Delete
         </button>
 
-        {!address.isDefault && (
-          <button
-            type="button"
-            onClick={() => onSetDefault?.(address)}
-            className="flex items-center gap-1 text-[11px] font-medium text-gray-900 underline underline-offset-4 transition hover:text-black"
-          >
-            <Star size={13} />
-            Set as Default
-          </button>
+        {settingDefault ? (
+          <span className="flex items-center gap-1.5 text-[11px] font-medium text-gray-900">
+            <Spinner className="h-3 w-3" />
+            Setting as default...
+          </span>
+        ) : (
+          !address.isDefault && (
+            <button
+              type="button"
+              onClick={() => onSetDefault?.(address)}
+              disabled={disabled}
+              className="flex items-center gap-1 text-[11px] font-medium text-gray-900 underline underline-offset-4 transition hover:text-black disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Star size={13} />
+              Set as Default
+            </button>
+          )
         )}
       </div>
     </article>

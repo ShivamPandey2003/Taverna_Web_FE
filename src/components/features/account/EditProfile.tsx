@@ -1,68 +1,27 @@
 import { Camera, UserCircle } from 'reicon-react';
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { toast } from "sonner";
-import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { selectAccountUser, updateProfile } from "@/redux/account/accountSlice";
-import { authApi } from "@/services/authApi";
-
-const profileSchema = z.object({
-  fullname: z
-    .string()
-    .min(2, "Name must be at least 2 characters")
-    .max(100, "Name is too long"),
-
-  email: z
-    .email("Please enter a valid email"),
-
-  phone: z
-    .string()
-    .min(10, "Please enter a valid phone number"),
-});
-
-type ProfileFormData = z.infer<typeof profileSchema>;
+import { Spinner } from "@/components/ui/Spinner";
+import { cn } from "@/libs/utils";
+import { useAppSelector } from "@/redux/hooks";
+import { selectAccountUser } from "@/redux/account/accountSlice";
+import { profileSchema, type ProfileFormData } from "@/schema/profile.schema";
+import { useProfile, useUpdateProfile } from "@/services/queries/profileQueries";
+import type { Profile } from "@/types/profile";
 
 export function EditProfile() {
-  const dispatch = useAppDispatch();
   const user = useAppSelector(selectAccountUser);
+  const { data: profile, isPending, isError, isFetching, refetch } = useProfile();
 
-  const {
-    register,
-    handleSubmit,
-    formState: {
-      errors,
-      isSubmitting,
-    },
-  } = useForm<ProfileFormData>({
-    resolver: zodResolver(profileSchema),
-
-    defaultValues: {
-      fullname: user.name,
-      email: user.email,
-      phone: user.phone,
-    },
-  });
-
-  const onSubmit = async (
-    data: ProfileFormData
-  ) => {
-    try {
-      const updated = await authApi.updateMe({
-        name: data.fullname,
-        phone: data.phone,
-      });
-
-      dispatch(
-        updateProfile({
-          name: updated.name,
-          phone: updated.phone,
-        })
-      );
-      toast.success("Profile updated");
-    } catch {
-      // already reported by the API layer
-    }
+  // If the profile didn't load (already toasted), the form still works from what
+  // the login gave us: the one name split into first and last
+  const [firstName = "", ...rest] = user.name.trim().split(/\s+/);
+  const fallback: Profile = {
+    firstName,
+    lastName: rest.join(" "),
+    email: user.email,
+    phone: user.phone,
   };
 
   return (
@@ -98,65 +57,151 @@ export function EditProfile() {
         </button>
       </div>
 
-      {/* Form */}
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="mt-7 space-y-5"
-      >
-        {/* Full Name */}
-        <FormField
-          label="Full Name"
-          error={errors.fullname?.message}
-        >
-          <input
-            {...register("fullname")}
-            className="form-input"
-          />
-        </FormField>
+      {isError && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-xs text-amber-900">
+            We couldn't load your latest profile. What you see may be out of date.
+          </p>
 
-        {/* Email */}
-        <FormField
-          label="Email Address"
-          error={errors.email?.message}
-          description="Email cannot be changed."
-        >
+          <button
+            type="button"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="inline-flex items-center gap-2 text-xs font-semibold text-amber-900 underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isFetching && <Spinner className="h-3 w-3" />}
+            {isFetching ? "Retrying..." : "Try Again"}
+          </button>
+        </div>
+      )}
+
+      {isPending ? (
+        <ProfileFormSkeleton />
+      ) : (
+        // Remounts when the profile arrives after a failed load, so the fields start from it
+        <ProfileForm key={profile ? "loaded" : "fallback"} profile={profile ?? fallback} />
+      )}
+    </div>
+  );
+}
+
+// The form's shape while the profile loads
+function ProfileFormSkeleton() {
+  return (
+    <div className="mt-7 animate-pulse space-y-5" role="status" aria-label="Loading your profile">
+      <div className="grid gap-5 sm:grid-cols-2">
+        <SkeletonField />
+        <SkeletonField />
+      </div>
+      <SkeletonField />
+      <SkeletonField />
+      <div className="h-11 rounded-lg bg-gray-200" />
+    </div>
+  );
+}
+
+function SkeletonField() {
+  return (
+    <div>
+      <div className="mb-2 h-3 w-24 rounded bg-gray-200" />
+      <div className="h-11 rounded-lg bg-gray-100" />
+    </div>
+  );
+}
+
+function ProfileForm({ profile }: { profile: Profile }) {
+  const updateProfile = useUpdateProfile();
+  const saving = updateProfile.isPending;
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isDirty },
+  } = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      phone: profile.phone,
+    },
+  });
+
+  // A failure is toasted by the API layer; the fields keep what was typed
+  const onSubmit = async (data: ProfileFormData) => {
+    try {
+      const saved = await updateProfile.mutateAsync(data);
+      // What the server kept is the new starting point, so Save goes quiet again
+      reset({ firstName: saved.firstName, lastName: saved.lastName, phone: saved.phone });
+      toast.success("Profile updated");
+    } catch {
+      // already reported
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="mt-7">
+      {/* Locked while saving */}
+      <fieldset disabled={saving} className={cn("space-y-5 transition", saving && "opacity-60")}>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <FormField label="First Name" htmlFor="firstName" error={errors.firstName?.message}>
+            <input
+              id="firstName"
+              {...register("firstName")}
+              autoComplete="given-name"
+              className="form-input"
+            />
+          </FormField>
+
+          <FormField label="Last Name" htmlFor="lastName" error={errors.lastName?.message}>
+            <input
+              id="lastName"
+              {...register("lastName")}
+              autoComplete="family-name"
+              className="form-input"
+            />
+          </FormField>
+        </div>
+
+        {/* Email: shown, never sent */}
+        <FormField label="Email Address" htmlFor="email" description="Email cannot be changed.">
           <input
-            {...register("email")}
+            id="email"
             type="email"
+            value={profile.email}
+            readOnly
             disabled
             className="form-input cursor-not-allowed bg-gray-50 text-gray-500"
           />
         </FormField>
 
-        {/* Phone */}
-        <FormField
-          label="Phone Number"
-          error={errors.phone?.message}
-        >
+        <FormField label="Phone Number" htmlFor="phone" error={errors.phone?.message}>
           <input
+            id="phone"
             {...register("phone")}
             type="tel"
+            autoComplete="tel"
             className="form-input"
           />
         </FormField>
+      </fieldset>
 
-        {/* Save */}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="h-11 w-full rounded-lg bg-black text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isSubmitting
-            ? "Saving..."
-            : "Save Changes"}
-        </button>
-      </form>
-    </div>
+      {/* Save: only once something changed */}
+      <button
+        type="submit"
+        disabled={saving || !isDirty}
+        className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-black text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {saving && <Spinner className="h-4 w-4" />}
+        {saving ? "Saving..." : "Save Changes"}
+      </button>
+    </form>
   );
 }
 
 interface FormFieldProps {
   label: string;
+  htmlFor: string;
   description?: string;
   error?: string;
   children: React.ReactNode;
@@ -164,13 +209,14 @@ interface FormFieldProps {
 
 function FormField({
   label,
+  htmlFor,
   description,
   error,
   children,
 }: FormFieldProps) {
   return (
     <div>
-      <label className="mb-2 block text-xs font-semibold text-gray-600">
+      <label htmlFor={htmlFor} className="mb-2 block text-xs font-semibold text-gray-600">
         {label}
       </label>
 

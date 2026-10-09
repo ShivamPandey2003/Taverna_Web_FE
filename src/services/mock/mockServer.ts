@@ -1,7 +1,6 @@
 import type { Offer, OfferInput, OfferList, OfferListParams } from "@/types/offer";
 import type { OfferCsvRow } from "@/components/features/offers/offerCsv";
 import { BookingStatus } from "@/types/booking";
-import type { AuthUser } from "@/types/auth";
 import {
   ADVISOR_HANDOVER,
   ADVISOR_MILESTONES,
@@ -936,12 +935,6 @@ window.addEventListener("storage", (event) => {
 });
 
 export const mockServer = {
-  // ---- Profile ----
-  // The caller puts the result in Redux, which is what persists the session
-  updateMe(patch: Partial<Pick<AuthUser, "name" | "phone">>): AuthUser {
-    return { ...currentUser(), ...patch };
-  },
-
   // ---- Customer bookings ----
   createBooking(
     input: Omit<

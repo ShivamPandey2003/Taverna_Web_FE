@@ -6,7 +6,16 @@ type TanstackProviderProps = {
   children: ReactNode;
 };
 
-export const queryClient = new QueryClient();
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Don't refetch just because the tab got focus again
+      refetchOnWindowFocus: false,
+      // One more try before a query fails; a hook's own `retry` still wins
+      retry: 1,
+    },
+  },
+});
 
 export const TanstackProvider = ({ children }: TanstackProviderProps) => {
   return (

@@ -22,7 +22,7 @@ export function AddressSection() {
 
         {/* Count */}
         <span className="rounded-full bg-gray-50 px-2.5 py-1 text-[10px] font-semibold text-gray-600">
-          {addresses.length} addresses
+          {addresses.length} {addresses.length === 1 ? "address" : "addresses"}
         </span>
       </header>
 
