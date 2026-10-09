@@ -21,7 +21,8 @@ const formatSize = (bytes: number) =>
 
 // Pick (or drop) an offers CSV, check its columns in the browser, look over the
 // first rows, then upload it. The file is only sent once the check passes.
-export function OfferUpload() {
+// Shown in the offers page's bulk upload modal, which `onUploaded` closes.
+export function OfferUpload({ onUploaded }: { onUploaded?: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadOffers = useUploadOffers();
   const [selected, setSelected] = useState<{ file: File; check: OfferCsvCheck } | null>(null);
@@ -54,11 +55,12 @@ export function OfferUpload() {
   const upload = () => {
     if (!selected) return;
     uploadOffers.mutate(
-      { file: selected.file, rowCount: selected.check.rowCount },
+      { file: selected.file, rows: selected.check.rows },
       {
         onSuccess: ({ imported }) => {
           toast.success(`${imported.toLocaleString()} offers uploaded`);
           clear();
+          onUploaded?.();
         },
       },
     );
@@ -66,7 +68,7 @@ export function OfferUpload() {
 
   return (
     <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-      <section className="rounded-xl border border-gray-200 bg-white p-5">
+      <section className="min-w-0 rounded-xl border border-gray-200 bg-white p-5">
         <h2 className="text-base font-bold text-gray-900">Upload Offers File</h2>
         <p className="mt-1 text-sm text-gray-500">
           The file is checked here first; nothing is sent until you press Upload Offers.

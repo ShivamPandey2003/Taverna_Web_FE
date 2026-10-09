@@ -10,10 +10,13 @@ import type {
   BookingListParams,
   StaffListParams,
   StaffRole,
+  IntakeMethod,
   ValetLeg,
   ValetMilestone,
 } from "@/types/admin";
 import type { Dealership } from "@/types/dealership";
+import type { OfferInput, OfferListParams } from "@/types/offer";
+import type { OfferCsvRow } from "@/components/features/offers/offerCsv";
 
 export const adminKeys = {
   bookings: ["admin", "bookings"] as const,
@@ -24,6 +27,8 @@ export const adminKeys = {
     ["admin", "staff", role, "list", params] as const,
   dealerships: ["admin", "dealerships"] as const,
   dealershipList: (search: string) => ["admin", "dealerships", "list", search] as const,
+  offers: ["admin", "offers"] as const,
+  offerList: (params: OfferListParams) => ["admin", "offers", "list", params] as const,
 };
 
 // Flip to true once the backend supports ?search= on /admin/dealerships.
@@ -167,6 +172,17 @@ function useBookingMutation<TVariables>(
 export const useConfirmBooking = () =>
   useBookingMutation((id: string) => adminApi.confirmBooking(id));
 
+export const useSetLegMethod = () =>
+  useBookingMutation(
+    ({ id, leg, method }: { id: string; leg: ValetLeg; method: IntakeMethod }) =>
+      adminApi.setLegMethod(id, leg, method),
+  );
+
+export const useConfirmLegDone = () =>
+  useBookingMutation(({ id, leg }: { id: string; leg: ValetLeg }) =>
+    adminApi.confirmLegDone(id, leg),
+  );
+
 export const useAssignValet = () =>
   useBookingMutation(({ id, leg, valetId }: { id: string; leg: ValetLeg; valetId: string }) =>
     adminApi.assignValet(id, leg, valetId),
@@ -197,8 +213,42 @@ export const useGenerateInvoice = () =>
 export const useConfirmPayment = () =>
   useBookingMutation((id: string) => adminApi.confirmPayment(id));
 
-export const useUploadOffers = () =>
-  useMutation({
-    mutationFn: ({ file, rowCount }: { file: File; rowCount: number }) =>
-      adminApi.uploadOffers(file, rowCount),
+export function useAdminOffers(params: OfferListParams) {
+  return useQuery({
+    queryKey: adminKeys.offerList(params),
+    queryFn: () => adminApi.listOffers(params),
+    // Keep the current page on screen while the next one loads
+    placeholderData: keepPreviousData,
   });
+}
+
+// Editing or deleting an offer refreshes every page of the list
+export function useUpdateOffer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: OfferInput }) =>
+      adminApi.updateOffer(id, input),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.offers }),
+  });
+}
+
+export function useDeleteOffer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => adminApi.deleteOffer(id),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.offers }),
+  });
+}
+
+// A new file replaces the offers, so every page of the list is refetched
+export function useUploadOffers() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ file, rows }: { file: File; rows: OfferCsvRow[] }) =>
+      adminApi.uploadOffers(file, rows),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.offers }),
+  });
+}

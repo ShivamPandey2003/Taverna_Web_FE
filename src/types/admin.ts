@@ -94,6 +94,22 @@ export const TRIP_END: Record<ValetLeg, ValetMilestone> = {
   delivery: "delivered",
 };
 
+// How the vehicle gets to the dealership, picked by the admin in the Vehicle
+// Intake step. Only "valet" has a valet and a trip to follow; with the other two
+// the admin just confirms that the vehicle arrived (`pickupProgress.reached`).
+export const INTAKE_METHODS = ["valet", "towTruck", "selfDrive"] as const;
+export type IntakeMethod = (typeof INTAKE_METHODS)[number];
+
+// The choices on each trip, which depend on the service that was booked: with
+// Pickup & Delivery the dealership moves the vehicle (a valet, or a tow truck on
+// the way in); with Loaner Only the customer brings and collects it themselves,
+// which the admin confirms (`pickupProgress.reached` / `deliveryProgress.delivered`).
+// A trip with a single choice needs no picking: see `legMethod` in admin.utils.ts.
+export const LEG_METHODS: Record<ServiceId, Record<ValetLeg, readonly IntakeMethod[]>> = {
+  "pickup-delivery": { pickup: ["valet", "towTruck"], delivery: ["valet"] },
+  "loaner-only": { pickup: ["selfDrive"], delivery: ["selfDrive"] },
+};
+
 // Updates the advisor shares with the customer while the vehicle is serviced, in
 // order. The bill and payment that follow come from `invoice` and `payment`; then
 // the advisor hands the vehicle over for the delivery valet (`ADVISOR_HANDOVER`).
@@ -125,6 +141,9 @@ export interface AdminBooking {
   pickup: string;
   dealershipName: string;
   driveable: boolean;
+  // Only for a vehicle that isn't driveable: false when the customer took the tow
+  // truck off (they get the vehicle to the dealership themselves)
+  towTruck?: boolean;
   concern: string;
   scheduledAt: string | null;
   createdAt: string;
@@ -132,6 +151,8 @@ export interface AdminBooking {
   // Minutes until the valet reaches the customer, sent while they're on the way
   etaMinutes?: number | null;
   confirmedAt: string | null;
+  // Not picked yet when missing (bookings from before it existed have a valet instead)
+  intakeMethod?: IntakeMethod | null;
   // Pickup valet (the API calls it just "valet")
   valet: StaffMember | null;
   pickupProgress?: MilestoneLog<ValetMilestone>;
@@ -140,6 +161,8 @@ export interface AdminBooking {
   payment: PaymentInfo | null;
   // Set when the bill is generated
   invoice?: Invoice | null;
+  // How the vehicle goes back: "valet" or "selfDrive" (the customer collects it)
+  handoverMethod?: IntakeMethod | null;
   // Brings the vehicle back once the bill is paid
   deliveryValet?: StaffMember | null;
   deliveryProgress?: MilestoneLog<ValetMilestone>;

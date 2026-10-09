@@ -1,3 +1,4 @@
+import { Call, Envelope, Location } from "reicon-react";
 import { siteConfig } from "@/config/site.config";
 import { Container } from "@/components/ui/Container";
 import { Logo } from "@/components/ui/Logo";
@@ -54,9 +55,18 @@ export function Footer() {
             </h3>
 
             <div className="mt-5 space-y-3 text-xs text-text-secondary">
-              <p>✉ {siteConfig.contact.email}</p>
-              <p>☎ {siteConfig.contact.phone}</p>
-              <p>{siteConfig.contact.address}</p>
+              <p className="flex items-center gap-2">
+                <Envelope size={14} className="shrink-0" />
+                {siteConfig.contact.email}
+              </p>
+              <p className="flex items-center gap-2">
+                <Call size={14} className="shrink-0" />
+                {siteConfig.contact.phone}
+              </p>
+              <p className="flex items-start gap-2">
+                <Location size={14} className="mt-0.5 shrink-0" />
+                {siteConfig.contact.address}
+              </p>
             </div>
           </div>
 
@@ -65,7 +75,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="flex flex-col justify-between gap-4 border-t border-border py-7 text-xs text-text-secondary md:flex-row">
           <p>
-            © 2026 Taverna Valet. All rights reserved.
+            © 2026 Taverna. All rights reserved.
           </p>
 
           {/* <div className="flex gap-6">

@@ -14,6 +14,7 @@ import Home from "@/pages/Home";
 import { PickupDelivery } from "@/pages/PickupDelivery";
 import { Specials } from "@/pages/Specials";
 import { ServiceTracking } from "@/pages/Tracking";
+import { StaffTasks } from "@/pages/StaffTasks";
 import { ValetUpdate } from "@/pages/ValetUpdate";
 import { createBrowserRouter } from "react-router";
 
@@ -48,7 +49,8 @@ const Router = createBrowserRouter([
         element:<PickupDelivery/>
       },
       {
-        path:"book-service/tracking",
+        // One booking's tracking; without an id, the newest that's still running
+        path:"book-service/tracking/:bookingId?",
         element:<ServiceTracking/>
       },
       {
@@ -94,6 +96,15 @@ const Router = createBrowserRouter([
     // `gear` and `token` search params, or else an email + OTP form on the page.
     element: <StaffLayout />,
     children: [
+      // The signed-in staff member's task list; a task opens its page below
+      {
+        path: "valet",
+        element: <StaffTasks />,
+      },
+      {
+        path: "advisor",
+        element: <StaffTasks />,
+      },
       {
         path: "valet/:leg/:bookingId",
         element: <ValetUpdate />,

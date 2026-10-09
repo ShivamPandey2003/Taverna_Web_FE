@@ -7,18 +7,18 @@ import { isStepDone, isStepUnlocked } from "../admin.utils";
 // What's left to do on each step
 const stepLabels: Record<WorkflowStep, string> = {
   confirm: "Booking Details",
-  pickup: "Pickup Valet",
-  advisor: "Advisor",
-  delivery: "Delivery Valet",
+  pickup: "Vehicle Intake",
+  advisor: "Service Details",
+  delivery: "Vehicle Handover",
   complete: "Service Complete",
 };
 
 // What a finished step holds once there's nothing left to do on it
 const doneLabels: Record<WorkflowStep, string> = {
   confirm: "Booking Details",
-  pickup: "Pickup Valet",
-  advisor: "Advisor",
-  delivery: "Delivery Valet",
+  pickup: "Vehicle Intake",
+  advisor: "Service Details",
+  delivery: "Vehicle Handover",
   complete: "Service Completed",
 };
 

@@ -10,7 +10,7 @@ import { DeleteStaffModal } from "./DeleteStaffModal";
 import { StaffFormModal } from "./StaffFormModal";
 import { StaffTable } from "./StaffTable";
 import { StaffToolbar } from "./StaffToolbar";
-import { staffPageTitles, staffRoleLabels } from "./staff.utils";
+import { staffPageTitles } from "./staff.utils";
 
 // Searchable, sortable list of one kind of staff with add, edit and delete
 export function StaffDirectory({ role }: { role: StaffRole }) {
@@ -30,9 +30,9 @@ export function StaffDirectory({ role }: { role: StaffRole }) {
             {staffPageTitles[role]}
           </h1>
 
-          <p className="text-sm text-gray-500">
+          {/* <p className="text-sm text-gray-500">
             Add, edit or remove the {staffRoleLabels[role]}s you can assign to bookings.
-          </p>
+          </p> */}
         </header>
 
         <StaffToolbar role={role} />

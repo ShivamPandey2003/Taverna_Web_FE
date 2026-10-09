@@ -24,11 +24,6 @@ interface ValetStepProps {
   onDone: () => void;
 }
 
-const legDescriptions: Record<ValetLeg, string> = {
-  pickup: "Collects the vehicle from the customer and drives it to the dealership.",
-  delivery: "Collects the serviced vehicle from the dealership and returns it to the customer.",
-};
-
 const nextStepLabels: Record<ValetLeg, string> = {
   pickup: "Next: Assign Advisor",
   delivery: "Next: Complete Service",
@@ -84,8 +79,6 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm text-gray-500">{legDescriptions[leg]}</p>
-
       <AssignmentRow
         role="valet"
         title={legTitles[leg]}

@@ -128,6 +128,8 @@ export interface OfferCsvCheck {
   badRows: number[];
   // First few rows, to look over before uploading
   preview: OfferCsvRow[];
+  // Every row (empty while columns are missing); the mock API stores these
+  rows: OfferCsvRow[];
 }
 
 const PREVIEW_ROWS = 5;
@@ -143,16 +145,22 @@ export function checkOfferCsv(text: string): OfferCsvCheck {
     cells.length !== headerRow.length || (vin !== -1 && !cells[vin]?.trim()) ? [index + 2] : [],
   );
 
-  const preview = missingHeaders.length
+  const parsed = missingHeaders.length
     ? []
-    : rows.slice(0, PREVIEW_ROWS).map(
+    : rows.map(
         (cells) =>
           Object.fromEntries(
             OFFER_CSV_HEADERS.map((header) => [header, cells[indexOf(header)]?.trim() ?? ""]),
           ) as OfferCsvRow,
       );
 
-  return { missingHeaders, rowCount: rows.length, badRows, preview };
+  return {
+    missingHeaders,
+    rowCount: rows.length,
+    badRows,
+    preview: parsed.slice(0, PREVIEW_ROWS),
+    rows: parsed,
+  };
 }
 
 export const isOfferCsvValid = (check: OfferCsvCheck) =>

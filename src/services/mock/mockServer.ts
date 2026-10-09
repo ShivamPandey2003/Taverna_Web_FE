@@ -1,3 +1,5 @@
+import type { Offer, OfferInput, OfferList, OfferListParams } from "@/types/offer";
+import type { OfferCsvRow } from "@/components/features/offers/offerCsv";
 import { BookingStatus } from "@/types/booking";
 import type { AuthUser } from "@/types/auth";
 import {
@@ -5,6 +7,7 @@ import {
   ADVISOR_MILESTONES,
   INVOICE_TAX_RATE,
   LEG_MILESTONES,
+  LEG_METHODS,
   TRIP_END,
   type AdminBooking,
   type AdvisorMilestone,
@@ -19,6 +22,7 @@ import {
   type StaffMember,
   type StaffRole,
   type StaffType,
+  type IntakeMethod,
   type ValetLeg,
   type ValetMilestone,
 } from "@/types/admin";
@@ -39,6 +43,7 @@ type MockDb = {
   valets: StaffMember[];
   relationshipManagers: StaffMember[];
   dealerships: Dealership[];
+  offers: Offer[];
 };
 
 const staff = (id: string, name: string, phone: string, available: boolean): StaffMember => ({
@@ -186,12 +191,97 @@ function seedBookings(): AdminBooking[] {
   });
 }
 
+// How much of an upload the mock keeps: localStorage is small
+const MOCK_OFFERS_LIMIT = 2000;
+
+const toNumber = (value: string) => Number(value.replace(/[^0-9.-]/g, "")) || 0;
+
+function toOffer(row: OfferCsvRow, index: number): Offer {
+  return {
+    id: `offer-${index + 1}`,
+    vin: row.VIN.toUpperCase(),
+    stockNumber: row["Stock Number"],
+    brand: row["Brand Name"],
+    year: toNumber(row.Year),
+    model: row.Model,
+    trim: row.Trim,
+    condition: row.Condition,
+    offerType: row["Offer Type"],
+    payment: toNumber(row.Payment),
+    paymentNoTax: toNumber(row["Payment No Tax"]),
+    totalRebate: toNumber(row["Total Rebate"]),
+    term: toNumber(row.Term),
+    downPayment: toNumber(row["Down Payment"]),
+    dueAtSigning: toNumber(row["Due At Signing"]),
+    apr: toNumber(row.APR),
+    lender: row.Lender,
+    description: row.Description,
+    disclaimer: row.Disclaimer,
+  };
+}
+
+// Offers the admin sees before uploading a file of their own
+function seedOffers(): Offer[] {
+  const random = createRandom(7);
+  const pick = <T,>(items: readonly T[]) => items[Math.floor(random() * items.length)];
+  const models = [
+    ["Ram", "1500", "Big Horn"],
+    ["Ram", "2500", "Tradesman"],
+    ["Jeep", "Grand Cherokee", "Limited"],
+    ["Jeep", "Wrangler", "Sahara"],
+    ["Jeep", "Compass", "Latitude"],
+    ["Dodge", "Durango", "GT"],
+    ["Dodge", "Hornet", "R/T"],
+    ["Chrysler", "Pacifica", "Touring L"],
+  ] as const;
+  const deals = [
+    ["First and Fees", "CAL", "Cal Automotive Closed End Lease"],
+    ["Zero Down Lease", "CAL", "Cal Automotive Closed End Lease"],
+    ["Low APR Finance Deal", "SFS", "Stellantis Financial Services Stand-Alone APR Program"],
+    ["Cash Rebate Deal", "SFS", "Stellantis Financial Services Retail Bonus Cash"],
+  ] as const;
+
+  return Array.from({ length: 34 }, (_, index) => {
+    const [brand, model, trim] = pick(models);
+    const [offerType, lender, description] = pick(deals);
+    const finance = offerType === "Low APR Finance Deal" || offerType === "Cash Rebate Deal";
+    const used = random() < 0.2;
+    const payment = (finance ? 520 : 229) + Math.floor(random() * 40) * 10;
+    const term = finance ? pick([48, 60, 72]) : pick([24, 36, 39]);
+    const dueAtSigning = finance || offerType === "Zero Down Lease" ? 0 : 2500 + Math.floor(random() * 30) * 100;
+    const stock = `${brand.charAt(0)}${200000 + Math.floor(random() * 9999)}`;
+
+    return {
+      id: `offer-${index + 1}`,
+      vin: `3C6RR${String(10000000000000 + Math.floor(random() * 89999999999999)).slice(0, 12)}`,
+      stockNumber: stock,
+      brand,
+      year: used ? 2023 + Math.floor(random() * 2) : 2026,
+      model,
+      trim,
+      condition: used ? "Used" : "New",
+      offerType,
+      payment,
+      paymentNoTax: Math.round(payment / 1.07),
+      totalRebate: finance ? Math.floor(random() * 6) * 500 : 13000 - Math.floor(random() * 10) * 500,
+      term,
+      downPayment: 0,
+      dueAtSigning,
+      apr: finance ? pick([0, 1.9, 2.9, 3.9]) : Math.round((5 + random() * 3) * 1000) / 1000,
+      lender,
+      description,
+      disclaimer: `*Stock#: ${stock}. $${payment}/Mo. for ${term} Months. $${dueAtSigning.toLocaleString("en-US")} total due at signing. See dealer for details.`,
+    };
+  });
+}
+
 function loadDb(): MockDb {
   const seed: MockDb = {
     bookings: seedBookings(),
     valets,
     relationshipManagers,
     dealerships: seedDealerships,
+    offers: seedOffers(),
   };
 
   try {
@@ -348,13 +438,12 @@ function activeAssignments(role: StaffRole, id: string) {
   });
 }
 
-// A customer's booking that isn't complete yet; they can only have one at a time
-function findOpenBooking(customerId: string) {
-  return (
-    db.bookings.find(
-      (booking) =>
-        booking.customer.id === customerId && booking.status !== BookingStatus.SERVICE_COMPLETE,
-    ) ?? null
+// A customer's bookings that aren't complete yet, newest first: one per vehicle
+// at most
+function findOpenBookings(customerId: string) {
+  return db.bookings.filter(
+    (booking) =>
+      booking.customer.id === customerId && booking.status !== BookingStatus.SERVICE_COMPLETE,
   );
 }
 
@@ -418,6 +507,36 @@ function findStaffBooking(auth: StaffAuth, id: string) {
   const roles = ofType.filter((role) => assigned[role]?.id === member.id);
   if (!roles.length) throw new Error("You're not assigned to this booking.");
   return { booking, roles };
+}
+
+// Every booking the caller has a task on, with the pages of it they may use: a
+// signed-in member gets all they're assigned to, a link's token just its booking
+function findStaffBookings(auth: StaffAuth) {
+  const type = STAFF_TYPES.find((item) => mockStaffTypeToken(item) === auth.token);
+  if (!type) throw new Error("This link isn't valid. Sign in again to continue.");
+  const ofType = STAFF_LINK_ROLES.filter((role) => linkRoleType(role) === type);
+  const member = (type === "valet" ? db.valets : db.relationshipManagers).find(
+    (item) => mockStaffGear(item) === auth.gear,
+  );
+
+  const found = db.bookings.flatMap((booking) => {
+    const assigned: Record<StaffLinkRole, StaffMember | null | undefined> = {
+      pickup: booking.valet,
+      advisor: booking.relationshipManager,
+      delivery: booking.deliveryValet,
+    };
+    const roles = ofType.filter((role) =>
+      member
+        ? assigned[role]?.id === member.id
+        : booking.staffTokens?.[role]?.gear === auth.gear,
+    );
+    return roles.length ? [{ booking, roles }] : [];
+  });
+
+  if (!member && !found.length) {
+    throw new Error("Your sign-in has expired. Sign in again to continue.");
+  }
+  return found;
 }
 
 function assertStaffRole(roles: StaffLinkRole[], expected: StaffLinkRole) {
@@ -550,8 +669,23 @@ function nextMilestone<T extends string>(order: readonly T[], log: Partial<Recor
   return order.find((key) => !log[key]) ?? null;
 }
 
-const legDone = (booking: AdminBooking, leg: ValetLeg) =>
-  !!legValet(booking, leg) && !!legProgress(booking, leg)[TRIP_END[leg]];
+// How the vehicle makes this trip. A booking that already has the trip's valet
+// counts as "valet"; the choices depend on the booked service.
+function legMethod(booking: AdminBooking, leg: ValetLeg): IntakeMethod | null {
+  const saved = leg === "pickup" ? booking.intakeMethod : booking.handoverMethod;
+  if (saved) return saved;
+  if (legValet(booking, leg)) return "valet";
+  // The only choice for the booked service needs no picking
+  const options = LEG_METHODS[booking.serviceId][leg];
+  return options.length === 1 ? options[0] : null;
+}
+
+// The vehicle is at the other end: taken by the valet, a tow truck or the customer
+const legDone = (booking: AdminBooking, leg: ValetLeg) => {
+  const method = legMethod(booking, leg);
+  if (!method || (method === "valet" && !legValet(booking, leg))) return false;
+  return !!legProgress(booking, leg)[TRIP_END[leg]];
+};
 
 // Status the customer sees once a pickup milestone is reached. The delivery
 // trip reads as "Vehicle Return", except while its valet is on the road.
@@ -579,15 +713,75 @@ function confirm(booking: AdminBooking) {
   advanceStatusTo(booking, BookingStatus.BOOKED);
 }
 
-function assignValet(booking: AdminBooking, leg: ValetLeg, valet: StaffMember) {
+// What has to be true before a trip can be set up
+function assertLegOpen(booking: AdminBooking, leg: ValetLeg) {
   assertNotComplete(booking);
-  if (!booking.confirmedAt) throw new Error("Confirm the booking before assigning a valet.");
+  if (!booking.confirmedAt) throw new Error("Confirm the booking first.");
   if (leg === "delivery" && !booking.advisorProgress?.[ADVISOR_HANDOVER]) {
     throw new Error("The advisor has to mark the vehicle ready to dispatch first.");
   }
+}
+
+// Valet, tow truck (intake only) or the customer themselves
+function setLegMethod(booking: AdminBooking, leg: ValetLeg, method: IntakeMethod) {
+  assertLegOpen(booking, leg);
+  if (!LEG_METHODS[booking.serviceId][leg].includes(method)) throw new Error("That isn't an option for this step.");
+  if (legMethod(booking, leg) === method) return;
+  const log = legProgress(booking, leg);
+  if (log.pickedUp) {
+    throw new Error("The valet already has the vehicle, so this can't be changed.");
+  }
+  if (log[TRIP_END[leg]]) {
+    throw new Error("The vehicle has already been handed over, so this can't be changed.");
+  }
+
+  // Whoever was on the way is off the booking, and their trip with them
+  delete booking.assignedAt?.[leg];
+  booking.etaMinutes = null;
+  if (leg === "pickup") {
+    booking.intakeMethod = method;
+    booking.valet = null;
+    booking.pickupProgress = {};
+    // Back from "Valet Assigned" / "Valet On Road"
+    booking.status = BookingStatus.BOOKED;
+  } else {
+    booking.handoverMethod = method;
+    booking.deliveryValet = null;
+    booking.deliveryProgress = {};
+    // Back from "Valet On Road"
+    booking.status = BookingStatus.VEHICLE_RETURN;
+  }
+}
+
+// No valet, so nobody to follow: the admin just says the vehicle is at the
+// dealership (intake) or back with the customer (handover)
+function confirmLegDone(booking: AdminBooking, leg: ValetLeg) {
+  assertLegOpen(booking, leg);
+  const method = legMethod(booking, leg);
+  if (!method) throw new Error("Choose how the vehicle makes this trip first.");
+  if (method === "valet") throw new Error("The valet's trip shows when the vehicle gets there.");
+  if (legProgress(booking, leg)[TRIP_END[leg]]) {
+    throw new Error("This is already confirmed.");
+  }
+
+  const log = { [TRIP_END[leg]]: clock() };
+  if (leg === "pickup") {
+    booking.pickupProgress = log;
+    advanceStatusTo(booking, BookingStatus.VEHICLE_ARRIVED);
+  } else {
+    booking.deliveryProgress = log;
+  }
+}
+
+function assignValet(booking: AdminBooking, leg: ValetLeg, valet: StaffMember) {
+  assertLegOpen(booking, leg);
+  const method = legMethod(booking, leg);
+  if (method && method !== "valet") throw new Error("This trip isn't made by a valet.");
   if (legProgress(booking, leg).pickedUp) {
     throw new Error("This valet already has the vehicle, so they can't be changed.");
   }
+  if (leg === "pickup") booking.intakeMethod = "valet";
+  else booking.handoverMethod = "valet";
 
   booking.assignedAt = { ...booking.assignedAt, [leg]: clock() };
   // A new valet starts the trip over
@@ -701,9 +895,19 @@ function nextAction(booking: AdminBooking, pickStaff: StaffPicker): (() => void)
   if (booking.status === BookingStatus.SERVICE_COMPLETE) return null;
   if (!booking.confirmedAt) return () => confirm(booking);
 
-  if (!booking.valet) return () => assignValet(booking, "pickup", pickStaff.valet());
-  const pickupStep = nextMilestone(LEG_MILESTONES.pickup, legProgress(booking, "pickup"));
-  if (pickupStep) return () => markValetMilestone(booking, "pickup", pickupStep);
+  // A valet unless the admin picked something else for the trip
+  const nextOnLeg = (leg: ValetLeg) => {
+    const method = legMethod(booking, leg);
+    if (method && method !== "valet") {
+      return legDone(booking, leg) ? null : () => confirmLegDone(booking, leg);
+    }
+    if (!legValet(booking, leg)) return () => assignValet(booking, leg, pickStaff.valet());
+    const step = nextMilestone(LEG_MILESTONES[leg], legProgress(booking, leg));
+    return step ? () => markValetMilestone(booking, leg, step) : null;
+  };
+
+  const pickupAction = nextOnLeg("pickup");
+  if (pickupAction) return pickupAction;
 
   if (!booking.relationshipManager) return () => assignAdvisor(booking, pickStaff.manager());
   const advisorStep = nextMilestone(ADVISOR_MILESTONES, booking.advisorProgress ?? {});
@@ -714,11 +918,7 @@ function nextAction(booking: AdminBooking, pickStaff: StaffPicker): (() => void)
     return () => markAdvisorMilestone(booking, ADVISOR_HANDOVER);
   }
 
-  if (!booking.deliveryValet) return () => assignValet(booking, "delivery", pickStaff.valet());
-  const deliveryStep = nextMilestone(LEG_MILESTONES.delivery, legProgress(booking, "delivery"));
-  if (deliveryStep) return () => markValetMilestone(booking, "delivery", deliveryStep);
-
-  return () => complete(booking);
+  return nextOnLeg("delivery") ?? (() => complete(booking));
 }
 
 const payAction = (booking: AdminBooking) =>
@@ -758,9 +958,10 @@ export const mockServer = {
     >,
   ) {
     const user = currentUser();
-    if (findOpenBooking(user.id)) {
+    // One service per vehicle at a time; other vehicles can be booked alongside
+    if (findOpenBookings(user.id).some((booking) => booking.vehicle.vin === input.vehicle.vin)) {
       throw new Error(
-        "You already have a service in progress. You can book again once it's complete.",
+        "This vehicle already has a service in progress. You can book it again once that's complete.",
       );
     }
     const id = `PC-${Date.now().toString().slice(-6)}`;
@@ -781,8 +982,8 @@ export const mockServer = {
     return booking;
   },
 
-  getMyOpenBooking() {
-    return findOpenBooking(currentUser().id);
+  getMyOpenBookings() {
+    return findOpenBookings(currentUser().id);
   },
 
   getMyBooking(id: string) {
@@ -912,6 +1113,22 @@ export const mockServer = {
     return booking;
   },
 
+  setLegMethod(id: string, leg: ValetLeg, method: IntakeMethod) {
+    requireAdmin();
+    const booking = findBooking(id);
+    setLegMethod(booking, leg, method);
+    persist();
+    return booking;
+  },
+
+  confirmLegDone(id: string, leg: ValetLeg) {
+    requireAdmin();
+    const booking = findBooking(id);
+    confirmLegDone(booking, leg);
+    persist();
+    return booking;
+  },
+
   assignValet(id: string, leg: ValetLeg, valetId: string) {
     requireAdmin();
     const booking = findBooking(id);
@@ -972,10 +1189,90 @@ export const mockServer = {
     return booking;
   },
 
-  // The mock keeps no offers: it only says how many rows it was sent
-  uploadOffers(rowCount: number) {
+  listOffers(params: OfferListParams): OfferList {
     requireAdmin();
-    return { imported: rowCount };
+    const search = params.search.trim().toLowerCase();
+    const vehicle = (offer: Offer) => `${offer.year} ${offer.brand} ${offer.model} ${offer.trim}`;
+
+    const filtered = db.offers.filter((offer) => {
+      if (params.condition !== "all" && offer.condition !== params.condition) return false;
+      if (params.offerType !== "all" && offer.offerType !== params.offerType) return false;
+      if (!search) return true;
+
+      return [offer.vin, offer.stockNumber, vehicle(offer), offer.lender].some((value) =>
+        value.toLowerCase().includes(search),
+      );
+    });
+
+    const sortValue = (offer: Offer) => {
+      switch (params.sortBy) {
+        case "vin":
+          return offer.vin;
+        case "stockNumber":
+          return offer.stockNumber;
+        case "offerType":
+          return offer.offerType.toLowerCase();
+        case "payment":
+          return offer.payment;
+        case "term":
+          return offer.term;
+        case "apr":
+          return offer.apr;
+        default:
+          return vehicle(offer).toLowerCase();
+      }
+    };
+
+    const direction = params.sortOrder === "asc" ? 1 : -1;
+    const sorted = [...filtered].sort((first, second) =>
+      sortValue(first) < sortValue(second)
+        ? -direction
+        : sortValue(first) > sortValue(second)
+          ? direction
+          : 0,
+    );
+
+    const totalPages = Math.max(1, Math.ceil(sorted.length / params.pageSize));
+    const page = Math.min(params.page, totalPages);
+    const start = (page - 1) * params.pageSize;
+    const distinct = (values: string[]) => [...new Set(values.filter(Boolean))].sort();
+
+    return {
+      items: sorted.slice(start, start + params.pageSize),
+      total: sorted.length,
+      page,
+      pageSize: params.pageSize,
+      totalPages,
+      conditions: distinct(db.offers.map((offer) => offer.condition)),
+      offerTypes: distinct(db.offers.map((offer) => offer.offerType)),
+    };
+  },
+
+  updateOffer(id: string, input: OfferInput) {
+    requireAdmin();
+    const offer = db.offers.find((item) => item.id === id);
+    if (!offer) throw new Error("We couldn't find this offer.");
+    Object.assign(offer, input);
+    persist();
+    return offer;
+  },
+
+  deleteOffer(id: string) {
+    requireAdmin();
+    const index = db.offers.findIndex((item) => item.id === id);
+    if (index === -1) throw new Error("We couldn't find this offer.");
+    db.offers.splice(index, 1);
+    persist();
+    return { id };
+  },
+
+  // A new file replaces the offers there were. The mock keeps the first
+  // MOCK_OFFERS_LIMIT of them but reports them all as imported.
+  uploadOffers(rows: OfferCsvRow[]) {
+    requireAdmin();
+    db.offers = rows.slice(0, MOCK_OFFERS_LIMIT).map(toOffer);
+    persist();
+    return { imported: rows.length };
   },
 
   // ---- Staff pages (valet / advisor; signed in by the link's search params or
@@ -992,6 +1289,10 @@ export const mockServer = {
     const found = findStaffByEmail(email);
     if (!found) throw new Error("No valet or advisor account found for this email.");
     return { gear: mockStaffGear(found.member), token: mockStaffTypeToken(found.type) };
+  },
+
+  listStaffBookings(auth: StaffAuth) {
+    return findStaffBookings(auth).map(({ booking, roles }) => staffView(booking, roles));
   },
 
   getStaffBooking(auth: StaffAuth, id: string) {

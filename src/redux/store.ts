@@ -10,6 +10,7 @@ import account from "./account/accountSlice";
 import auth from "./auth/authSlice";
 import location from "./location/locationSlice";
 import adminBookings from "./adminBookings/adminBookingsSlice";
+import adminOffers from "./adminOffers/adminOffersSlice";
 import adminDealerships from "./adminDealerships/adminDealershipsSlice";
 import adminStaff from "./adminStaff/adminStaffSlice";
 import { authStorage } from "@/services/authStorage";
@@ -23,6 +24,7 @@ import accountModal from "./modals/accountModal/accountModalSlice";
 import adminModal from "./modals/adminModal/adminModalSlice";
 import dealershipModal from "./modals/dealershipModal/dealershipModalSlice";
 import staffModal from "./modals/staffModal/staffModalSlice";
+import offersModal from "./modals/offersModal/offersModalSlice";
 
 const rootReducer = combineReducers({
   vehicle,
@@ -34,6 +36,7 @@ const rootReducer = combineReducers({
   auth,
   location,
   adminBookings,
+  adminOffers,
   adminDealerships,
   adminStaff,
 
@@ -45,6 +48,7 @@ const rootReducer = combineReducers({
   adminModal,
   dealershipModal,
   staffModal,
+  offersModal,
 });
 
 export const store = configureStore({

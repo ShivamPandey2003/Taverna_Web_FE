@@ -29,6 +29,14 @@ export const staffApi = {
       () => staffRequest<StaffAuth>(null, "post", "/staff/auth/verify_otp", { email, otp }),
     ),
 
+  // Every booking the signed-in valet / advisor is assigned to; `linkRoles` says
+  // which of each booking's pages are theirs (proposed path)
+  listBookings: (auth: StaffAuth) =>
+    callStaffApi(
+      () => mockServer.listStaffBookings(auth),
+      () => staffRequest<StaffBooking[]>(auth, "get", "/staff/bookings"),
+    ),
+
   getBooking: (auth: StaffAuth, id: string) =>
     callStaffApi(
       () => mockServer.getStaffBooking(auth, id),

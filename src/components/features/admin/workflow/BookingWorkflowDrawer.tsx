@@ -15,7 +15,7 @@ import { BookingStatusBadge } from "../BookingStatusBadge";
 import { firstOpenStep, isStepUnlocked, serviceLabels } from "../admin.utils";
 import { WorkflowStepper } from "./WorkflowStepper";
 import { ConfirmStep } from "./ConfirmStep";
-import { ValetStep } from "./ValetStep";
+import { TransferStep } from "./TransferStep";
 import { AdvisorStep } from "./AdvisorStep";
 import { CompleteStep } from "./CompleteStep";
 import { CopyButton } from "./StepParts";
@@ -107,13 +107,13 @@ export function BookingWorkflowDrawer() {
               <ConfirmStep booking={booking} onDone={() => goToNextStep("confirm")} />
             )}
             {step === "pickup" && (
-              <ValetStep booking={booking} leg="pickup" onDone={() => goToNextStep("pickup")} />
+              <TransferStep booking={booking} leg="pickup" onDone={() => goToNextStep("pickup")} />
             )}
             {step === "advisor" && (
               <AdvisorStep booking={booking} onDone={() => goToNextStep("advisor")} />
             )}
             {step === "delivery" && (
-              <ValetStep
+              <TransferStep
                 booking={booking}
                 leg="delivery"
                 onDone={() => goToNextStep("delivery")}

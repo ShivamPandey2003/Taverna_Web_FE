@@ -1,11 +1,18 @@
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { selectBooking, setDriveable } from "@/redux/booking/bookingSlice";
+import { selectBooking, setDriveable, setTowTruck } from "@/redux/booking/bookingSlice";
+import {
+  closeReviewModal,
+  openReviewModal,
+  selectReviewModal,
+} from "@/redux/modals/reviewModal/reviewModalSlice";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { TowTruckNotice } from "./TowTruckNotice";
 import { BookingFieldStatus } from "./BookingSummaryCard";
 
 export function DriveableStatus() {
   const dispatch = useAppDispatch();
-  const { driveable: value } = useAppSelector(selectBooking);
+  const { driveable: value, towTruck } = useAppSelector(selectBooking);
+  const confirmingRemoval = useAppSelector(selectReviewModal) === "removeTow";
 
   const onChange = (driveable: boolean) => dispatch(setDriveable(driveable));
 
@@ -45,8 +52,32 @@ export function DriveableStatus() {
       {/* A car that can't be driven is towed in */}
       {value === false && (
         <div className="mt-3">
-          <TowTruckNotice price={49} />
+          <TowTruckNotice
+            price={49}
+            included={towTruck}
+            // Taking it off asks first; putting it back doesn't. Either way the
+            // car stays "not driveable".
+            onToggle={() =>
+              towTruck ? dispatch(openReviewModal("removeTow")) : dispatch(setTowTruck(true))
+            }
+          />
         </div>
+      )}
+
+      {confirmingRemoval && (
+        <ConfirmModal
+          title="Remove Tow Truck?"
+          confirmLabel="Remove Tow Truck"
+          cancelLabel="Keep Tow Truck"
+          onConfirm={() => {
+            dispatch(setTowTruck(false));
+            dispatch(closeReviewModal());
+          }}
+          onClose={() => dispatch(closeReviewModal())}
+        >
+          Your vehicle is marked as not driveable. Without the tow truck you'll need to get it
+          to the dealership yourself. You can add the tow truck back before you book.
+        </ConfirmModal>
       )}
     </div>
   );

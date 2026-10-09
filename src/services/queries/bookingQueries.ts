@@ -17,9 +17,9 @@ export function useMyBooking(id: string | null) {
   });
 }
 
-// The customer's unfinished booking, if any. Polls so booking unlocks once the admin
-// completes the service.
-export function useMyOpenBooking(enabled = true) {
+// The customer's unfinished bookings. Polls so admin progress shows up and a
+// vehicle can be booked again once its service is complete.
+export function useMyOpenBookings(enabled = true) {
   return useQuery({
     queryKey: bookingKeys.open,
     queryFn: bookingApi.getOpen,
@@ -50,7 +50,9 @@ export function useCancelBooking() {
     mutationFn: (id: string) => bookingApi.cancel(id),
     onSuccess: async (_, id) => {
       await queryClient.cancelQueries({ queryKey: ["bookings"] });
-      queryClient.setQueryData(bookingKeys.open, null);
+      queryClient.setQueryData<AdminBooking[]>(bookingKeys.open, (open) =>
+        open?.filter((booking) => booking.id !== id),
+      );
       queryClient.removeQueries({ queryKey: bookingKeys.detail(id) });
     },
   });

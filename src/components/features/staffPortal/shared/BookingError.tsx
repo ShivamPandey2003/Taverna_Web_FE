@@ -5,10 +5,12 @@ import { errorMessage } from "@/libs/apiError";
 // The booking couldn't be loaded: bad or expired sign-in, removed booking, or no
 // signal. `onSignIn` drops the sign-in so the email + OTP form comes back.
 export function BookingError({
+  title = "Couldn't Open This Booking",
   error,
   onRetry,
   onSignIn,
 }: {
+  title?: string;
   error: unknown;
   onRetry: () => void;
   onSignIn: () => void;
@@ -18,7 +20,7 @@ export function BookingError({
       <StateScreen
         tone="danger"
         icon={<AlertCircle size={30} />}
-        title="Couldn't Open This Booking"
+        title={title}
         action={
           <div className="space-y-2">
             <button type="button" onClick={onRetry} className="btn btn-secondary btn-block">

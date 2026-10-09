@@ -1,5 +1,6 @@
 import { Calendar, InfoCircle } from "reicon-react";
-import { brandName, maskedVin } from "@/libs/utils";
+import { brandName, cn, maskedVin } from "@/libs/utils";
+import { statusIcons, type ActiveService } from "@/components/features/tracking/serviceStatus";
 import type { Vehicle } from "@/types/vehicle";
 import { VehicleTitle } from "./VehicleTitle";
 
@@ -9,9 +10,25 @@ interface VehicleCardProps {
   onSelect?: () => void;
   // Starts a pickup booking for this vehicle; button next to the stats
   onBook?: () => void;
+  // The vehicle's running service, if it has one: its status replaces the booking
+  // button (a vehicle can't be booked again until the service is complete)
+  service?: ActiveService | null;
+  // Opens that service's tracking page; the status button
+  onTrack?: () => void;
 }
 
-export function VehicleCard({ vehicle, onSelect, onBook }: VehicleCardProps) {
+export function VehicleCard({
+  vehicle,
+  onSelect,
+  onBook,
+  service,
+  onTrack,
+}: VehicleCardProps) {
+  const StatusIcon = service ? statusIcons[service.status] : null;
+  const statusLabel = service?.display.etaMinutes
+    ? `Arriving in ${service.display.etaMinutes} mins`
+    : service?.display.label;
+
   return (
     <article className="group w-full max-w-[380px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
       {/* Image */}
@@ -50,8 +67,8 @@ export function VehicleCard({ vehicle, onSelect, onBook }: VehicleCardProps) {
         <div className="my-5 h-px bg-gray-200" />
 
         {/* Stats, with the booking button beside them */}
-        <div className="flex items-end justify-between gap-4">
-          <div className="flex min-w-0 gap-6">
+        <div className="flex items-end justify-between gap-3">
+          <div className="flex min-w-0 gap-4">
             {/* Last 4 of the VIN, like everywhere else; the full VIN is in the tooltip */}
             <VehicleStat
               label="VIN"
@@ -62,7 +79,21 @@ export function VehicleCard({ vehicle, onSelect, onBook }: VehicleCardProps) {
             <VehicleStat label="Miles" value={vehicle.miles || "—"} />
           </div>
 
-          {onBook && (
+          {service ? (
+            <button
+              type="button"
+              onClick={onTrack}
+              aria-label={`${brandName(vehicle.brand)} ${vehicle.model}, ${statusLabel}: ${service.display.message}. Open tracking`}
+              title={service.display.message}
+              className={cn(
+                "flex h-10 min-w-0 items-center gap-2 rounded-full px-4 text-sm font-semibold transition hover:brightness-95",
+                service.display.color.soft,
+              )}
+            >
+              {StatusIcon && <StatusIcon size={16} className="shrink-0" />}
+              <span className="truncate">{statusLabel}</span>
+            </button>
+          ) : onBook && (
             <button
               type="button"
               onClick={(event) => {

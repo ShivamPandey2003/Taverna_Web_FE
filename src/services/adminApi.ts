@@ -4,6 +4,7 @@ import type {
   AdminBooking,
   AdvisorMilestone,
   BookingListParams,
+  IntakeMethod,
   Paginated,
   StaffListParams,
   StaffMember,
@@ -12,6 +13,8 @@ import type {
   ValetMilestone,
 } from "@/types/admin";
 import type { Dealership } from "@/types/dealership";
+import type { Offer, OfferInput, OfferList, OfferListParams } from "@/types/offer";
+import type { OfferCsvRow } from "@/components/features/offers/offerCsv";
 
 export type StaffInput = Pick<StaffMember, "name" | "email" | "phone" | "available">;
 
@@ -22,6 +25,8 @@ const staffPaths: Record<StaffRole, string> = {
   manager: "/admin/relationship-managers",
 };
 export type DealershipInput = Omit<Dealership, "id">;
+
+const legPaths: Record<ValetLeg, string> = { pickup: "intake", delivery: "handover" };
 
 // Sorting, filtering, search and pagination all happen on the server
 export const adminApi = {
@@ -45,6 +50,26 @@ export const adminApi = {
     callApi(
       () => mockServer.confirmBooking(id),
       () => request<AdminBooking>("put", `/admin/bookings/${id}/confirm`),
+    ),
+
+  // How the vehicle gets to the dealership (pickup) or back to the customer
+  // (delivery). Changing it drops that trip's valet and their progress. The
+  // paths are a proposal: agree them with the backend.
+  setLegMethod: (id: string, leg: ValetLeg, method: IntakeMethod) =>
+    callApi(
+      () => mockServer.setLegMethod(id, leg, method),
+      () => request<AdminBooking>("put", `/admin/bookings/${id}/${legPaths[leg]}`, { method }),
+    ),
+
+  // Without a valet: the vehicle is at the dealership / back with the customer
+  confirmLegDone: (id: string, leg: ValetLeg) =>
+    callApi(
+      () => mockServer.confirmLegDone(id, leg),
+      () =>
+        request<AdminBooking>(
+          "put",
+          `/admin/bookings/${id}/${legPaths[leg]}/${leg === "pickup" ? "arrived" : "delivered"}`,
+        ),
     ),
 
   // Pickup or delivery valet; assigning someone new restarts that trip
@@ -104,11 +129,32 @@ export const adminApi = {
       () => request<AdminBooking>("put", `/admin/bookings/${id}/complete`),
     ),
 
-  // Sends the offers CSV as multipart form data; the server parses and stores it.
-  // The path is a proposal: agree it with the backend. `rowCount` only feeds the mock.
-  uploadOffers: (file: File, rowCount: number) =>
+  // The uploaded offers, a page at a time; search, filters and sorting happen on
+  // the server. The path is a proposal: agree it with the backend.
+  listOffers: (params: OfferListParams) =>
     callApi(
-      () => mockServer.uploadOffers(rowCount),
+      () => mockServer.listOffers(params),
+      () => request<OfferList>("get", `/admin/offers${toQueryString({ ...params })}`),
+    ),
+
+  updateOffer: (id: string, input: OfferInput) =>
+    callApi(
+      () => mockServer.updateOffer(id, input),
+      () => request<Offer>("put", `/admin/offers/${id}`, input),
+    ),
+
+  deleteOffer: (id: string) =>
+    callApi(
+      () => mockServer.deleteOffer(id),
+      () => request<{ id: string }>("delete", `/admin/offers/${id}`),
+    ),
+
+  // Sends the offers CSV as multipart form data; the server parses and stores it,
+  // replacing the offers it had. The path is a proposal: agree it with the backend.
+  // `rows` (the file as parsed in the browser) only feeds the mock.
+  uploadOffers: (file: File, rows: OfferCsvRow[]) =>
+    callApi(
+      () => mockServer.uploadOffers(rows),
       () => {
         const form = new FormData();
         form.append("file", file);

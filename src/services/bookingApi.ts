@@ -12,11 +12,12 @@ export const bookingApi = {
       () => request<AdminBooking>("post", "/bookings", input),
     ),
 
-  // The customer's booking that isn't complete yet, or null
+  // The customer's bookings that aren't complete yet (one per vehicle at most),
+  // newest first
   getOpen: () =>
     callApi(
-      () => mockServer.getMyOpenBooking(),
-      () => request<AdminBooking | null>("get", "/bookings/open"),
+      () => mockServer.getMyOpenBookings(),
+      () => request<AdminBooking[]>("get", "/bookings/open"),
     ),
 
   get: (id: string) =>

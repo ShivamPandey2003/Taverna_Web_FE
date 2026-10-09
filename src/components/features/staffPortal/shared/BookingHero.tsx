@@ -126,8 +126,10 @@ export function BookingHero({
         <div className="notice notice-warning mt-4">
           <Danger size={18} className="mt-px shrink-0" />
           <span>
-            <strong className="font-semibold">Not driveable.</strong> A tow
-            truck moves this vehicle. Don't try to drive it.
+            <strong className="font-semibold">Not driveable.</strong>{" "}
+            {booking.towTruck === false
+              ? "The customer declined the tow truck. Don't try to drive it."
+              : "A tow truck moves this vehicle. Don't try to drive it."}
           </span>
         </div>
       )}

@@ -8,11 +8,11 @@ import {
 import { bookingApi } from "@/services/bookingApi";
 
 // Sends the booking in progress to the API, then snapshots it into the tracking slice.
-// Resolves false when a vehicle, pickup location or dealership is missing, or the API fails
-// (the API layer has already shown the error).
+// Resolves the new booking's id, or null when a vehicle, pickup location or dealership is
+// missing, or the API fails (the API layer has already shown the error).
 export const confirmBooking =
   () =>
-  async (dispatch: AppDispatch, getState: () => RootState): Promise<boolean> => {
+  async (dispatch: AppDispatch, getState: () => RootState): Promise<string | null> => {
     const state = getState();
     const vehicle = selectBookingVehicle(state);
     const address = selectBookingAddress(state);
@@ -33,12 +33,14 @@ export const confirmBooking =
           };
 
     if (!vehicle || !pickup || !dealership) {
-      return false;
+      return null;
     }
 
     // Loaner Only has no driveable question; the customer drives the car in
     const driveable =
       state.booking.selectedServiceId === "loaner-only" || state.booking.driveable;
+    // A vehicle that can't be driven is towed in unless the customer took the tow truck off
+    const towTruck = driveable ? undefined : state.booking.towTruck;
 
     try {
       const created = await bookingApi.create({
@@ -55,6 +57,7 @@ export const confirmBooking =
             : `${address!.address}, ${address!.city}, ${address!.state} ${address!.zip}`,
         dealershipName: dealership.name,
         driveable,
+        towTruck,
         concern: state.booking.concern,
         scheduledAt,
       });
@@ -67,6 +70,7 @@ export const confirmBooking =
           pickup,
           dealership,
           driveable,
+          towTruck,
           concern: created.concern,
           scheduledAt,
           createdAt: created.createdAt,
@@ -74,8 +78,8 @@ export const confirmBooking =
         }),
       );
 
-      return true;
+      return created.id;
     } catch {
-      return false;
+      return null;
     }
   };

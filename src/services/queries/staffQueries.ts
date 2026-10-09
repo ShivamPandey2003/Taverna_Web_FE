@@ -12,12 +12,13 @@ import type {
 } from "@/types/admin";
 
 // What a staff page works with: the booking from its route and the sign-in from
-// its search params (see useStaffAuth)
+// stored staff sign-in (see useStaffAuth)
 export interface StaffLinkParams extends StaffAuth {
   id: string;
 }
 
 export const staffKeys = {
+  bookings: ({ gear, token }: StaffAuth) => ["staff", "bookings", gear, token] as const,
   booking: ({ id, gear, token }: StaffLinkParams) =>
     ["staff", "booking", id, gear, token] as const,
 };
@@ -42,6 +43,18 @@ export function useStaffVerifyOtp() {
 // The admin can reassign staff or change the booking at any time, so keep the
 // page fresh while it's open (and when the staff member comes back to it)
 const REFRESH_MS = 15_000;
+
+// The task list: every booking the signed-in staff member is assigned to
+export function useStaffBookings(auth: StaffAuth) {
+  return useQuery({
+    queryKey: staffKeys.bookings(auth),
+    queryFn: () => staffApi.listBookings(auth),
+    enabled: !!auth.gear && !!auth.token,
+    refetchInterval: REFRESH_MS,
+    refetchOnWindowFocus: true,
+    retry: 1,
+  });
+}
 
 export function useStaffBooking(link: StaffLinkParams) {
   return useQuery({

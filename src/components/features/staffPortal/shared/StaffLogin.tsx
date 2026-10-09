@@ -6,10 +6,15 @@ import { useStaffSendOtp, useStaffVerifyOtp } from "@/services/queries/staffQuer
 import { staffToast } from "./staffToast";
 import { useStaffAuth } from "./useStaffAuth";
 
-// Shown when the page was opened without `gear` and `token` in its URL: the same
+// Shown when there's no staff sign-in (stored, or in the link's URL): the same
 // email + OTP steps as the app's login, but against the staff sign-in, which
 // never touches the app's session.
-export function StaffLogin() {
+export function StaffLogin({
+  hint = "Sign in with your Taverna staff email to open this booking.",
+}: {
+  // What signing in is for, under the title
+  hint?: string;
+}) {
   const { signIn } = useStaffAuth();
   const sendOtp = useStaffSendOtp();
   const verifyOtp = useStaffVerifyOtp();
@@ -54,10 +59,8 @@ export function StaffLogin() {
         ) : (
           <>
             <div className="mb-6">
-              <h1 className="text-2xl font-bold tracking-tight">Staff Sign In</h1>
-              <p className="muted mt-2">
-                Sign in with your Taverna staff email to open this booking.
-              </p>
+              <h1 className="text-2xl font-bold tracking-tight">Sign In</h1>
+              <p className="muted mt-2">{hint}</p>
             </div>
             <LoginForm onSubmit={handleEmail} />
           </>

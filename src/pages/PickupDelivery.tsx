@@ -1,3 +1,5 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { bookingKeys } from "@/services/queries/bookingQueries";
 import { useState } from "react";
 import { ArrowLeft } from "reicon-react";
 import { useNavigate } from "react-router";
@@ -15,7 +17,7 @@ import { ScheduleSummary } from "@/components/features/review/ScheduleSummary";
 import { SelectVehicleModal } from "@/components/features/booking/SelectVehicleModal";
 import { AddAddressModal } from "@/components/features/addresses/AddAddressModal";
 import { ServiceInProgressNotice } from "@/components/features/booking/ServiceInProgressNotice";
-import { useServiceInProgress } from "@/components/features/tracking/serviceStatus";
+import { trackingPath, useVehicleService } from "@/components/features/tracking/serviceStatus";
 import { useClosestDealership } from "@/hooks/useClosestDealership";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
@@ -43,6 +45,7 @@ import {
 export function PickupDelivery() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const queryClient = useQueryClient();
 
   const service = useAppSelector(selectBookingService);
   const { pickupLocation, scheduledAt } = useAppSelector(selectBooking);
@@ -55,9 +58,10 @@ export function PickupDelivery() {
 
   const hasPickup = !!address || pickupLocation?.type === "current";
   const [booking, setBooking] = useState(false);
-  // One service at a time. Ignored while this page's own booking is being placed,
-  // so the notice doesn't flash before we move to tracking.
-  const serviceInProgress = useServiceInProgress() && !booking;
+  // One service per vehicle at a time. Ignored while this page's own booking is being
+  // placed, so the notice doesn't flash before we move to tracking.
+  const vehicleService = useVehicleService(vehicle?.vin);
+  const serviceInProgress = !!vehicleService && !booking;
   const canBook = !!vehicle && hasPickup && !!dealership && !serviceInProgress;
   // Loaner Only customers drive in themselves, so there's no pickup to schedule
   const canSchedule = service.id !== "loaner-only";
@@ -67,7 +71,7 @@ export function PickupDelivery() {
 
   const handleBook = async () => {
     if (serviceInProgress) {
-      toast.error("You can book again once your current service is complete.");
+      toast.error("You can book this vehicle again once its current service is complete.");
       return;
     }
     if (!canBook) {
@@ -82,11 +86,13 @@ export function PickupDelivery() {
     }
 
     setBooking(true);
-    const booked = await dispatch(confirmBooking());
+    const bookingId = await dispatch(confirmBooking());
 
     // A failed API call has already been reported by the API layer
-    if (booked) {
-      navigate("/dashboard/book-service/tracking", { replace: true });
+    if (bookingId) {
+      // So the list of open bookings has the new one before its next poll
+      queryClient.invalidateQueries({ queryKey: bookingKeys.open });
+      navigate(trackingPath(bookingId), { replace: true });
     } else {
       setBooking(false);
     }
@@ -140,9 +146,9 @@ export function PickupDelivery() {
           </div>
         </header>
 
-        {serviceInProgress && (
+        {serviceInProgress && vehicleService && (
           <div className="mt-5">
-            <ServiceInProgressNotice />
+            <ServiceInProgressNotice service={vehicleService} />
           </div>
         )}
 

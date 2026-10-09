@@ -42,6 +42,9 @@ export function getBookingDetailGroups(booking: Booking, user: AccountUser): Det
           value: formatPickupTime(booking.scheduledAt ?? booking.createdAt),
         },
         { label: "Vehicle driveable", value: booking.driveable ? "Yes" : "No" },
+        ...(booking.driveable
+          ? []
+          : [{ label: "Tow truck", value: booking.towTruck === false ? "Not included" : "Included" }]),
         { label: "Pickup address", value: pickupLabel(booking.pickup), wide: true },
         { label: "Dealership", value: booking.dealership.name, wide: true },
       ],

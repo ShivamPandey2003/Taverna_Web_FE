@@ -25,7 +25,12 @@ export function BookingOverview({ booking }: { booking: AdminBooking }) {
   ];
 
   if (booking.serviceId === "pickup-delivery") {
-    rows.push({ label: "Driveable", value: booking.driveable ? "Yes" : "No — tow truck needed" });
+    rows.push({ label: "Driveable", value: booking.driveable
+        ? "Yes"
+        : booking.towTruck === false
+          ? "No — customer declined the tow truck"
+          : "No — tow truck needed",
+    });
   }
 
   return (
