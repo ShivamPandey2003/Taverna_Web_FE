@@ -402,18 +402,6 @@ function findStaff(role: StaffRole, id: string) {
   return member;
 }
 
-// Unfinished bookings the member is assigned to
-function activeAssignments(role: StaffRole, id: string) {
-  return db.bookings.filter((booking) => {
-    const assigned =
-      role === "valet" ? [booking.valet, booking.deliveryValet] : [booking.relationshipManager];
-    return (
-      assigned.some((member) => member?.id === id) &&
-      booking.status !== BookingStatus.SERVICE_COMPLETE
-    );
-  });
-}
-
 // A customer's bookings that aren't complete yet, newest first: one per vehicle
 // at most
 function findOpenBookings(customerId: string) {
@@ -1304,19 +1292,14 @@ export const mockServer = {
     persist();
   },
 
-  deleteStaff(role: StaffRole, id: string) {
-    requireAdmin();
-    const member = findStaff(role, id);
-    const active = activeAssignments(role, id).length;
-    if (active > 0) {
-      throw new Error(
-        `${member.name} is assigned to ${active} active booking${active === 1 ? "" : "s"} and can't be deleted.`,
-      );
-    }
+  // Someone deleted with the real API: the copy kept here goes too. Bookings
+  // they were on keep their own copy of the person.
+  removeStaff(role: StaffRole, id: string) {
     const list = staffList(role);
-    list.splice(list.indexOf(member), 1);
+    const index = list.findIndex((member) => member.id === id);
+    if (index === -1) return;
+    list.splice(index, 1);
     persist();
-    return { id };
   },
 
   // ---- Dealerships ----

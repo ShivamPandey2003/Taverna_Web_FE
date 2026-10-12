@@ -20,14 +20,14 @@ import type { OfferCsvRow } from "@/components/features/offers/offerCsv";
 
 export type StaffInput = Pick<StaffMember, "name" | "email" | "phone" | "available">;
 
-// The real API's name for each kind of staff, in staff/:staffType/list
+// The real API's name for each kind of staff, in the staff/:staffType/… paths
 const staffTypes: Record<StaffRole, string> = {
   valet: "valet-operator",
   manager: "advisor",
 };
 
 // A staff member, from staff/:staffType/list and staff/:staffType/save
-// (staff/:staffType/update/:id only answers with the id)
+// (update and delete only answer with the id)
 interface StaffResponse {
   id: string;
   fullName: string;
@@ -48,13 +48,6 @@ const toStaffMember = (member: StaffResponse): StaffMember => ({
   activeBookings: member.activeBookings ?? 0,
 });
 
-// Deleting staff is still the mock's. Valets and advisors
-// share one shape under different paths (advisors are still "relationship
-// managers" there).
-const staffPaths: Record<StaffRole, string> = {
-  valet: "/admin/valets",
-  manager: "/admin/relationship-managers",
-};
 export type DealershipInput = Omit<Dealership, "id">;
 
 const legPaths: Record<ValetLeg, string> = { pickup: "intake", delivery: "handover" };
@@ -377,11 +370,12 @@ export const adminApi = {
     return member;
   },
 
-  deleteStaff: (role: StaffRole, id: string) =>
-    callApi(
-      () => mockServer.deleteStaff(role, id),
-      () => request<{ id: string }>("delete", `${staffPaths[role]}/${id}`),
-    ),
+  // Real API. The mock drops its copy too.
+  deleteStaff: async (role: StaffRole, id: string) => {
+    await request("post", `staff/${staffTypes[role]}/delete/${id}`);
+    if (USE_MOCK_API) mockServer.removeStaff(role, id);
+    return { id };
+  },
 
   listDealerships: (search: string) =>
     callApi(
