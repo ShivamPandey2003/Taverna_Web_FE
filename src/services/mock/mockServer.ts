@@ -402,25 +402,6 @@ function findStaff(role: StaffRole, id: string) {
   return member;
 }
 
-const phoneDigits = (phone: string) => phone.replace(/\D/g, "");
-
-type StaffFields = Pick<StaffMember, "name" | "email" | "phone" | "available">;
-
-function assertContactFree(
-  role: StaffRole,
-  input: Pick<StaffMember, "email" | "phone">,
-  exceptId?: string,
-) {
-  const others = staffList(role).filter((member) => member.id !== exceptId);
-  if (others.some((member) => phoneDigits(member.phone) === phoneDigits(input.phone))) {
-    throw new Error("Someone with this phone number already exists.");
-  }
-  const email = input.email.toLowerCase();
-  if (others.some((member) => member.email.toLowerCase() === email)) {
-    throw new Error("Someone with this email already exists.");
-  }
-}
-
 // Unfinished bookings the member is assigned to
 function activeAssignments(role: StaffRole, id: string) {
   return db.bookings.filter((booking) => {
@@ -1308,33 +1289,19 @@ export const mockServer = {
       const copy = list.find((item) => item.id === member.id);
       if (copy) Object.assign(copy, fields);
       else list.push(fields);
+
+      // Bookings keep a copy of the assigned member; keep their details current
+      db.bookings.forEach((booking) => {
+        if (role === "valet" && booking.valet?.id === member.id) booking.valet = { ...fields };
+        if (role === "valet" && booking.deliveryValet?.id === member.id) {
+          booking.deliveryValet = { ...fields };
+        }
+        if (role === "manager" && booking.relationshipManager?.id === member.id) {
+          booking.relationshipManager = { ...fields };
+        }
+      });
     });
     persist();
-  },
-
-  updateStaff(
-    role: StaffRole,
-    id: string,
-    input: StaffFields,
-  ) {
-    requireAdmin();
-    const member = findStaff(role, id);
-    assertContactFree(role, input, id);
-    Object.assign(member, input);
-
-    // Bookings keep a copy of the assigned member; keep their details current
-    db.bookings.forEach((booking) => {
-      if (role === "valet" && booking.valet?.id === id) booking.valet = { ...member };
-      if (role === "valet" && booking.deliveryValet?.id === id) {
-        booking.deliveryValet = { ...member };
-      }
-      if (role === "manager" && booking.relationshipManager?.id === id) {
-        booking.relationshipManager = { ...member };
-      }
-    });
-
-    persist();
-    return member;
   },
 
   deleteStaff(role: StaffRole, id: string) {

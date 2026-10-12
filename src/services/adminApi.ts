@@ -27,6 +27,7 @@ const staffTypes: Record<StaffRole, string> = {
 };
 
 // A staff member, from staff/:staffType/list and staff/:staffType/save
+// (staff/:staffType/update/:id only answers with the id)
 interface StaffResponse {
   id: string;
   fullName: string;
@@ -47,7 +48,7 @@ const toStaffMember = (member: StaffResponse): StaffMember => ({
   activeBookings: member.activeBookings ?? 0,
 });
 
-// Editing and deleting staff are still the mock's. Valets and advisors
+// Deleting staff is still the mock's. Valets and advisors
 // share one shape under different paths (advisors are still "relationship
 // managers" there).
 const staffPaths: Record<StaffRole, string> = {
@@ -361,11 +362,20 @@ export const adminApi = {
     return member;
   },
 
-  updateStaff: (role: StaffRole, id: string, input: StaffInput) =>
-    callApi(
-      () => mockServer.updateStaff(role, id, input),
-      () => request<StaffMember>("put", `${staffPaths[role]}/${id}`, input),
-    ),
+  // Real API. It answers with the id alone, so the member is what was sent.
+  updateStaff: async (role: StaffRole, id: string, input: StaffInput): Promise<StaffMember> => {
+    await request("post", `staff/${staffTypes[role]}/update/${id}`, {
+      fullName: input.name,
+      email: input.email,
+      phone: input.phone,
+      isActive: true,
+      availableForNewBookings: input.available,
+    });
+    const member = { id, ...input };
+
+    if (USE_MOCK_API) mockServer.syncStaff(role, [member]);
+    return member;
+  },
 
   deleteStaff: (role: StaffRole, id: string) =>
     callApi(
