@@ -949,15 +949,21 @@ export const mockServer = {
       | "payment"
       | "staffTokens"
     >,
+    // The id the real API gave the booking: it has already accepted it, so the
+    // copy kept here is never refused
+    savedId?: string,
   ) {
     const user = currentUser();
     // One service per vehicle at a time; other vehicles can be booked alongside
-    if (findOpenBookings(user.id).some((booking) => booking.vehicle.vin === input.vehicle.vin)) {
+    if (
+      !savedId &&
+      findOpenBookings(user.id).some((booking) => booking.vehicle.vin === input.vehicle.vin)
+    ) {
       throw new Error(
         "This vehicle already has a service in progress. You can book it again once that's complete.",
       );
     }
-    const id = `PC-${Date.now().toString().slice(-6)}`;
+    const id = savedId ?? `PC-${Date.now().toString().slice(-6)}`;
     const booking: AdminBooking = {
       ...input,
       id,

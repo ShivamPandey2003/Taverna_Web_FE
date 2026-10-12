@@ -78,8 +78,14 @@ export function PickupDelivery() {
       toast.error("Select a vehicle, pickup address and dealership first.");
       return;
     }
+    // The current location has no saved address for the API to book against
+    if (!address) {
+      toast.error("Booking needs a saved address. Pick one of yours or add a new one.");
+      dispatch(openReviewModal("location"));
+      return;
+    }
 
-    if (scheduled && new Date(scheduledAt!).getTime() <= Date.now()) {
+    if (scheduled &&new Date(scheduledAt!).getTime() <= Date.now()) {
       toast.error("Your scheduled pickup time has passed. Pick a new time.");
       dispatch(openReviewModal("schedule"));
       return;

@@ -32,7 +32,8 @@ export const confirmBooking =
             zip: address.zip,
           };
 
-    if (!vehicle || !pickup || !dealership) {
+    // The API books against a saved address (it checks the distance to the dealership)
+    if (!vehicle || !pickup || !dealership || !address) {
       return null;
     }
 
@@ -44,6 +45,9 @@ export const confirmBooking =
 
     try {
       const created = await bookingApi.create({
+        vehicleId: vehicle.id,
+        dealershipId: dealership.id,
+        addressId: address.id,
         serviceId: state.booking.selectedServiceId,
         vehicle: {
           brand: vehicle.brand,
@@ -65,13 +69,13 @@ export const confirmBooking =
       dispatch(
         bookingCreated({
           id: created.id,
-          serviceId: created.serviceId,
+          serviceId: state.booking.selectedServiceId,
           vehicle,
           pickup,
           dealership,
           driveable,
           towTruck,
-          concern: created.concern,
+          concern: state.booking.concern,
           scheduledAt,
           createdAt: created.createdAt,
           status: created.status,
