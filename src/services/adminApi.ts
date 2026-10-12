@@ -26,7 +26,7 @@ const staffTypes: Record<StaffRole, string> = {
   manager: "advisor",
 };
 
-// A row of staff/:staffType/list
+// A staff member, from staff/:staffType/list and staff/:staffType/save
 interface StaffResponse {
   id: string;
   fullName: string;
@@ -34,10 +34,20 @@ interface StaffResponse {
   phone: string | null;
   isActive: boolean;
   availableForNewBookings: boolean;
-  activeBookings: number;
+  // Only in the list
+  activeBookings?: number;
 }
 
-// Adding, editing and deleting staff are still the mock's. Valets and advisors
+const toStaffMember = (member: StaffResponse): StaffMember => ({
+  id: member.id,
+  name: member.fullName,
+  email: member.email ?? "",
+  phone: member.phone ?? "",
+  available: member.availableForNewBookings,
+  activeBookings: member.activeBookings ?? 0,
+});
+
+// Editing and deleting staff are still the mock's. Valets and advisors
 // share one shape under different paths (advisors are still "relationship
 // managers" there).
 const staffPaths: Record<StaffRole, string> = {
@@ -329,26 +339,27 @@ export const adminApi = {
       "get",
       `staff/${staffTypes[role]}/list`,
     );
-    const staff = records
-      .filter((member) => member.isActive !== false)
-      .map((member) => ({
-        id: member.id,
-        name: member.fullName,
-        email: member.email ?? "",
-        phone: member.phone ?? "",
-        available: member.availableForNewBookings,
-        activeBookings: member.activeBookings,
-      }));
+    const staff = records.filter((member) => member.isActive !== false).map(toStaffMember);
 
     if (USE_MOCK_API) mockServer.syncStaff(role, staff);
     return staff;
   },
 
-  createStaff: (role: StaffRole, input: StaffInput) =>
-    callApi(
-      () => mockServer.createStaff(role, input),
-      () => request<StaffMember>("post", staffPaths[role], input),
-    ),
+  // Real API. The mock gets its copy straight away, so someone added from the
+  // workflow's assign step can be assigned without waiting for the list.
+  createStaff: async (role: StaffRole, input: StaffInput) => {
+    const member = toStaffMember(
+      await request<StaffResponse>("post", `staff/${staffTypes[role]}/save`, {
+        fullName: input.name,
+        email: input.email,
+        phone: input.phone,
+        availableForNewBookings: input.available,
+      }),
+    );
+
+    if (USE_MOCK_API) mockServer.syncStaff(role, [member]);
+    return member;
+  },
 
   updateStaff: (role: StaffRole, id: string, input: StaffInput) =>
     callApi(

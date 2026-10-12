@@ -387,7 +387,6 @@ function requireAdmin() {
   }
 }
 
-const staffIdPrefixes: Record<StaffRole, string> = { valet: "valet", manager: "rm" };
 const staffLabels: Record<StaffRole, string> = {
   valet: "valet",
   manager: "advisor",
@@ -1311,15 +1310,6 @@ export const mockServer = {
       else list.push(fields);
     });
     persist();
-  },
-
-  createStaff(role: StaffRole, input: StaffFields) {
-    requireAdmin();
-    assertContactFree(role, input);
-    const member: StaffMember = { id: `${staffIdPrefixes[role]}-${Date.now()}`, ...input };
-    staffList(role).push(member);
-    persist();
-    return member;
   },
 
   updateStaff(
