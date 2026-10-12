@@ -185,6 +185,22 @@ export interface StaffBooking extends AdminBooking {
   dealershipAddress?: string;
 }
 
+// A row of the admin bookings table, from booking/admin/list. The API sends the
+// vehicle, service and scheduled time as text ready to show.
+export interface AdminBookingRow {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  // e.g. "2026 RAM 1500"
+  vehicle: string;
+  service: string;
+  // e.g. "Oct 12, 12:30 PM"
+  scheduled: string;
+  // For the badge colour; null when the API's status isn't one the app knows
+  status: BookingStatus | null;
+  statusLabel: string;
+}
+
 export type BookingSortField =
   | "id"
   | "customer"

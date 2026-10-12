@@ -1,7 +1,10 @@
 import { callApi, request, toQueryString } from "./apiClient";
 import { mockServer } from "./mock/mockServer";
+import { BookingStatus } from "@/types/booking";
+import type { ServiceId } from "@/types/service";
 import type {
   AdminBooking,
+  AdminBookingRow,
   AdvisorMilestone,
   BookingListParams,
   IntakeMethod,
@@ -28,17 +31,76 @@ export type DealershipInput = Omit<Dealership, "id">;
 
 const legPaths: Record<ValetLeg, string> = { pickup: "intake", delivery: "handover" };
 
+// GET booking/admin/list
+interface BookingListResponse {
+  bookings: {
+    bmsId: string;
+    customerName: string;
+    customerPhone: string;
+    vehicle: string;
+    service: string;
+    scheduled: string;
+    bookingStatus: string;
+    statusLabel: string;
+  }[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
+}
+
+const bookingTypes: Record<ServiceId, string> = {
+  "pickup-delivery": "PICKUP_AND_DELIVERY",
+  "loaner-only": "LOANER_ONLY",
+};
+
+// The API names a status in capitals ("IN_QUEUE"), the app as it reads ("In-queue").
+// Only IN_QUEUE has been seen so far, so the two are matched on their letters alone:
+// tighten this once the API's full list of statuses is known.
+const statusLetters = (status: string) => status.replace(/[^a-z]/gi, "").toLowerCase();
+
+const toBookingStatus = (code: string) =>
+  Object.values(BookingStatus).find((status) => statusLetters(status) === statusLetters(code)) ??
+  null;
+
+const toStatusCode = (status: BookingStatus) =>
+  Object.entries(BookingStatus).find(([, value]) => value === status)![0];
+
 // Sorting, filtering, search and pagination all happen on the server
 export const adminApi = {
-  listBookings: (params: BookingListParams) =>
-    callApi(
-      () => mockServer.listBookings(params),
-      () =>
-        request<Paginated<AdminBooking>>(
-          "get",
-          `/admin/bookings${toQueryString({ ...params })}`,
-        ),
-    ),
+  // Real API. It has no sorting: bookings come newest first.
+  listBookings: async (params: BookingListParams): Promise<Paginated<AdminBookingRow>> => {
+    const query = toQueryString({
+      page: params.page,
+      pageSize: params.pageSize,
+      search: params.search.trim(),
+      status: params.status === "all" ? "" : toStatusCode(params.status),
+      bookingType: params.serviceId === "all" ? "" : bookingTypes[params.serviceId],
+    });
+    const { bookings, pagination } = await request<BookingListResponse>(
+      "get",
+      `booking/admin/list${query}`,
+    );
+
+    return {
+      items: bookings.map((booking) => ({
+        id: booking.bmsId,
+        customerName: booking.customerName,
+        customerPhone: booking.customerPhone,
+        vehicle: booking.vehicle,
+        service: booking.service,
+        scheduled: booking.scheduled,
+        status: toBookingStatus(booking.bookingStatus),
+        statusLabel: booking.statusLabel,
+      })),
+      total: pagination.totalItems,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      totalPages: pagination.totalPages,
+    };
+  },
 
   getBooking: (id: string) =>
     callApi(
