@@ -12,11 +12,9 @@ import {
   type AdvisorMilestone,
   type Invoice,
   type InvoiceLine,
-  type Paginated,
   type StaffAuth,
   type StaffBooking,
   type StaffLinkRole,
-  type StaffListParams,
   type StaffMember,
   type StaffRole,
   type StaffType,
@@ -1299,59 +1297,20 @@ export const mockServer = {
   },
 
   // ---- Staff (valets and advisors) ----
-  listStaff(role: StaffRole, params: StaffListParams): Paginated<StaffMember> {
-    requireAdmin();
-    const search = params.search.trim().toLowerCase();
-    const digits = phoneDigits(search);
-
-    const filtered = staffList(role).filter((member) => {
-      if (params.availability === "available" && !member.available) return false;
-      if (params.availability === "busy" && member.available) return false;
-      if (!search) return true;
-
-      return (
-        member.name.toLowerCase().includes(search) ||
-        member.email.toLowerCase().includes(search) ||
-        (digits !== "" && phoneDigits(member.phone).includes(digits))
-      );
+  // The staff list from the real API, while adding, editing and deleting staff
+  // and the workflow's assign steps are still answered here: keeps a copy of each
+  // person under the API's id, so they can be assigned to a booking.
+  syncStaff(role: StaffRole, staff: StaffMember[]) {
+    const list = staffList(role);
+    staff.forEach((member) => {
+      const fields = { ...member };
+      // Counted here from the bookings, not stored
+      delete fields.activeBookings;
+      const copy = list.find((item) => item.id === member.id);
+      if (copy) Object.assign(copy, fields);
+      else list.push(fields);
     });
-
-    const sortValue = (member: StaffMember) => {
-      switch (params.sortBy) {
-        case "email":
-          return member.email.toLowerCase();
-        case "phone":
-          return member.phone;
-        case "available":
-          return member.available ? 1 : 0;
-        default:
-          return member.name.toLowerCase();
-      }
-    };
-
-    const direction = params.sortOrder === "asc" ? 1 : -1;
-    const sorted = [...filtered].sort((first, second) =>
-      sortValue(first) < sortValue(second)
-        ? -direction
-        : sortValue(first) > sortValue(second)
-          ? direction
-          : 0,
-    );
-
-    const totalPages = Math.max(1, Math.ceil(sorted.length / params.pageSize));
-    const page = Math.min(params.page, totalPages);
-    const start = (page - 1) * params.pageSize;
-
-    return {
-      items: sorted.slice(start, start + params.pageSize).map((member) => ({
-        ...member,
-        activeBookings: activeAssignments(role, member.id).length,
-      })),
-      total: sorted.length,
-      page,
-      pageSize: params.pageSize,
-      totalPages,
-    };
+    persist();
   },
 
   createStaff(role: StaffRole, input: StaffFields) {

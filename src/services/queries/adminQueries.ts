@@ -14,6 +14,7 @@ import type {
   ValetLeg,
   ValetMilestone,
 } from "@/types/admin";
+import { staffPage } from "@/components/features/staff/staff.utils";
 import type { Dealership } from "@/types/dealership";
 import type { OfferInput, OfferListParams } from "@/types/offer";
 import type { OfferCsvRow } from "@/components/features/offers/offerCsv";
@@ -23,8 +24,7 @@ export const adminKeys = {
   bookingList: (params: BookingListParams) => ["admin", "bookings", "list", params] as const,
   booking: (id: string) => ["admin", "bookings", "detail", id] as const,
   staff: (role: StaffRole) => ["admin", "staff", role] as const,
-  staffList: (role: StaffRole, params: StaffListParams) =>
-    ["admin", "staff", role, "list", params] as const,
+  staffList: (role: StaffRole) => ["admin", "staff", role, "list"] as const,
   dealerships: ["admin", "dealerships"] as const,
   dealershipList: (search: string) => ["admin", "dealerships", "list", search] as const,
   offers: ["admin", "offers"] as const,
@@ -52,12 +52,12 @@ export function useAdminBooking(id: string | null) {
   });
 }
 
+// Everyone of the role is fetched once; the page asked for is cut out in the browser
 export function useStaffList(role: StaffRole, params: StaffListParams) {
   return useQuery({
-    queryKey: adminKeys.staffList(role, params),
-    queryFn: () => adminApi.listStaff(role, params),
-    // Keep the current page on screen while the next one loads
-    placeholderData: keepPreviousData,
+    queryKey: adminKeys.staffList(role),
+    queryFn: () => adminApi.listStaff(role),
+    select: (staff) => staffPage(staff, params),
   });
 }
 

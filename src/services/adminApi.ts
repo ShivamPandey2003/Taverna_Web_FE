@@ -9,7 +9,6 @@ import type {
   BookingListParams,
   IntakeMethod,
   Paginated,
-  StaffListParams,
   StaffMember,
   StaffRole,
   ValetLeg,
@@ -21,8 +20,26 @@ import type { OfferCsvRow } from "@/components/features/offers/offerCsv";
 
 export type StaffInput = Pick<StaffMember, "name" | "email" | "phone" | "available">;
 
-// Valets and advisors share one API shape under different paths
-// (advisors are still "relationship managers" in the API)
+// The real API's name for each kind of staff, in staff/:staffType/list
+const staffTypes: Record<StaffRole, string> = {
+  valet: "valet-operator",
+  manager: "advisor",
+};
+
+// A row of staff/:staffType/list
+interface StaffResponse {
+  id: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  isActive: boolean;
+  availableForNewBookings: boolean;
+  activeBookings: number;
+}
+
+// Adding, editing and deleting staff are still the mock's. Valets and advisors
+// share one shape under different paths (advisors are still "relationship
+// managers" there).
 const staffPaths: Record<StaffRole, string> = {
   valet: "/admin/valets",
   manager: "/admin/relationship-managers",
@@ -305,15 +322,27 @@ export const adminApi = {
       },
     ),
 
-  listStaff: (role: StaffRole, params: StaffListParams) =>
-    callApi(
-      () => mockServer.listStaff(role, params),
-      () =>
-        request<Paginated<StaffMember>>(
-          "get",
-          `${staffPaths[role]}${toQueryString({ ...params })}`,
-        ),
-    ),
+  // Real API: everyone of a role at once (it has no search, sorting or paging).
+  // While the mock is on it keeps a copy, for the calls it still answers.
+  listStaff: async (role: StaffRole): Promise<StaffMember[]> => {
+    const { records } = await request<{ records: StaffResponse[] }>(
+      "get",
+      `staff/${staffTypes[role]}/list`,
+    );
+    const staff = records
+      .filter((member) => member.isActive !== false)
+      .map((member) => ({
+        id: member.id,
+        name: member.fullName,
+        email: member.email ?? "",
+        phone: member.phone ?? "",
+        available: member.availableForNewBookings,
+        activeBookings: member.activeBookings,
+      }));
+
+    if (USE_MOCK_API) mockServer.syncStaff(role, staff);
+    return staff;
+  },
 
   createStaff: (role: StaffRole, input: StaffInput) =>
     callApi(

@@ -33,7 +33,7 @@ export function StaffTable({ role }: { role: StaffRole }) {
     <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white">
       {/* Scrolls on its own only if the screen is too short for a full page */}
       <div className="relative min-h-0 overflow-auto">
-        {/* Thin bar while a new page / sort / search loads over the current rows */}
+        {/* Thin bar while the list is refreshed over the current rows */}
         {isFetching && !isPending && (
           <div className="absolute inset-x-0 top-0 z-10 h-0.5 animate-pulse bg-black" />
         )}
