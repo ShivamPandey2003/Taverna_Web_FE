@@ -168,7 +168,7 @@ function toAdminBooking(details: BookingDetailsResponse): AdminBooking {
 type StaffAssignment = "advisorId" | "valetOperatorId" | "deliveryValetOperatorId";
 
 const assignStaff = (bmsId: string, field: StaffAssignment, staffId: string) =>
-  request("post", "booking/staff/assign", {
+  request<unknown>("post", "booking/staff/assign", {
     reason: "string",
     bmsId,
     advisorId: "",
@@ -252,16 +252,10 @@ export const adminApi = {
         ),
     ),
 
-  // Pickup or delivery valet; assigning someone new restarts that trip. The
-  // assignment is made with the real API; the trip that follows is still the
-  // mock's, so its copy of the booking gets the valet too.
-  assignValet: async (id: string, leg: ValetLeg, valetId: string) => {
-    await assignStaff(id, leg === "pickup" ? "valetOperatorId" : "deliveryValetOperatorId", valetId);
-    return callApi(
-      () => mockServer.assignValet(id, leg, valetId),
-      () => adminApi.getBooking(id),
-    );
-  },
+  // Pickup or delivery valet; assigning someone new restarts that trip. Real API:
+  // its answer is a status summary, so the hook loads the booking's details again.
+  assignValet: (id: string, leg: ValetLeg, valetId: string) =>
+    assignStaff(id, leg === "pickup" ? "valetOperatorId" : "deliveryValetOperatorId", valetId),
 
   // Marks the next milestone of a valet trip (milestones go in order)
   updateValetProgress: (id: string, leg: ValetLeg, milestone: ValetMilestone) =>
@@ -275,13 +269,8 @@ export const adminApi = {
     ),
 
   // The advisor, assigned with the real API like the valets
-  assignRelationshipManager: async (id: string, managerId: string) => {
-    await assignStaff(id, "advisorId", managerId);
-    return callApi(
-      () => mockServer.assignRelationshipManager(id, managerId),
-      () => adminApi.getBooking(id),
-    );
-  },
+  assignRelationshipManager: (id: string, managerId: string) =>
+    assignStaff(id, "advisorId", managerId),
 
   // Service updates the advisor shares with the customer (in order)
   updateAdvisorProgress: (id: string, milestone: AdvisorMilestone) =>

@@ -9,6 +9,7 @@ import {
   LEG_METHODS,
   defaultLegMethod,
   TRIP_END,
+  VALET_LEGS,
   type AdminBooking,
   type AdvisorMilestone,
   type Invoice,
@@ -388,19 +389,8 @@ function requireAdmin() {
   }
 }
 
-const staffLabels: Record<StaffRole, string> = {
-  valet: "valet",
-  manager: "advisor",
-};
-
 function staffList(role: StaffRole) {
   return role === "valet" ? db.valets : db.relationshipManagers;
-}
-
-function findStaff(role: StaffRole, id: string) {
-  const member = staffList(role).find((item) => item.id === id);
-  if (!member) throw new Error(`We couldn't find this ${staffLabels[role]}.`);
-  return member;
 }
 
 // A customer's bookings that aren't complete yet, newest first: one per vehicle
@@ -889,6 +879,44 @@ const payAction = (booking: AdminBooking) =>
 
 const firstAvailable = (list: StaffMember[]) => list.find((item) => item.available) ?? list[0];
 
+// Who is on a booking comes from the API's details, which name each person
+// without an id: they're matched by email. Someone new there is put on the copy
+// the way an assignment here would be (their trip, or the service, starts over);
+// if the copy isn't that far yet, they're put on it as they are.
+function syncAssigned(copy: AdminBooking, real: AdminBooking) {
+  const key = (member: StaffMember) => member.email.toLowerCase() || member.name;
+  // The copy kept of the staff list has the person's real id
+  const person = (role: StaffRole, from: StaffMember) =>
+    staffList(role).find((member) => key(member) === key(from)) ?? from;
+  const isNew = (current: StaffMember | null | undefined, member: StaffMember) => {
+    if (!current || key(current) !== key(member)) return true;
+    Object.assign(current, member);
+    return false;
+  };
+
+  VALET_LEGS.forEach((leg) => {
+    const assigned = legValet(real, leg);
+    if (!assigned) return;
+    const valet = person("valet", assigned);
+    if (!isNew(legValet(copy, leg), valet)) return;
+    try {
+      assignValet(copy, leg, valet);
+    } catch {
+      if (leg === "pickup") copy.valet = { ...valet };
+      else copy.deliveryValet = { ...valet };
+    }
+  });
+
+  if (!real.relationshipManager) return;
+  const advisor = person("manager", real.relationshipManager);
+  if (!isNew(copy.relationshipManager, advisor)) return;
+  try {
+    assignAdvisor(copy, advisor);
+  } catch {
+    copy.relationshipManager = { ...advisor };
+  }
+}
+
 // Created after the workflow helpers above, which the seed uses
 let db = loadDb();
 
@@ -1038,6 +1066,7 @@ export const mockServer = {
       copy.confirmedAt = real.confirmedAt;
       confirm(copy);
     }
+    syncAssigned(copy, real);
     persist();
     return copy;
   },
@@ -1058,27 +1087,11 @@ export const mockServer = {
     return booking;
   },
 
-  assignValet(id: string, leg: ValetLeg, valetId: string) {
-    requireAdmin();
-    const booking = findBooking(id);
-    assignValet(booking, leg, findStaff("valet", valetId));
-    persist();
-    return booking;
-  },
-
   // Normally posted by the valet from their link; the admin can post it too
   updateValetProgress(id: string, leg: ValetLeg, milestone: ValetMilestone) {
     requireAdmin();
     const booking = findBooking(id);
     markValetMilestone(booking, leg, milestone);
-    persist();
-    return booking;
-  },
-
-  assignRelationshipManager(id: string, managerId: string) {
-    requireAdmin();
-    const booking = findBooking(id);
-    assignAdvisor(booking, findStaff("manager", managerId));
     persist();
     return booking;
   },

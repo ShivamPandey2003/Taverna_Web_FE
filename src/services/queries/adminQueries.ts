@@ -183,8 +183,20 @@ export const useConfirmLegDone = () =>
     adminApi.confirmLegDone(id, leg),
   );
 
+// Assigning answers with a status summary, not the booking: the booking's details
+// (and the table) are loaded again, and who is assigned is shown from there. The
+// mutation stays pending until they have arrived.
+function useAssignMutation<TVariables>(mutationFn: (variables: TVariables) => Promise<unknown>) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.bookings }),
+  });
+}
+
 export const useAssignValet = () =>
-  useBookingMutation(({ id, leg, valetId }: { id: string; leg: ValetLeg; valetId: string }) =>
+  useAssignMutation(({ id, leg, valetId }: { id: string; leg: ValetLeg; valetId: string }) =>
     adminApi.assignValet(id, leg, valetId),
   );
 
@@ -200,7 +212,7 @@ export const useUpdateAdvisorProgress = () =>
   );
 
 export const useAssignRelationshipManager = () =>
-  useBookingMutation(({ id, managerId }: { id: string; managerId: string }) =>
+  useAssignMutation(({ id, managerId }: { id: string; managerId: string }) =>
     adminApi.assignRelationshipManager(id, managerId),
   );
 
