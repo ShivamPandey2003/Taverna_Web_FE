@@ -10,7 +10,6 @@ import {
   TRIP_END,
   type AdminBooking,
   type AdvisorMilestone,
-  type BookingListParams,
   type Invoice,
   type InvoiceLine,
   type Paginated,
@@ -1043,67 +1042,6 @@ export const mockServer = {
   },
 
   // ---- Admin ----
-  listBookings(params: BookingListParams): Paginated<AdminBooking> {
-    requireAdmin();
-    const search = params.search.trim().toLowerCase();
-
-    const filtered = db.bookings.filter((booking) => {
-      if (params.status !== "all" && booking.status !== params.status) return false;
-      if (params.serviceId !== "all" && booking.serviceId !== params.serviceId) return false;
-      if (!search) return true;
-
-      return [
-        booking.id,
-        booking.customer.name,
-        booking.customer.email,
-        booking.customer.phone,
-        booking.vehicle.vin,
-        `${booking.vehicle.brand} ${booking.vehicle.model}`,
-      ].some((value) => value.toLowerCase().includes(search));
-    });
-
-    const sortValue = (booking: AdminBooking) => {
-      switch (params.sortBy) {
-        case "customer":
-          return booking.customer.name.toLowerCase();
-        case "scheduledAt":
-          return booking.scheduledAt ?? "";
-        case "status":
-          return booking.status;
-        case "id":
-          return booking.id;
-        default:
-          return booking.createdAt;
-      }
-    };
-
-    const direction = params.sortOrder === "asc" ? 1 : -1;
-    const sorted = [...filtered].sort((first, second) =>
-      sortValue(first) < sortValue(second)
-        ? -direction
-        : sortValue(first) > sortValue(second)
-          ? direction
-          : 0,
-    );
-
-    const totalPages = Math.max(1, Math.ceil(sorted.length / params.pageSize));
-    const page = Math.min(params.page, totalPages);
-    const start = (page - 1) * params.pageSize;
-
-    return {
-      items: sorted.slice(start, start + params.pageSize),
-      total: sorted.length,
-      page,
-      pageSize: params.pageSize,
-      totalPages,
-    };
-  },
-
-  getBooking(id: string) {
-    requireAdmin();
-    return findBooking(id);
-  },
-
   // A booking's details from the real API, while the workflow is still answered
   // here: keeps a copy (so the workflow steps have a booking to act on) and
   // returns it. What the booking is comes from the API; how far its workflow has

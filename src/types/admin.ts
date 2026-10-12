@@ -201,20 +201,11 @@ export interface AdminBookingRow {
   statusLabel: string;
 }
 
-export type BookingSortField =
-  | "id"
-  | "customer"
-  | "createdAt"
-  | "scheduledAt"
-  | "status";
-
 export type SortOrder = "asc" | "desc";
 
 export interface BookingListParams {
   page: number;
   pageSize: number;
-  sortBy: BookingSortField;
-  sortOrder: SortOrder;
   search: string;
   status: BookingStatus | "all";
   serviceId: ServiceId | "all";
