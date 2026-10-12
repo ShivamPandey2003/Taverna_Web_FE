@@ -7,6 +7,7 @@ import {
   INVOICE_TAX_RATE,
   LEG_MILESTONES,
   LEG_METHODS,
+  defaultLegMethod,
   TRIP_END,
   type AdminBooking,
   type AdvisorMilestone,
@@ -634,14 +635,12 @@ function nextMilestone<T extends string>(order: readonly T[], log: Partial<Recor
 }
 
 // How the vehicle makes this trip. A booking that already has the trip's valet
-// counts as "valet"; the choices depend on the booked service.
+// counts as "valet"; otherwise it starts from what the customer booked.
 function legMethod(booking: AdminBooking, leg: ValetLeg): IntakeMethod | null {
   const saved = leg === "pickup" ? booking.intakeMethod : booking.handoverMethod;
   if (saved) return saved;
   if (legValet(booking, leg)) return "valet";
-  // The only choice for the booked service needs no picking
-  const options = LEG_METHODS[booking.serviceId][leg];
-  return options.length === 1 ? options[0] : null;
+  return defaultLegMethod(booking, leg);
 }
 
 // The vehicle is at the other end: taken by the valet, a tow truck or the customer

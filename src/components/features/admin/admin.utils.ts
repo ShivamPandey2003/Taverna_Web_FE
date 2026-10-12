@@ -1,6 +1,6 @@
 import { BookingStatus } from "@/types/booking";
 import {
-  LEG_METHODS,
+  defaultLegMethod,
   TRIP_END,
   type AdminBooking,
   type AdvisorMilestone,
@@ -85,15 +85,14 @@ export const intakeMethodLabels: Record<IntakeMethod, string> = {
   selfDrive: "Self-Drive",
 };
 
-// How the vehicle makes a trip; null until the admin picks. A booking that
-// already has the trip's valet counts as "valet", and a trip with only one
-// choice for the booked service (LEG_METHODS) has it picked from the start.
+// How the vehicle makes a trip: what the admin picked, else "valet" for a booking
+// that already has the trip's valet, else what the booking starts with
+// (defaultLegMethod). null when the admin still has to pick.
 export function legMethod(booking: AdminBooking, leg: ValetLeg): IntakeMethod | null {
   const saved = leg === "pickup" ? booking.intakeMethod : booking.handoverMethod;
   if (saved) return saved;
   if (valetTrip(booking, leg).valet) return "valet";
-  const options = LEG_METHODS[booking.serviceId][leg];
-  return options.length === 1 ? options[0] : null;
+  return defaultLegMethod(booking, leg);
 }
 
 // The valet and milestone log of one trip

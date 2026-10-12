@@ -104,11 +104,26 @@ export type IntakeMethod = (typeof INTAKE_METHODS)[number];
 // Pickup & Delivery the dealership moves the vehicle (a valet, or a tow truck on
 // the way in); with Loaner Only the customer brings and collects it themselves,
 // which the admin confirms (`pickupProgress.reached` / `deliveryProgress.delivered`).
-// A trip with a single choice needs no picking: see `legMethod` in admin.utils.ts.
+// A trip with a single choice needs no picking: see `defaultLegMethod`.
 export const LEG_METHODS: Record<ServiceId, Record<ValetLeg, readonly IntakeMethod[]>> = {
   "pickup-delivery": { pickup: ["valet", "towTruck"], delivery: ["valet"] },
   "loaner-only": { pickup: ["selfDrive"], delivery: ["selfDrive"] },
 };
+
+// How a trip is made until the admin picks something else: the only choice the
+// booked service has, or for the way in what the customer booked (a tow truck when
+// they asked for one, a valet for a vehicle that can be driven). null leaves it to
+// the admin: the vehicle can't be driven and no tow truck was asked for.
+export function defaultLegMethod(
+  booking: Pick<AdminBooking, "serviceId" | "driveable" | "towTruck">,
+  leg: ValetLeg,
+): IntakeMethod | null {
+  const options = LEG_METHODS[booking.serviceId][leg];
+  if (options.length === 1) return options[0];
+  if (leg !== "pickup") return null;
+  if (booking.towTruck) return "towTruck";
+  return booking.driveable ? "valet" : null;
+}
 
 // Updates the advisor shares with the customer while the vehicle is serviced, in
 // order. The bill and payment that follow come from `invoice` and `payment`; then
@@ -141,8 +156,8 @@ export interface AdminBooking {
   pickup: string;
   dealershipName: string;
   driveable: boolean;
-  // Only for a vehicle that isn't driveable: false when the customer took the tow
-  // truck off (they get the vehicle to the dealership themselves)
+  // The customer asked for a tow truck (the API's `towRequested`). false for a
+  // vehicle that isn't driveable means they took the tow truck off.
   towTruck?: boolean;
   concern: string;
   scheduledAt: string | null;

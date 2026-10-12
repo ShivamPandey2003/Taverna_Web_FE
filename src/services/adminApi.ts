@@ -146,7 +146,7 @@ function toAdminBooking(details: BookingDetailsResponse): AdminBooking {
     pickup: details.pickupAddress ?? "",
     dealershipName: details.dealershipName,
     driveable: details.isDriveable,
-    towTruck: details.isDriveable ? undefined : details.towRequested,
+    towTruck: details.towRequested,
     concern: details.serviceDescription ?? "",
     scheduledAt: details.appointmentAt,
     createdAt: details.bookingDate,
