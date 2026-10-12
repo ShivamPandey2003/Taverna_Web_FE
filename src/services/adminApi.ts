@@ -163,6 +163,22 @@ function toAdminBooking(details: BookingDetailsResponse): AdminBooking {
   };
 }
 
+// Who booking/staff/assign can put on a booking. One call assigns one person:
+// the API wants every field in the body, so the others go as empty text.
+type StaffAssignment = "advisorId" | "valetOperatorId" | "deliveryValetOperatorId";
+
+const assignStaff = (bmsId: string, field: StaffAssignment, staffId: string) =>
+  request("post", "booking/staff/assign", {
+    reason: "string",
+    bmsId,
+    advisorId: "",
+    valetOperatorId: "",
+    deliveryValetOperatorId: "",
+    towOperatorId: "",
+    scheduledAt: "",
+    [field]: staffId,
+  });
+
 const toStatusCode =(status: BookingStatus) =>
   Object.entries(BookingStatus).find(([, value]) => value === status)![0];
 
@@ -236,12 +252,16 @@ export const adminApi = {
         ),
     ),
 
-  // Pickup or delivery valet; assigning someone new restarts that trip
-  assignValet: (id: string, leg: ValetLeg, valetId: string) =>
-    callApi(
+  // Pickup or delivery valet; assigning someone new restarts that trip. The
+  // assignment is made with the real API; the trip that follows is still the
+  // mock's, so its copy of the booking gets the valet too.
+  assignValet: async (id: string, leg: ValetLeg, valetId: string) => {
+    await assignStaff(id, leg === "pickup" ? "valetOperatorId" : "deliveryValetOperatorId", valetId);
+    return callApi(
       () => mockServer.assignValet(id, leg, valetId),
-      () => request<AdminBooking>("put", `/admin/bookings/${id}/valet`, { leg, valetId }),
-    ),
+      () => adminApi.getBooking(id),
+    );
+  },
 
   // Marks the next milestone of a valet trip (milestones go in order)
   updateValetProgress: (id: string, leg: ValetLeg, milestone: ValetMilestone) =>
@@ -254,14 +274,14 @@ export const adminApi = {
         }),
     ),
 
-  assignRelationshipManager: (id: string, managerId: string) =>
-    callApi(
+  // The advisor, assigned with the real API like the valets
+  assignRelationshipManager: async (id: string, managerId: string) => {
+    await assignStaff(id, "advisorId", managerId);
+    return callApi(
       () => mockServer.assignRelationshipManager(id, managerId),
-      () =>
-        request<AdminBooking>("put", `/admin/bookings/${id}/relationship-manager`, {
-          managerId,
-        }),
-    ),
+      () => adminApi.getBooking(id),
+    );
+  },
 
   // Service updates the advisor shares with the customer (in order)
   updateAdvisorProgress: (id: string, milestone: AdvisorMilestone) =>
