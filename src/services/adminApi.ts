@@ -188,11 +188,12 @@ export const adminApi = {
     return USE_MOCK_API ? structuredClone(mockServer.syncBooking(booking)) : booking;
   },
 
-  confirmBooking: (id: string) =>
-    callApi(
-      () => mockServer.confirmBooking(id),
-      () => request<AdminBooking>("put", `/admin/bookings/${id}/confirm`),
-    ),
+  // Real API. Its answer is only a summary of the new status, so the booking is
+  // loaded again for the drawer.
+  confirmBooking: async (id: string) => {
+    await request("post", `booking/admin/${id}/confirm`);
+    return adminApi.getBooking(id);
+  },
 
   // How the vehicle gets to the dealership (pickup) or back to the customer
   // (delivery). Changing it drops that trip's valet and their progress. The

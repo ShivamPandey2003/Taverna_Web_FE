@@ -1068,16 +1068,13 @@ export const mockServer = {
       concern: real.concern,
       scheduledAt: real.scheduledAt,
     });
+    // Confirming is done with the API: a booking it has confirmed is confirmed here
+    if (real.confirmedAt && !copy.confirmedAt) {
+      copy.confirmedAt = real.confirmedAt;
+      confirm(copy);
+    }
     persist();
     return copy;
-  },
-
-  confirmBooking(id: string) {
-    requireAdmin();
-    const booking = findBooking(id);
-    confirm(booking);
-    persist();
-    return booking;
   },
 
   setLegMethod(id: string, leg: ValetLeg, method: IntakeMethod) {
