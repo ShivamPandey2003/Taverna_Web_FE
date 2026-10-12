@@ -1104,6 +1104,36 @@ export const mockServer = {
     return findBooking(id);
   },
 
+  // A booking's details from the real API, while the workflow is still answered
+  // here: keeps a copy (so the workflow steps have a booking to act on) and
+  // returns it. What the booking is comes from the API; how far its workflow has
+  // got comes from the copy.
+  syncBooking(real: AdminBooking) {
+    requireAdmin();
+    const copy = db.bookings.find((item) => item.id === real.id);
+    if (!copy) {
+      const booking = { ...real, staffTokens: mockStaffTokens(real.id) };
+      db.bookings.unshift(booking);
+      persist();
+      return booking;
+    }
+
+    Object.assign(copy, {
+      // The customer's own bookings are found by the id the copy was made with
+      customer: { ...real.customer, id: copy.customer.id },
+      serviceId: real.serviceId,
+      vehicle: real.vehicle,
+      pickup: real.pickup,
+      dealershipName: real.dealershipName,
+      driveable: real.driveable,
+      towTruck: real.towTruck,
+      concern: real.concern,
+      scheduledAt: real.scheduledAt,
+    });
+    persist();
+    return copy;
+  },
+
   confirmBooking(id: string) {
     requireAdmin();
     const booking = findBooking(id);

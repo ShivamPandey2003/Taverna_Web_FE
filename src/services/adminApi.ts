@@ -1,4 +1,4 @@
-import { callApi, request, toQueryString } from "./apiClient";
+import { USE_MOCK_API, callApi, request, toQueryString } from "./apiClient";
 import { mockServer } from "./mock/mockServer";
 import { BookingStatus } from "@/types/booking";
 import type { ServiceId } from "@/types/service";
@@ -65,7 +65,84 @@ const toBookingStatus = (code: string) =>
   Object.values(BookingStatus).find((status) => statusLetters(status) === statusLetters(code)) ??
   null;
 
-const toStatusCode = (status: BookingStatus) =>
+// GET booking/admin/:bmsId/details. The invoice fields (`invoiceTotal`,
+// `invoiceItems`, …) and the staff links (`pickupValetLink`, …) are not read yet:
+// they have only been seen empty.
+interface BookingDetailsResponse {
+  bmsId: string;
+  bookingStatus: string;
+  bookingType: string;
+  isDriveable: boolean;
+  towRequested: boolean;
+  pickupValetName: string | null;
+  pickupValetPhone: string | null;
+  pickupValetEmail: string | null;
+  advisorName: string | null;
+  advisorPhone: string | null;
+  advisorEmail: string | null;
+  deliveryValetName: string | null;
+  deliveryValetPhone: string | null;
+  deliveryValetEmail: string | null;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  // "2026 RAM 1500"
+  vehicle: string;
+  vin: string;
+  pickupAddress: string | null;
+  dealershipName: string;
+  appointmentAt: string | null;
+  bookingDate: string;
+  confirmedAt: string | null;
+  serviceDescription: string | null;
+}
+
+// The API sends no staff ids here, so the email stands in for one
+function toStaff(name: string | null, phone: string | null, email: string | null): StaffMember | null {
+  if (!name) return null;
+  return { id: email ?? name, name, email: email ?? "", phone: phone ?? "", available: true };
+}
+
+// "2026 RAM 1500" -> year, brand and model
+function toBookingVehicle(vehicle: string, vin: string): AdminBooking["vehicle"] {
+  const [first = "", ...rest] = vehicle.trim().split(/\s+/);
+  const year = Number(first);
+  const [brand = "", ...model] = Number.isNaN(year) ? [first, ...rest] : rest;
+  return { brand, model: model.join(" "), year: Number.isNaN(year) ? 0 : year, vin };
+}
+
+function toAdminBooking(details: BookingDetailsResponse): AdminBooking {
+  return {
+    id: details.bmsId,
+    customer: {
+      id: details.customerEmail,
+      name: details.customerName,
+      email: details.customerEmail,
+      phone: details.customerPhone,
+    },
+    serviceId: details.bookingType === "LOANER_ONLY" ? "loaner-only" : "pickup-delivery",
+    vehicle: toBookingVehicle(details.vehicle, details.vin),
+    pickup: details.pickupAddress ?? "",
+    dealershipName: details.dealershipName,
+    driveable: details.isDriveable,
+    towTruck: details.isDriveable ? undefined : details.towRequested,
+    concern: details.serviceDescription ?? "",
+    scheduledAt: details.appointmentAt,
+    createdAt: details.bookingDate,
+    status: toBookingStatus(details.bookingStatus) ?? BookingStatus.IN_QUEUE,
+    confirmedAt: details.confirmedAt,
+    valet: toStaff(details.pickupValetName, details.pickupValetPhone, details.pickupValetEmail),
+    relationshipManager: toStaff(details.advisorName, details.advisorPhone, details.advisorEmail),
+    deliveryValet: toStaff(
+      details.deliveryValetName,
+      details.deliveryValetPhone,
+      details.deliveryValetEmail,
+    ),
+    payment: null,
+  };
+}
+
+const toStatusCode =(status: BookingStatus) =>
   Object.entries(BookingStatus).find(([, value]) => value === status)![0];
 
 // Sorting, filtering, search and pagination all happen on the server
@@ -102,11 +179,14 @@ export const adminApi = {
     };
   },
 
-  getBooking: (id: string) =>
-    callApi(
-      () => mockServer.getBooking(id),
-      () => request<AdminBooking>("get", `/admin/bookings/${id}`),
-    ),
+  // Real API. The workflow steps below are still the mock's, so while the mock is
+  // on it keeps a copy of the booking and the answer carries that copy's progress.
+  getBooking: async (id: string): Promise<AdminBooking> => {
+    const booking = toAdminBooking(
+      await request<BookingDetailsResponse>("get", `booking/admin/${id}/details`),
+    );
+    return USE_MOCK_API ? structuredClone(mockServer.syncBooking(booking)) : booking;
+  },
 
   confirmBooking: (id: string) =>
     callApi(
