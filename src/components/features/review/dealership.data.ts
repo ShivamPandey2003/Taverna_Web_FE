@@ -9,6 +9,11 @@ export const dealerships: Dealership[] = [
     image: Taverna,
     valetAvailable: true,
     loanerAvailable: true,
+    latitude: 26.1329,
+    longitude: -80.203453,
+    serviceRadiusMiles: 25,
+    timezone: "America/New_York",
+    isActive: true,
   },
   {
     id: "fort-lauderdale",
@@ -17,5 +22,10 @@ export const dealerships: Dealership[] = [
     image: Taverna,
     valetAvailable: true,
     loanerAvailable: true,
+    latitude: 26.219538,
+    longitude: -80.105646,
+    serviceRadiusMiles: 25,
+    timezone: "America/New_York",
+    isActive: true,
   },
 ];

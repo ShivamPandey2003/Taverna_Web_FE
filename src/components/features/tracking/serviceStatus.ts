@@ -169,6 +169,11 @@ function toTrackingBooking(booking: AdminBooking, vehicles: Vehicle[]): Booking 
     image: "",
     valetAvailable: true,
     loanerAvailable: true,
+    latitude: 0,
+    longitude: 0,
+    serviceRadiusMiles: 0,
+    timezone: "",
+    isActive: true,
   };
 
   return {

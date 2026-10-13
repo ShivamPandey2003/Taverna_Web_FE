@@ -561,28 +561,6 @@ function createInvoice(lines: InvoiceLine[]): Invoice {
   };
 }
 
-function findDealership(id: string) {
-  const dealership = db.dealerships.find((item) => item.id === id);
-  if (!dealership) throw new Error("We couldn't find this dealership.");
-  return dealership;
-}
-
-function assertDealershipNameFree(name: string, exceptId?: string) {
-  const value = name.trim().toLowerCase();
-  const taken = db.dealerships.some(
-    (dealership) => dealership.id !== exceptId && dealership.name.toLowerCase() === value,
-  );
-  if (taken) throw new Error("A dealership with this name already exists.");
-}
-
-// Bookings store the dealership by name
-function activeDealershipBookings(name: string) {
-  return db.bookings.filter(
-    (booking) =>
-      booking.dealershipName === name && booking.status !== BookingStatus.SERVICE_COMPLETE,
-  );
-}
-
 // Timestamps for workflow actions; the seed swaps in its own past times
 let clock = () => new Date().toISOString();
 
@@ -1312,54 +1290,5 @@ export const mockServer = {
     if (index === -1) return;
     list.splice(index, 1);
     persist();
-  },
-
-  // ---- Dealerships ----
-  listDealerships(search: string) {
-    requireAdmin();
-    const query = search.trim().toLowerCase();
-    if (!query) return db.dealerships;
-
-    return db.dealerships.filter((dealership) =>
-      [dealership.name, dealership.address].some((value) =>
-        value.toLowerCase().includes(query),
-      ),
-    );
-  },
-
-  createDealership(input: Omit<Dealership, "id">) {
-    requireAdmin();
-    assertDealershipNameFree(input.name);
-    const dealership: Dealership = { id: `dealership-${Date.now()}`, ...input };
-    db.dealerships.push(dealership);
-    persist();
-    return dealership;
-  },
-
-  updateDealership(id: string, input: Omit<Dealership, "id">) {
-    requireAdmin();
-    const dealership = findDealership(id);
-    assertDealershipNameFree(input.name, id);
-    // Keep unfinished bookings pointing at the renamed dealership
-    activeDealershipBookings(dealership.name).forEach((booking) => {
-      booking.dealershipName = input.name;
-    });
-    Object.assign(dealership, input);
-    persist();
-    return dealership;
-  },
-
-  deleteDealership(id: string) {
-    requireAdmin();
-    const dealership = findDealership(id);
-    const active = activeDealershipBookings(dealership.name).length;
-    if (active > 0) {
-      throw new Error(
-        `${dealership.name} has ${active} active booking${active === 1 ? "" : "s"} and can't be deleted.`,
-      );
-    }
-    db.dealerships.splice(db.dealerships.indexOf(dealership), 1);
-    persist();
-    return { id };
   },
 };

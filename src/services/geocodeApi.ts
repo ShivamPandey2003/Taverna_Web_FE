@@ -56,6 +56,18 @@ export async function geocodeAddress(place: AddressPlace): Promise<Coordinates> 
     { city, state },
   ];
 
+  return firstMatch(attempts);
+}
+
+// The same for an address typed on one line ("777 N State Road 7, Plantation,
+// FL 33317"), as a dealership's is. Falls back to what follows the street.
+export async function geocodeText(address: string): Promise<Coordinates> {
+  const area = address.split(",").slice(1).join(",").trim();
+
+  return firstMatch([{ q: address }, ...(area ? [{ q: area }] : [])]);
+}
+
+async function firstMatch(attempts: Record<string, string>[]): Promise<Coordinates> {
   for (const params of attempts) {
     const coordinates = await search(params);
     if (coordinates) return coordinates;

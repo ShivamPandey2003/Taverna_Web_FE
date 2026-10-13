@@ -7,14 +7,11 @@ type DealershipModalState = {
   formOpen: boolean;
   // Dealership being edited (a copy of the card); null while adding
   editing: Dealership | null;
-  // Dealership waiting for delete confirmation
-  deleting: Dealership | null;
 };
 
 const initialState: DealershipModalState = {
   formOpen: false,
   editing: null,
-  deleting: null,
 };
 
 const dealershipModalSlice = createSlice({
@@ -33,12 +30,6 @@ const dealershipModalSlice = createSlice({
       state.formOpen = false;
       state.editing = null;
     },
-    openDeleteDealership: (state, action: PayloadAction<Dealership>) => {
-      state.deleting = action.payload;
-    },
-    closeDeleteDealership: (state) => {
-      state.deleting = null;
-    },
   },
 });
 
@@ -46,8 +37,6 @@ export const {
   openAddDealership,
   openEditDealership,
   closeDealershipForm,
-  openDeleteDealership,
-  closeDeleteDealership,
 } = dealershipModalSlice.actions;
 
 export const selectDealershipModal = (state: RootState) => state.dealershipModal;

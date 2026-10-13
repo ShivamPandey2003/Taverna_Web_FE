@@ -14,7 +14,6 @@ import type {
   ValetLeg,
   ValetMilestone,
 } from "@/types/admin";
-import type { Dealership } from "@/types/dealership";
 import type { Offer, OfferInput, OfferList, OfferListParams } from "@/types/offer";
 import type { OfferCsvRow } from "@/components/features/offers/offerCsv";
 
@@ -47,8 +46,6 @@ const toStaffMember = (member: StaffResponse): StaffMember => ({
   available: member.availableForNewBookings,
   activeBookings: member.activeBookings ?? 0,
 });
-
-export type DealershipInput = Omit<Dealership, "id">;
 
 const legPaths: Record<ValetLeg, string> = { pickup: "intake", delivery: "handover" };
 
@@ -385,28 +382,4 @@ export const adminApi = {
     if (USE_MOCK_API) mockServer.removeStaff(role, id);
     return { id };
   },
-
-  listDealerships: (search: string) =>
-    callApi(
-      () => mockServer.listDealerships(search),
-      () => request<Dealership[]>("get", `/admin/dealerships${toQueryString({ search })}`),
-    ),
-
-  createDealership: (input: DealershipInput) =>
-    callApi(
-      () => mockServer.createDealership(input),
-      () => request<Dealership>("post", "/admin/dealerships", input),
-    ),
-
-  updateDealership: (id: string, input: DealershipInput) =>
-    callApi(
-      () => mockServer.updateDealership(id, input),
-      () => request<Dealership>("put", `/admin/dealerships/${id}`, input),
-    ),
-
-  deleteDealership: (id: string) =>
-    callApi(
-      () => mockServer.deleteDealership(id),
-      () => request<{ id: string }>("delete", `/admin/dealerships/${id}`),
-    ),
 };

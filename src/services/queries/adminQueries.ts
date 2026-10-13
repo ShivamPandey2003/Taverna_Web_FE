@@ -4,7 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { adminApi, type DealershipInput, type StaffInput } from "@/services/adminApi";
+import { adminApi, type StaffInput } from "@/services/adminApi";
 import type {
   AdvisorMilestone,
   BookingListParams,
@@ -15,7 +15,6 @@ import type {
   ValetMilestone,
 } from "@/types/admin";
 import { staffPage } from "@/components/features/staff/staff.utils";
-import type { Dealership } from "@/types/dealership";
 import type { OfferInput, OfferListParams } from "@/types/offer";
 import type { OfferCsvRow } from "@/components/features/offers/offerCsv";
 
@@ -25,15 +24,9 @@ export const adminKeys = {
   booking: (id: string) => ["admin", "bookings", "detail", id] as const,
   staff: (role: StaffRole) => ["admin", "staff", role] as const,
   staffList: (role: StaffRole) => ["admin", "staff", role, "list"] as const,
-  dealerships: ["admin", "dealerships"] as const,
-  dealershipList: (search: string) => ["admin", "dealerships", "list", search] as const,
   offers: ["admin", "offers"] as const,
   offerList: (params: OfferListParams) => ["admin", "offers", "list", params] as const,
 };
-
-// Flip to true once the backend supports ?search= on /admin/dealerships.
-// Until then the full list is fetched once and filtered in the browser.
-export const DEALERSHIP_SEARCH_VIA_API = false;
 
 export function useAdminBookings(params: BookingListParams) {
   return useQuery({
@@ -105,54 +98,6 @@ export const useUpdateStaff = (role: StaffRole) =>
 
 export const useDeleteStaff = (role: StaffRole) =>
   useStaffMutation(role, (id: string) => adminApi.deleteStaff(role, id));
-
-function matchesDealership(dealership: Dealership, search: string) {
-  const query = search.trim().toLowerCase();
-  return [dealership.name, dealership.address].some((value) =>
-    value.toLowerCase().includes(query),
-  );
-}
-
-export function useDealerships(search: string) {
-  const apiSearch = DEALERSHIP_SEARCH_VIA_API ? search : "";
-
-  return useQuery({
-    queryKey: adminKeys.dealershipList(apiSearch),
-    queryFn: () => adminApi.listDealerships(apiSearch),
-    placeholderData: keepPreviousData,
-    select: (dealerships) =>
-      DEALERSHIP_SEARCH_VIA_API
-        ? dealerships
-        : dealerships.filter((dealership) => matchesDealership(dealership, search)),
-  });
-}
-
-// Add, edit and delete refresh every dealership list
-function useDealershipMutation<TVariables, TData>(
-  mutationFn: (variables: TVariables) => Promise<TData>,
-) {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.dealerships });
-      // Renaming a dealership also renames it on its bookings
-      queryClient.invalidateQueries({ queryKey: adminKeys.bookings });
-    },
-  });
-}
-
-export const useCreateDealership = () =>
-  useDealershipMutation((input: DealershipInput) => adminApi.createDealership(input));
-
-export const useUpdateDealership = () =>
-  useDealershipMutation(({ id, input }: { id: string; input: DealershipInput }) =>
-    adminApi.updateDealership(id, input),
-  );
-
-export const useDeleteDealership = () =>
-  useDealershipMutation((id: string) => adminApi.deleteDealership(id));
 
 // Every workflow step refreshes both the open booking and the table
 function useBookingMutation<TVariables>(
