@@ -766,7 +766,6 @@ function nextAction(booking: AdminBooking, pickStaff: StaffPicker): (() => void)
 const payAction = (booking: AdminBooking) =>
   booking.invoice && booking.payment?.status !== "paid" ? () => markPaid(booking) : null;
 
-const firstAvailable = (list: StaffMember[]) => list.find((item) => item.available) ?? list[0];
 
 // Who is on a booking comes from the API's details, which name each person
 // without an id: they're matched by email. Someone new there is put on the copy
@@ -862,63 +861,18 @@ export const mockServer = {
     return booking;
   },
 
-  getMyOpenBookings() {
-    return findOpenBookings(currentUser().id);
-  },
-
-  getMyBooking(id: string) {
-    return findMyBooking(id);
-  },
-
-  // The customer withdraws a booking the dealership hasn't confirmed yet; it's removed
-  cancelBooking(id: string) {
-    const booking = findMyBooking(id);
-    if (booking.status !== BookingStatus.IN_QUEUE) {
-      throw new Error("The dealership has confirmed this booking, so it can't be cancelled here.");
-    }
-    db.bookings.splice(db.bookings.indexOf(booking), 1);
+  // A booking cancelled with the real API: the copy kept here goes too
+  removeBooking(id: string) {
+    const index = db.bookings.findIndex((booking) => booking.id === id);
+    if (index === -1) return;
+    db.bookings.splice(index, 1);
     persist();
-    return { id };
   },
 
   // Pays the generated bill; the delivery valet can then bring the vehicle back
   payInvoice(id: string) {
     const booking = findMyBooking(id);
     markPaid(booking);
-    persist();
-    return booking;
-  },
-
-  // Demo only: does what the admin and valets would do next, until the customer
-  // can see a change (a new status, or a valet / advisor assigned)
-  simulateNextStatus(id: string) {
-    const booking = findMyBooking(id);
-    if (booking.status === BookingStatus.SERVICE_COMPLETE) {
-      throw new Error("This service is already complete.");
-    }
-
-    const pickStaff: StaffPicker = {
-      valet: () => firstAvailable(db.valets),
-      manager: () => firstAvailable(db.relationshipManagers),
-    };
-    const staffOf = () => [booking.valet, booking.relationshipManager, booking.deliveryValet];
-    const statusBefore = booking.status;
-
-    for (let count = 0; count < WORKFLOW_ACTIONS; count++) {
-      const action = nextAction(booking, pickStaff);
-      if (!action) {
-        if (booking.status === statusBefore) {
-          throw new Error("Pay the bill to get your vehicle back.");
-        }
-        break;
-      }
-
-      const staffBefore = staffOf();
-      action();
-      const staffChanged = staffOf().some((member, index) => member !== staffBefore[index]);
-      if (booking.status !== statusBefore || staffChanged) break;
-    }
-
     persist();
     return booking;
   },

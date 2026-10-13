@@ -97,7 +97,7 @@ export function PickupDelivery() {
     // A failed API call has already been reported by the API layer
     if (bookingId) {
       // So the list of open bookings has the new one before its next poll
-      queryClient.invalidateQueries({ queryKey: bookingKeys.open });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.list });
       navigate(trackingPath(bookingId), { replace: true });
     } else {
       setBooking(false);

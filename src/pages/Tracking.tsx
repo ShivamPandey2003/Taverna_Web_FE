@@ -1,5 +1,4 @@
 import { useNavigate, useParams } from "react-router";
-import { InvoiceCard } from "@/components/features/tracking/InvoiceCard";
 import { StaffContactCard } from "@/components/features/tracking/StaffContactCard";
 import { TrackingMap } from "@/components/features/tracking/TrackingMap";
 import { TrackingHeader } from "@/components/features/tracking/TrackingHeader";
@@ -12,8 +11,7 @@ import {
   useActiveServices,
 } from "@/components/features/tracking/serviceStatus";
 import { formatPickupTime } from "@/libs/utils";
-import { USE_MOCK_API } from "@/services/apiClient";
-import { useMyBooking, useSimulateNextStatus } from "@/services/queries/bookingQueries";
+import { useServiceStatus } from "@/services/queries/bookingQueries";
 import { BookingStatus as Status } from "@/types/booking";
 
 export function ServiceTracking() {
@@ -21,9 +19,9 @@ export function ServiceTracking() {
   // The booking in the URL; without one, the newest that's still running
   const { bookingId } = useParams();
   const booking = pickTrackedService(useActiveServices(), bookingId)?.booking ?? null;
-  // Live copy from the API; the Redux snapshot covers the first render and API failures
-  const { data: liveBooking } = useMyBooking(booking?.id ?? null);
-  const simulateNextStatus = useSimulateNextStatus();
+  // Where it stands, from the API and kept fresh while the page is open; the
+  // Redux snapshot covers the first render and API failures
+  const { data: live } = useServiceStatus(booking?.id ?? null);
 
   if (!booking) {
     return (
@@ -51,12 +49,9 @@ export function ServiceTracking() {
     ? `Pickup scheduled for ${formatPickupTime(booking.scheduledAt)}`
     : `Booked ${formatPickupTime(booking.createdAt)}`;
 
-  const status = liveBooking?.status ?? booking.status;
-  const display = getStatusDisplay(status, liveBooking?.etaMinutes);
-  // Which cards to show; nothing extra until the live booking has loaded
-  const stage = liveBooking ? getTrackingStage(liveBooking, status) : "waiting";
-  // The demo control is only offered while the mock API answers, and not once finished
-  const canSimulate = USE_MOCK_API && status !== Status.SERVICE_COMPLETE;
+  const status = live?.status ?? booking.status;
+  const display = getStatusDisplay(status, live);
+  const stage = getTrackingStage(status);
 
   return (
     <div className="min-h-0 h-full bg-[#f8f9fa] px-6 py-4 lg:px-10 overflow-auto">
@@ -68,42 +63,25 @@ export function ServiceTracking() {
           title={display.message}
           subtitle={subtitle}
           status={status}
+          statusLabel={live?.label ?? status}
           gradient={display.color.gradient}
-          onAdvance={canSimulate ? () => simulateNextStatus.mutate(booking.id) : undefined}
-          advancing={simulateNextStatus.isPending}
         />
 
         {/* Before anyone is assigned: what was booked */}
-        {(status === Status.IN_QUEUE || status === Status.BOOKED) && (
+        {stage === "details" && (
           <>
             <BookingDetailsCard booking={booking} />
             <BookingActions booking={booking} canCancel={status === Status.IN_QUEUE} />
           </>
         )}
 
-        {/* One contact at a time: pickup valet, then the advisor, then the delivery valet */}
-        {stage === "valet" && liveBooking?.valet && (
-          <StaffContactCard member={liveBooking.valet} role="Valet" />
+        {/* The customer's contact while the vehicle is at the dealership */}
+        {stage === "advisor" && live?.advisor && (
+          <StaffContactCard member={live.advisor} role="Advisor" />
         )}
-        {(stage === "manager" || stage === "payment") && liveBooking?.relationshipManager && (
-          <StaffContactCard member={liveBooking.relationshipManager} role="Advisor" />
-        )}
-        {stage === "delivery" && liveBooking?.deliveryValet && (
-          <StaffContactCard member={liveBooking.deliveryValet} role="Valet" />
-        )}
-
-        {/* The bill, from the moment the advisor sends it; a receipt once paid */}
-        {(stage === "payment" || stage === "delivery" || stage === "complete") &&
-          liveBooking?.invoice && (
-            <InvoiceCard
-              bookingId={liveBooking.id}
-              invoice={liveBooking.invoice}
-              payment={liveBooking.payment}
-            />
-          )}
 
         {/* Only while a valet is moving the vehicle */}
-        {(stage === "valet" || stage === "delivery") && <TrackingMap />}
+        {stage === "valet" && <TrackingMap />}
       </div>
     </div>
   );

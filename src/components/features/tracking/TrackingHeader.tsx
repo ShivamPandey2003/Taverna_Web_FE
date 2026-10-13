@@ -11,12 +11,11 @@ interface TrackingHeaderProps {
   title: string;
   // When the booking was placed, or its scheduled pickup
   subtitle: string;
+  // The stage the booking is at, for the icon, and the status's own name
   status: BookingStatus;
+  statusLabel: string;
   // Gradient stops for the status's colour (StatusColor.gradient)
   gradient: string;
-  // Demo only (mock API): makes the status pill move the booking to its next status
-  onAdvance?: () => void;
-  advancing?: boolean;
 }
 
 // The vehicle on the left over white, the booking status on the right in a rounded
@@ -27,14 +26,10 @@ export function TrackingHeader({
   title,
   subtitle,
   status,
+  statusLabel,
   gradient,
-  onAdvance,
-  advancing = false,
 }: TrackingHeaderProps) {
   const Icon = statusIcons[status];
-  const pillClass =
-    "mt-4 flex items-center gap-2 rounded-full bg-white/20 px-5 py-2 text-sm font-semibold backdrop-blur-sm";
-
   return (
     <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
       <div className="flex flex-col md:flex-row md:items-stretch">
@@ -79,26 +74,10 @@ export function TrackingHeader({
             {subtitle}
           </p>
 
-          {onAdvance ? (
-            <button
-              type="button"
-              onClick={onAdvance}
-              disabled={advancing}
-              title="Demo: move to the next status"
-              className={cn(
-                pillClass,
-                "transition hover:bg-white/30 disabled:cursor-wait disabled:opacity-70",
-              )}
-            >
-              <Icon size={16} strokeWidth={2} className="shrink-0" />
-              {advancing ? "Updating..." : status}
-            </button>
-          ) : (
-            <div className={pillClass}>
-              <Icon size={16} strokeWidth={2} className="shrink-0" />
-              {status}
-            </div>
-          )}
+          <div className="mt-4 flex items-center gap-2 rounded-full bg-white/20 px-5 py-2 text-sm font-semibold backdrop-blur-sm">
+            <Icon size={16} strokeWidth={2} className="shrink-0" />
+            {statusLabel}
+          </div>
         </div>
       </div>
     </section>

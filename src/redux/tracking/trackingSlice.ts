@@ -1,11 +1,12 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
 import { logout } from "@/redux/auth/authSlice";
-import type { Booking, BookingStatus } from "@/types/booking";
+import type { Booking } from "@/types/booking";
 
 type TrackingState = {
   // The customer's bookings being tracked, newest first: one per vehicle at most
-  // while it's unfinished. A finished one stays (as "Service Complete") until reload.
+  // while it's unfinished. Each is a snapshot of what was booked: where it stands
+  // comes from the API (useActiveServices).
   activeBookings: Booking[];
 };
 
@@ -29,10 +30,6 @@ const trackingSlice = createSlice({
       const known = new Set(state.activeBookings.map((booking) => booking.id));
       state.activeBookings.push(...action.payload.filter((booking) => !known.has(booking.id)));
     },
-    setBookingStatus: (state, action: PayloadAction<{ id: string; status: BookingStatus }>) => {
-      const booking = state.activeBookings.find((item) => item.id === action.payload.id);
-      if (booking) booking.status = action.payload.status;
-    },
     // A cancelled booking is gone for good
     clearActiveBooking: (state, action: PayloadAction<string>) => {
       state.activeBookings = state.activeBookings.filter(
@@ -49,7 +46,6 @@ const trackingSlice = createSlice({
 export const {
   bookingCreated,
   activeBookingsRestored,
-  setBookingStatus,
   clearActiveBooking,
 } = trackingSlice.actions;
 

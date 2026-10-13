@@ -1,9 +1,8 @@
 import { /* MessageText2, */ Phone } from "reicon-react";
 import { shortName } from "@/libs/utils";
-import type { StaffMember } from "@/types/admin";
 
 interface StaffContactCardProps {
-  member: StaffMember;
+  member: { name: string; phone: string };
   // e.g. "Valet", "Advisor"
   role: string;
 }

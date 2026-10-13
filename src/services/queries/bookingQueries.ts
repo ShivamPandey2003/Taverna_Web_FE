@@ -1,30 +1,41 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { bookingApi } from "@/services/bookingApi";
 import type { AdminBooking } from "@/types/admin";
+import type { BookingSummary } from "@/types/booking";
 
 export const bookingKeys = {
-  open: ["bookings", "open"] as const,
-  detail: (id: string | null) => ["bookings", id] as const,
+  list: ["bookings", "list"] as const,
+  status: (id: string | null) => ["bookings", "status", id] as const,
 };
 
-// Customer view of one booking; polls so admin progress (confirmation, valet) shows up
-export function useMyBooking(id: string | null) {
+const STATUS_REFRESH_MS = 15_000;
+
+// Where one booking stands (the real API's service-status), for the tracking
+// page: polled, so the dealership's progress shows up. The API layer toasts a
+// failure, so it isn't retried.
+export function useServiceStatus(id: string | null) {
   return useQuery({
-    queryKey: bookingKeys.detail(id),
-    queryFn: () => bookingApi.get(id!),
+    queryKey: bookingKeys.status(id),
+    queryFn: () => bookingApi.getStatus(id!),
     enabled: !!id,
-    refetchInterval: 15_000,
+    refetchInterval: STATUS_REFRESH_MS,
+    retry: false,
   });
 }
 
-// The customer's unfinished bookings. Polls so admin progress shows up and a
-// vehicle can be booked again once its service is complete.
-export function useMyOpenBookings(enabled = true) {
+const LIST_REFRESH_MS = 30_000;
+
+// All of the customer's bookings with their status (the real API's booking/list):
+// what the status bubbles and the vehicle cards follow, and what puts the tracked
+// bookings back after a reload. Polled, so a service that moves on or finishes
+// shows without a reload.
+export function useMyBookings(enabled = true) {
   return useQuery({
-    queryKey: bookingKeys.open,
-    queryFn: bookingApi.getOpen,
+    queryKey: bookingKeys.list,
+    queryFn: bookingApi.list,
     enabled,
-    refetchInterval: 15_000,
+    refetchInterval: LIST_REFRESH_MS,
+    retry: false,
   });
 }
 
@@ -35,8 +46,8 @@ function useMyBookingMutation(mutationFn: (id: string) => Promise<AdminBooking>)
   return useMutation({
     mutationFn,
     onSuccess: (booking) => {
-      queryClient.setQueryData(bookingKeys.detail(booking.id), booking);
-      queryClient.invalidateQueries({ queryKey: bookingKeys.open });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.status(booking.id) });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.list });
     },
   });
 }
@@ -50,15 +61,12 @@ export function useCancelBooking() {
     mutationFn: (id: string) => bookingApi.cancel(id),
     onSuccess: async (_, id) => {
       await queryClient.cancelQueries({ queryKey: ["bookings"] });
-      queryClient.setQueryData<AdminBooking[]>(bookingKeys.open, (open) =>
-        open?.filter((booking) => booking.id !== id),
+      queryClient.setQueryData<BookingSummary[]>(bookingKeys.list, (bookings) =>
+        bookings?.filter((booking) => booking.id !== id),
       );
-      queryClient.removeQueries({ queryKey: bookingKeys.detail(id) });
+      queryClient.removeQueries({ queryKey: bookingKeys.status(id) });
     },
   });
 }
 
 export const usePayInvoice =() => useMyBookingMutation((id) => bookingApi.pay(id));
-
-export const useSimulateNextStatus = () =>
-  useMyBookingMutation((id) => bookingApi.simulateNextStatus(id));

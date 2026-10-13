@@ -1,7 +1,7 @@
-import { USE_MOCK_API, callApi, request } from "./apiClient";
+import { USE_MOCK_API, callApi, request, toQueryString } from "./apiClient";
 import { mockServer } from "./mock/mockServer";
 import type { AdminBooking } from "@/types/admin";
-import { BookingStatus } from "@/types/booking";
+import { BookingStatus, type BookingSummary, type ServiceStatus } from "@/types/booking";
 import type { ServiceId } from "@/types/service";
 
 // What the mock keeps of a booking, plus the ids the real API books with
@@ -43,10 +43,92 @@ function toAppointment(scheduledAt: string | null) {
   };
 }
 
+// GET service-status (only the fields the app shows)
+interface ServiceStatusResponse {
+  bmsId: string;
+  currentStatus: string;
+  statusDisplay: { statusCode: string; label: string; heading: string };
+  advisor: { name: string | null; phone: string | null; email: string | null } | null;
+}
+
+// The stage each of the API's statuses belongs to: the app has one colour and
+// icon per stage (statusColors), the API many statuses within each
+const statusStages: Record<string, BookingStatus> = {
+  IN_QUEUE: BookingStatus.IN_QUEUE,
+  BOOKED: BookingStatus.BOOKED,
+  VALET_ASSIGNED: BookingStatus.VALET_ASSIGNED,
+  TOW_ASSIGNED: BookingStatus.VALET_ASSIGNED,
+  VALET_DISPATCHED: BookingStatus.VALET_ON_ROAD,
+  VALET_ARRIVED_AT_CUSTOMER: BookingStatus.VALET_ON_ROAD,
+  VEHICLE_HANDED_OVER_TO_VALET: BookingStatus.VALET_ON_ROAD,
+  VALET_PICKUP_CONFIRMED: BookingStatus.VEHICLE_PICKED_UP,
+  VEHICLE_PICKED_UP: BookingStatus.VEHICLE_PICKED_UP,
+  VEHICLE_ARRIVED_AT_DEALERSHIP: BookingStatus.VEHICLE_ARRIVED,
+  VEHICLE_AT_DEALERSHIP_CONFIRMED: BookingStatus.VEHICLE_ARRIVED,
+  ADVISOR_ASSIGNED: BookingStatus.VEHICLE_ARRIVED,
+  VEHICLE_IN_INSPECTION: BookingStatus.IN_SERVICE,
+  INSPECTION_COMPLETED: BookingStatus.IN_SERVICE,
+  INSPECTION_APPROVED: BookingStatus.IN_SERVICE,
+  VEHICLE_IN_SERVICE: BookingStatus.IN_SERVICE,
+  SERVICE_COMPLETED: BookingStatus.IN_SERVICE,
+  INVOICE_GENERATED: BookingStatus.BILL_GENERATED,
+  PAYMENT_CONFIRMED: BookingStatus.VEHICLE_RETURN,
+  READY_FOR_DISPATCH: BookingStatus.VEHICLE_RETURN,
+  DELIVERY_VALET_ASSIGNED: BookingStatus.VEHICLE_RETURN,
+  DELIVERY_VALET_DISPATCHED: BookingStatus.VALET_ON_ROAD,
+  DELIVERY_VEHICLE_PICKED_UP: BookingStatus.VALET_ON_ROAD,
+  DELIVERY_VALET_ARRIVED_AT_CUSTOMER: BookingStatus.VEHICLE_RETURN,
+  VEHICLE_DELIVERED: BookingStatus.VEHICLE_RETURN,
+  SELF_COLLECTION_HANDED_OVER: BookingStatus.VEHICLE_RETURN,
+  VEHICLE_RECEIPT_CONFIRMED: BookingStatus.VEHICLE_RETURN,
+  SERVICE_COMPLETE: BookingStatus.SERVICE_COMPLETE,
+};
+
+// "ADVISOR_ASSIGNED" -> "Advisor Assigned"
+const statusName = (code: string) =>
+  code
+    .toLowerCase()
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+
+function toServiceStatus(response: ServiceStatusResponse): ServiceStatus {
+  const { advisor } = response;
+
+  return {
+    id: response.bmsId,
+    code: response.currentStatus,
+    status: statusStages[response.currentStatus] ?? null,
+    // The status the booking is actually at. The API's own `statusDisplay.label`
+    // groups several statuses under one name ("Vehicle Arrived" for
+    // ADVISOR_ASSIGNED), so it isn't used.
+    label: statusName(response.currentStatus),
+    heading: response.statusDisplay.heading,
+    advisor: advisor?.name
+      ? { name: advisor.name, phone: advisor.phone ?? "", email: advisor.email ?? "" }
+      : null,
+  };
+}
+
+// A booking of GET booking/list
+interface BookingListItem {
+  bmsId: string;
+  dealershipName: string;
+  vehicle: string;
+  service: string;
+  scheduled: string;
+  bookingStatus: string;
+  statusLabel: string;
+}
+
+// Only SERVICE_COMPLETE has been seen for a booking that's over; a cancelled
+// one is taken to say so in its status
+const isOpenStatus = (code: string) => code !== "SERVICE_COMPLETE" && !code.includes("CANCEL");
+
 // Customer-side booking endpoints
 export const bookingApi = {
-  // The booking is made with the real API. Everything after it (tracking, the admin
-  // workflow) is still the mock's, so the mock keeps a copy under the same id.
+  // The booking is made with the real API. The mock keeps a copy under the same
+  // id for the steps it still answers (paying the bill).
   create: async ({ vehicleId, dealershipId, addressId, ...booking }: CreateBookingInput) => {
     const saved = await request<SaveBookingResponse>("post", "booking/save", {
       vehicleId,
@@ -71,39 +153,42 @@ export const bookingApi = {
     };
   },
 
-  // The customer's bookings that aren't complete yet (one per vehicle at most),
-  // newest first
-  getOpen: () =>
-    callApi(
-      () => mockServer.getMyOpenBookings(),
-      () => request<AdminBooking[]>("get", "/bookings/open"),
+  // Real API: all of the customer's bookings, newest first
+  list: async (): Promise<BookingSummary[]> => {
+    const { bookings } = await request<{ bookings: BookingListItem[] }>("get", "booking/list");
+    return bookings.map((booking) => ({
+      id: booking.bmsId,
+      dealershipName: booking.dealershipName,
+      vehicle: booking.vehicle,
+      scheduled: booking.scheduled,
+      code: booking.bookingStatus,
+      status: statusStages[booking.bookingStatus] ?? null,
+      label: statusName(booking.bookingStatus),
+      open: isOpenStatus(booking.bookingStatus),
+    }));
+  },
+
+  // Real API: where a booking stands, and the advisor
+  getStatus: async (id: string): Promise<ServiceStatus> =>
+    toServiceStatus(
+      await request<ServiceStatusResponse>(
+        "get",
+        `service-status${toQueryString({ bmsId: id })}`,
+      ),
     ),
 
-  get: (id: string) =>
-    callApi(
-      () => mockServer.getMyBooking(id),
-      () => request<AdminBooking>("get", `/bookings/${id}`),
-    ),
-
-  // Only while the booking is In-queue (not yet confirmed by the dealership)
-  cancel: (id: string) =>
-    callApi(
-      () => mockServer.cancelBooking(id),
-      () => request<{ id: string }>("delete", `/bookings/${id}`),
-    ),
+  // Real API: the customer withdraws a booking (the API decides whether it still
+  // can be). The mock drops its copy too.
+  cancel: async (id: string) => {
+    await request("post", `booking/cancel/${id}`);
+    if (USE_MOCK_API) mockServer.removeBooking(id);
+    return { id };
+  },
 
   // Pays the generated invoice
   pay: (id: string) =>
     callApi(
       () => mockServer.payInvoice(id),
       () => request<AdminBooking>("post", `/bookings/${id}/pay`),
-    ),
-
-  // Demo only: moves the booking to its next status. The backend drives status
-  // for real, so there's no real endpoint; the UI only offers it with USE_MOCK_API.
-  simulateNextStatus: (id: string) =>
-    callApi(
-      () => mockServer.simulateNextStatus(id),
-      () => Promise.reject(new Error("Status simulation is only available with the mock API.")),
     ),
 };
