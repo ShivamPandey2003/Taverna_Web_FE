@@ -2,7 +2,7 @@ import { USE_MOCK_API, callApi, request, toQueryString } from "./apiClient";
 import { mockServer } from "./mock/mockServer";
 import { BookingStatus } from "@/types/booking";
 import type { ServiceId } from "@/types/service";
-import { journeyAdvisorProgress, journeyPickupProgress } from "@/types/admin";
+import { journeyAdvisorProgress, journeyTripProgress } from "@/types/admin";
 import type {
   AdminBooking,
   AdminBookingRow,
@@ -13,7 +13,6 @@ import type {
   StaffMember,
   StaffRole,
   ValetLeg,
-  ValetMilestone,
 } from "@/types/admin";
 import type { Offer, OfferInput, OfferList, OfferListParams } from "@/types/offer";
 import type { OfferCsvRow } from "@/components/features/offers/offerCsv";
@@ -285,8 +284,8 @@ export const adminApi = {
   },
 
   // Real API: the booking's details and where it is on its journey, which the
-  // pickup trip's and the service's progress are read from. The handover and
-  // completing are still the mock's, so while the mock is on it keeps a copy of the booking and the answer
+  // two trips' and the service's progress are read from. Picking how the vehicle
+  // travels and completing the service are still the mock's, so while the mock is on it keeps a copy of the booking and the answer
   // carries that copy's progress for them.
   getBooking: async (id: string): Promise<AdminBooking> => {
     const [details, { journey, status }] = await Promise.all([
@@ -294,7 +293,8 @@ export const adminApi = {
       getJourney(id),
     ]);
     const booking: AdminBooking = { ...toAdminBooking(details), journey };
-    booking.pickupProgress = journeyPickupProgress(journey);
+    booking.pickupProgress = journeyTripProgress(journey, "pickup");
+    booking.deliveryProgress = journeyTripProgress(journey, "delivery");
     booking.advisorProgress = journeyAdvisorProgress(journey);
     if (!USE_MOCK_API) return booking;
 
@@ -341,17 +341,6 @@ export const adminApi = {
   // its answer is a status summary, so the hook loads the booking's details again.
   assignValet: (id: string, leg: ValetLeg, valetId: string) =>
     assignStaff(id, leg === "pickup" ? "valetOperatorId" : "deliveryValetOperatorId", valetId),
-
-  // Marks the next milestone of a valet trip (milestones go in order)
-  updateValetProgress: (id: string, leg: ValetLeg, milestone: ValetMilestone) =>
-    callApi(
-      () => mockServer.updateValetProgress(id, leg, milestone),
-      () =>
-        request<AdminBooking>("put", `/admin/bookings/${id}/valet/progress`, {
-          leg,
-          milestone,
-        }),
-    ),
 
   // The advisor, assigned with the real API like the valets
   assignRelationshipManager: (id: string, managerId: string) =>

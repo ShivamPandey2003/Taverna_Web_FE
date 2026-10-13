@@ -6,6 +6,8 @@ import {
 } from "@tanstack/react-query";
 import { adminApi, type StaffInput } from "@/services/adminApi";
 import {
+  HANDOVER_DELIVERED,
+  HANDOVER_JOURNEY,
   INTAKE_ARRIVED,
   INTAKE_JOURNEY,
   journeyReached,
@@ -19,7 +21,6 @@ import type {
   StaffRole,
   IntakeMethod,
   ValetLeg,
-  ValetMilestone,
 } from "@/types/admin";
 import { staffPage } from "@/components/features/staff/staff.utils";
 import type { OfferInput, OfferListParams } from "@/types/offer";
@@ -46,14 +47,18 @@ export function useAdminBookings(params: BookingListParams) {
 
 const JOURNEY_REFRESH_MS = 15_000;
 
-// Someone else is moving the booking on from their own page: the pickup valet
-// (from being assigned until they reach the dealership), or the advisor and then
+// Someone else is moving the booking on from their own page: a valet (from
+// being assigned until the vehicle is at the other end), or the advisor and then
 // the paying customer (from the advisor being assigned until the bill is paid)
 function othersTurn({ journey }: AdminBooking) {
   if (!journey) return false;
   const between = (from: string, to: string) =>
     journeyReached(journey, from) && !journeyReached(journey, to);
-  return between(INTAKE_JOURNEY[0], INTAKE_ARRIVED) || between(SERVICE_JOURNEY[0], SERVICE_PAID);
+  return (
+    between(INTAKE_JOURNEY[0], INTAKE_ARRIVED) ||
+    between(SERVICE_JOURNEY[0], SERVICE_PAID) ||
+    between(HANDOVER_JOURNEY[0], HANDOVER_DELIVERED)
+  );
 }
 
 export function useAdminBooking(id: string | null) {
@@ -165,12 +170,6 @@ function useAssignMutation<TVariables>(mutationFn: (variables: TVariables) => Pr
 export const useAssignValet = () =>
   useAssignMutation(({ id, leg, valetId }: { id: string; leg: ValetLeg; valetId: string }) =>
     adminApi.assignValet(id, leg, valetId),
-  );
-
-export const useUpdateValetProgress = () =>
-  useBookingMutation(
-    ({ id, leg, milestone }: { id: string; leg: ValetLeg; milestone: ValetMilestone }) =>
-      adminApi.updateValetProgress(id, leg, milestone),
   );
 
 export const useAssignRelationshipManager = () =>

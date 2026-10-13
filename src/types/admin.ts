@@ -174,22 +174,43 @@ export const INTAKE_JOURNEY = [
 export const INTAKE_ARRIVED = "vehicleArrivedAtDealership";
 export const INTAKE_CONFIRMED = "vehicleAtDealershipConfirmed";
 
-const PICKUP_JOURNEY_STEPS: Partial<Record<ValetMilestone, string>> = {
-  dispatched: "valetDispatched",
-  arrived: "valetArrivedAtCustomer",
-  pickedUp: "vehiclePickedUp",
-  reached: INTAKE_ARRIVED,
+// The delivery valet's trip on the journey, as the Vehicle Handover step shows
+// it. It ends the step by itself: the customer's receipt comes after it.
+export const HANDOVER_JOURNEY = [
+  "deliveryValetAssigned",
+  "deliveryValetDispatched",
+  "deliveryVehiclePickedUp",
+  "deliveryValetArrivedAtCustomer",
+  "vehicleDelivered",
+] as const;
+
+export const HANDOVER_DELIVERED = "vehicleDelivered";
+
+const TRIP_JOURNEY_STEPS: Record<ValetLeg, Partial<Record<ValetMilestone, string>>> = {
+  pickup: {
+    dispatched: "valetDispatched",
+    arrived: "valetArrivedAtCustomer",
+    pickedUp: "vehiclePickedUp",
+    reached: INTAKE_ARRIVED,
+  },
+  delivery: {
+    dispatched: "deliveryValetDispatched",
+    pickedUp: "deliveryVehiclePickedUp",
+    reached: "deliveryValetArrivedAtCustomer",
+    delivered: HANDOVER_DELIVERED,
+  },
 };
 
-// The pickup trip's milestone log as the journey has it. The API doesn't send
-// when each step happened, so a step keeps the time it's `known` by, or gets now.
-export function journeyPickupProgress(
+// A trip's milestone log as the journey has it. The API doesn't send when each
+// step happened, so a step keeps the time it's `known` by, or gets now.
+export function journeyTripProgress(
   journey: BookingJourney,
+  leg: ValetLeg,
   known: MilestoneLog<ValetMilestone> = {},
 ): MilestoneLog<ValetMilestone> {
   const progress: MilestoneLog<ValetMilestone> = {};
-  LEG_MILESTONES.pickup.forEach((milestone) => {
-    const step = PICKUP_JOURNEY_STEPS[milestone];
+  LEG_MILESTONES[leg].forEach((milestone) => {
+    const step = TRIP_JOURNEY_STEPS[leg][milestone];
     if (step && journeyReached(journey, step)) {
       progress[milestone] = known[milestone] ?? new Date().toISOString();
     }
@@ -220,7 +241,7 @@ const SERVICE_JOURNEY_STEPS: Record<AdvisorMilestone, string> = {
   readyForDispatch: SERVICE_READY,
 };
 
-// The advisor's milestone log as the journey has it (see journeyPickupProgress)
+// The advisor's milestone log as the journey has it (see journeyTripProgress)
 export function journeyAdvisorProgress(
   journey: BookingJourney,
   known: MilestoneLog<AdvisorMilestone> = {},

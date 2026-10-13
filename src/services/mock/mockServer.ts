@@ -15,7 +15,7 @@ import {
   type Invoice,
   type InvoiceLine,
   journeyAdvisorProgress,
-  journeyPickupProgress,
+  journeyTripProgress,
   journeyReached,
   SERVICE_PAID,
   type StaffAuth,
@@ -956,10 +956,17 @@ export const mockServer = {
       confirm(copy);
     }
     syncAssigned(copy, real);
-    // The pickup valet posts their trip to the API: the copy follows it, keeping
-    // the times it already has
+    // The valets post their trips to the API: the copy follows them, keeping the
+    // times it already has
     if (real.journey && copy.valet) {
-      copy.pickupProgress = journeyPickupProgress(real.journey, copy.pickupProgress);
+      copy.pickupProgress = journeyTripProgress(real.journey, "pickup", copy.pickupProgress);
+    }
+    if (real.journey && copy.deliveryValet) {
+      copy.deliveryProgress = journeyTripProgress(
+        real.journey,
+        "delivery",
+        copy.deliveryProgress,
+      );
     }
     // So do the service, the bill and the payment, which the handover (still
     // answered here) waits for
@@ -997,15 +1004,6 @@ export const mockServer = {
   },
 
   // Normally posted by the valet from their link; the admin can post it too
-  updateValetProgress(id: string, leg: ValetLeg, milestone: ValetMilestone) {
-    requireAdmin();
-    const booking = findBooking(id);
-    markValetMilestone(booking, leg, milestone);
-    persist();
-    return booking;
-  },
-
-  // Service updates the advisor shares with the customer
   completeBooking(id: string) {
     requireAdmin();
     const booking = findBooking(id);
