@@ -5,7 +5,9 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { adminApi, type StaffInput } from "@/services/adminApi";
+import { INTAKE_ARRIVED, INTAKE_JOURNEY, journeyReached } from "@/types/admin";
 import type {
+  AdminBooking,
   AdvisorMilestone,
   BookingListParams,
   StaffListParams,
@@ -37,11 +39,26 @@ export function useAdminBookings(params: BookingListParams) {
   });
 }
 
+const VALET_TRIP_REFRESH_MS = 15_000;
+
+// From the valet being assigned until they reach the dealership
+function valetOnTrip({ journey }: AdminBooking) {
+  return (
+    !!journey &&
+    journeyReached(journey, INTAKE_JOURNEY[0]) &&
+    !journeyReached(journey, INTAKE_ARRIVED)
+  );
+}
+
 export function useAdminBooking(id: string | null) {
   return useQuery({
     queryKey: adminKeys.booking(id ?? ""),
     queryFn: () => adminApi.getBooking(id!),
     enabled: !!id,
+    // The pickup valet moves the booking on from their own page: while their trip
+    // is under way the booking is loaded again every so often
+    refetchInterval: (query) =>
+      query.state.data && valetOnTrip(query.state.data) ? VALET_TRIP_REFRESH_MS : false,
   });
 }
 

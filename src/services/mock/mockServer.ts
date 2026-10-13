@@ -14,6 +14,7 @@ import {
   type AdvisorMilestone,
   type Invoice,
   type InvoiceLine,
+  journeyPickupProgress,
   type StaffAuth,
   type StaffBooking,
   type StaffLinkRole,
@@ -1033,6 +1034,11 @@ export const mockServer = {
       confirm(copy);
     }
     syncAssigned(copy, real);
+    // The pickup valet posts their trip to the API: the copy follows it, keeping
+    // the times it already has
+    if (real.journey && copy.valet) {
+      copy.pickupProgress = journeyPickupProgress(real.journey, copy.pickupProgress);
+    }
     persist();
     return copy;
   },

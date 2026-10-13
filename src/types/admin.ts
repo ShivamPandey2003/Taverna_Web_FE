@@ -139,6 +139,64 @@ export type AdvisorMilestone = (typeof ADVISOR_MILESTONES)[number] | typeof ADVI
 // When each milestone was reached (ISO strings); missing = not reached yet
 export type MilestoneLog<T extends string> = Partial<Record<T, string>>;
 
+// Where a booking is on the API's journey: the step names of
+// booking/admin/:bmsId/journey-labels and the status of …/status-summary
+export interface BookingJourney {
+  // The steps this booking goes through, in order, with the API's names. A key
+  // is the status code in camel case: VALET_DISPATCHED is "valetDispatched".
+  steps: { key: string; label: string }[];
+  // The step the booking is at; not one of `steps` before the journey starts
+  current: string;
+  // The API's name for the current status, and when it was reached (text ready
+  // to show). Earlier steps' times aren't sent.
+  statusLabel: string;
+  doneAt: string | null;
+}
+
+// The steps come in order, so every step up to the current one has been reached
+export function journeyReached(journey: BookingJourney, key: string) {
+  const keys = journey.steps.map((step) => step.key);
+  const index = keys.indexOf(key);
+  return index !== -1 && index <= keys.indexOf(journey.current);
+}
+
+// The pickup valet's trip on the journey, as the Vehicle Intake step shows it.
+// The API has more steps in between (the customer's confirmations); they're left out.
+export const INTAKE_JOURNEY = [
+  "valetAssigned",
+  "valetDispatched",
+  "valetArrivedAtCustomer",
+  "vehiclePickedUp",
+  "vehicleArrivedAtDealership",
+] as const;
+
+// The valet's last step, and the admin's confirmation that ends the intake
+export const INTAKE_ARRIVED = "vehicleArrivedAtDealership";
+export const INTAKE_CONFIRMED = "vehicleAtDealershipConfirmed";
+
+const PICKUP_JOURNEY_STEPS: Partial<Record<ValetMilestone, string>> = {
+  dispatched: "valetDispatched",
+  arrived: "valetArrivedAtCustomer",
+  pickedUp: "vehiclePickedUp",
+  reached: INTAKE_ARRIVED,
+};
+
+// The pickup trip's milestone log as the journey has it. The API doesn't send
+// when each step happened, so a step keeps the time it's `known` by, or gets now.
+export function journeyPickupProgress(
+  journey: BookingJourney,
+  known: MilestoneLog<ValetMilestone> = {},
+): MilestoneLog<ValetMilestone> {
+  const progress: MilestoneLog<ValetMilestone> = {};
+  LEG_MILESTONES.pickup.forEach((milestone) => {
+    const step = PICKUP_JOURNEY_STEPS[milestone];
+    if (step && journeyReached(journey, step)) {
+      progress[milestone] = known[milestone] ?? new Date().toISOString();
+    }
+  });
+  return progress;
+}
+
 // A booking as the admin API returns it
 export interface AdminBooking {
   id: string;
@@ -189,6 +247,8 @@ export interface AdminBooking {
   // step of their progress
   assignedAt?: Partial<Record<StaffLinkRole, string>>;
   completedAt?: string | null;
+  // Where the booking is on the API's journey; the Vehicle Intake step is drawn from it
+  journey?: BookingJourney;
   // What goes in each staff link's search params (see staffLink in
   // admin.utils.ts). Only admin responses carry it; it's what signs the valet /
   // advisor in without the email + OTP form.

@@ -1,6 +1,8 @@
 import { BookingStatus } from "@/types/booking";
 import {
   defaultLegMethod,
+  INTAKE_CONFIRMED,
+  journeyReached,
   TRIP_END,
   type AdminBooking,
   type AdvisorMilestone,
@@ -116,6 +118,10 @@ const tripDone = (booking: AdminBooking, leg: ValetLeg) => {
   const { valet, progress } = valetTrip(booking, leg);
   const method = legMethod(booking, leg);
   if (!method || (method === "valet" && !valet)) return false;
+  // A pickup valet's trip isn't over until the admin confirms the vehicle was received
+  if (leg === "pickup" && method === "valet" && booking.journey) {
+    return journeyReached(booking.journey, INTAKE_CONFIRMED);
+  }
   return !!progress[TRIP_END[leg]];
 };
 

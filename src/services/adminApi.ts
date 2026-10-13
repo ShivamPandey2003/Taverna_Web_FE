@@ -2,10 +2,12 @@ import { USE_MOCK_API, callApi, request, toQueryString } from "./apiClient";
 import { mockServer } from "./mock/mockServer";
 import { BookingStatus } from "@/types/booking";
 import type { ServiceId } from "@/types/service";
+import { journeyPickupProgress } from "@/types/admin";
 import type {
   AdminBooking,
   AdminBookingRow,
   AdvisorMilestone,
+  BookingJourney,
   BookingListParams,
   IntakeMethod,
   Paginated,
@@ -160,6 +162,54 @@ function toAdminBooking(details: BookingDetailsResponse): AdminBooking {
   };
 }
 
+// GET booking/admin/:bmsId/journey-labels: `<step>Label` for every step of the
+// booking's journey, in order; null for a step this booking doesn't have
+type JourneyLabelsResponse = Record<string, string | null>;
+
+// GET booking/admin/:bmsId/status-summary
+interface StatusSummaryResponse {
+  bmsId: string;
+  currentStatus: string;
+  label: string;
+  doneAt: string | null;
+  previousStatus: string | null;
+}
+
+// A booking's step names don't change, so they're asked for once
+const journeySteps = new Map<string, BookingJourney["steps"]>();
+
+async function getJourneySteps(id: string) {
+  const cached = journeySteps.get(id);
+  if (cached) return cached;
+
+  const labels = await request<JourneyLabelsResponse>("get", `booking/admin/${id}/journey-labels`);
+  const steps = Object.entries(labels).flatMap(([field, label]) =>
+    field.endsWith("Label") && label ? [{ key: field.slice(0, -5), label }] : [],
+  );
+  journeySteps.set(id, steps);
+  return steps;
+}
+
+// "VALET_DISPATCHED" -> "valetDispatched", the name its label goes by
+const toStepKey = (status: string) =>
+  status.toLowerCase().replace(/_([a-z0-9])/g, (_, letter: string) => letter.toUpperCase());
+
+async function getJourney(id: string): Promise<{ journey: BookingJourney; status: string }> {
+  const [steps, summary] = await Promise.all([
+    getJourneySteps(id),
+    request<StatusSummaryResponse>("get", `booking/admin/${id}/status-summary`),
+  ]);
+  return {
+    journey: {
+      steps,
+      current: toStepKey(summary.currentStatus),
+      statusLabel: summary.label,
+      doneAt: summary.doneAt,
+    },
+    status: summary.currentStatus,
+  };
+}
+
 // Who booking/staff/assign can put on a booking. One call assigns one person:
 // the API wants every field in the body, so the others go as empty text.
 type StaffAssignment = "advisorId" | "valetOperatorId" | "deliveryValetOperatorId";
@@ -213,17 +263,27 @@ export const adminApi = {
     };
   },
 
-  // Real API. The workflow steps below are still the mock's, so while the mock is
-  // on it keeps a copy of the booking and the answer carries that copy's progress.
+  // Real API: the booking's details and where it is on its journey, which the
+  // pickup trip's progress is read from. The later workflow steps are still the
+  // mock's, so while the mock is on it keeps a copy of the booking and the answer
+  // carries that copy's progress for them.
   getBooking: async (id: string): Promise<AdminBooking> => {
-    const booking = toAdminBooking(
-      await request<BookingDetailsResponse>("get", `booking/admin/${id}/details`),
-    );
-    return USE_MOCK_API ? structuredClone(mockServer.syncBooking(booking)) : booking;
+    const [details, { journey, status }] = await Promise.all([
+      request<BookingDetailsResponse>("get", `booking/admin/${id}/details`),
+      getJourney(id),
+    ]);
+    const booking: AdminBooking = { ...toAdminBooking(details), journey };
+    booking.pickupProgress = journeyPickupProgress(journey);
+    if (!USE_MOCK_API) return booking;
+
+    const copy = structuredClone(mockServer.syncBooking(booking));
+    // The copy's status only moves with the mock's own steps
+    return { ...copy, journey, status: toBookingStatus(status) ?? copy.status };
   },
 
-  // Real API. Its answer is only a summary of the new status, so the booking is
-  // loaded again for the drawer.
+  // Real API: the admin confirmation the booking's stage allows (the new
+  // booking, then the vehicle received at the dealership). Its answer is only a
+  // summary of the new status, so the booking is loaded again for the drawer.
   confirmBooking: async (id: string) => {
     await request("post", `booking/admin/${id}/confirm`);
     return adminApi.getBooking(id);
