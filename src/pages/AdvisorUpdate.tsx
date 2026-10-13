@@ -45,7 +45,7 @@ export function AdvisorUpdate() {
   const link: StaffLinkParams = { id: bookingId, ...auth };
   const booking = useStaffBooking(link);
 
-  if (!signedIn) return <StaffLogin />;
+  if (!signedIn) return <StaffLogin type="advisor" />;
   if (booking.isPending) return <BookingSkeleton />;
   if (booking.isError) {
     return (

@@ -7,6 +7,7 @@ import type {
   InvoiceLine,
   StaffAuth,
   StaffBooking,
+  StaffType,
   ValetLeg,
   ValetMilestone,
 } from "@/types/admin";
@@ -27,15 +28,16 @@ export const staffKeys = {
 // Failures are toasted here, like the other staff mutations.
 export function useStaffSendOtp() {
   return useMutation({
-    mutationFn: (email: string) => staffApi.sendOtp(email),
+    mutationFn: ({ email, type }: { email: string; type: StaffType }) =>
+      staffApi.sendOtp(email, type),
     onError: (error) => staffToast.error(errorMessage(error)),
   });
 }
 
 export function useStaffVerifyOtp() {
   return useMutation({
-    mutationFn: ({ email, otp }: { email: string; otp: string }) =>
-      staffApi.verifyOtp(email, otp),
+    mutationFn: ({ email, otp, type }: { email: string; otp: string; type: StaffType }) =>
+      staffApi.verifyOtp(email, otp, type),
     onError: (error) => staffToast.error(errorMessage(error)),
   });
 }

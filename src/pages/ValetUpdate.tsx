@@ -47,7 +47,7 @@ export function ValetUpdate() {
   const booking = useStaffBooking(link);
 
   if (!isValetLeg(leg)) return <Navigate to="/" replace />;
-  if (!signedIn) return <StaffLogin />;
+  if (!signedIn) return <StaffLogin type="valet" />;
   if (booking.isPending) return <BookingSkeleton />;
   if (booking.isError) {
     return (

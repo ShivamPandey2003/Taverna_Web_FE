@@ -5,29 +5,42 @@ import type {
   InvoiceLine,
   StaffAuth,
   StaffBooking,
+  StaffType,
   ValetLeg,
   ValetMilestone,
 } from "@/types/admin";
 
-// Endpoints the valet / advisor pages call. They mirror the admin endpoints
-// (adminApi.ts) under /staff. Staff have their own sign-in, separate from the
-// app's: every call takes the page's StaffAuth (from the link's search params or
-// the email + OTP form) and sends `gear` as the Bearer token with the encrypted
-// staff type next to it. Agree the final paths with the backend.
-export const staffApi = {
-  // Emails a one-time password to a valet or advisor
-  sendOtp: (email: string) =>
-    callStaffApi(
-      () => mockServer.sendStaffOtp(email),
-      () => staffRequest<{ sent: boolean }>(null, "post", "/staff/auth/login", { email }),
-    ),
+// The real API's `user_type` for each kind of staff
+const userTypes: Record<StaffType, number> = { advisor: 1, valet: 2 };
 
-  // Returns what the link's search params would have carried
-  verifyOtp: (email: string, otp: string) =>
-    callStaffApi(
-      () => mockServer.verifyStaffOtp(email),
-      () => staffRequest<StaffAuth>(null, "post", "/staff/auth/verify_otp", { email, otp }),
-    ),
+// POST staff/verify-otp
+interface StaffSessionResponse {
+  accessToken: string;
+  expiresInSeconds: number;
+  staff: { name: string; email: string; phone: string };
+  user_type: number;
+}
+
+// Endpoints the valet / advisor pages call. Staff have their own sign-in,
+// separate from the app's: every call takes the page's StaffAuth (from the
+// link's search params or the email + OTP form) and sends `gear` as the Bearer
+// token with the staff type next to it. The sign-in is the real API; the booking
+// calls mirror the admin endpoints (adminApi.ts) under /staff and are still
+// proposed paths, answered by the mock.
+export const staffApi = {
+  // Emails a one-time password to a valet or advisor; asking again sends a new one
+  sendOtp: (email: string, type: StaffType) =>
+    staffRequest(null, "post", "staff/login", { email, user_type: userTypes[type] }),
+
+  // The access token becomes the sign-in's `gear`
+  verifyOtp: async (email: string, otp: string, type: StaffType): Promise<StaffAuth> => {
+    const session = await staffRequest<StaffSessionResponse>(null, "post", "staff/verify-otp", {
+      email,
+      otp,
+      user_type: userTypes[type],
+    });
+    return { gear: session.accessToken, token: type, email: session.staff?.email ?? email };
+  },
 
   // Every booking the signed-in valet / advisor is assigned to; `linkRoles` says
   // which of each booking's pages are theirs (proposed path)

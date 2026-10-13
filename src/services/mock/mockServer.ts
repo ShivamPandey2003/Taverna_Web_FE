@@ -417,9 +417,6 @@ const linkRoleType = (role: StaffLinkRole): StaffType => (role === "advisor" ? "
 // encrypts it so it can't be read or changed in the browser
 const mockStaffTypeToken = (type: StaffType) => `mock-enc-${type}`;
 
-// The auth token (`gear`) of someone who signed in with email + OTP
-const mockStaffGear = (member: StaffMember) => `mock-staff-${member.id}`;
-
 // What goes in each staff link. The real API issues signed tokens; these only have
 // to be the same on every load, so a copied link keeps working.
 function mockStaffTokens(bookingId: string): Record<StaffLinkRole, StaffAuth> {
@@ -430,65 +427,56 @@ function mockStaffTokens(bookingId: string): Record<StaffLinkRole, StaffAuth> {
   return { pickup: auth("pickup"), advisor: auth("advisor"), delivery: auth("delivery") };
 }
 
-function findStaffByEmail(email: string) {
-  const match = (member: StaffMember) => member.email.toLowerCase() === email.trim().toLowerCase();
-  const valet = db.valets.find(match);
-  if (valet) return { member: valet, type: "valet" as StaffType };
-  const advisor = db.relationshipManagers.find(match);
-  return advisor ? { member: advisor, type: "advisor" as StaffType } : null;
+// The staff type a sign-in is for: a link carries it encrypted, the email + OTP
+// sign-in (the real API's) as plain text
+function staffTypeOf(auth: StaffAuth) {
+  const type = STAFF_TYPES.find(
+    (item) => item === auth.token || mockStaffTypeToken(item) === auth.token,
+  );
+  if (!type) throw new Error("This link isn't valid. Sign in again to continue.");
+  return type;
 }
 
-// The booking a staff page opens, and which of its pages the caller may use.
-// `gear` is either a link's token (good for that one page of that booking) or a
-// signed-in staff member's (good for whatever they're assigned to on it).
-function findStaffBooking(auth: StaffAuth, id: string) {
-  const type = STAFF_TYPES.find((item) => mockStaffTypeToken(item) === auth.token);
-  if (!type) throw new Error("This link isn't valid. Sign in again to continue.");
-  const booking = findBooking(id);
+// The pages of a booking the caller may use. A link's `gear` is good for that
+// one page of that booking. Someone who signed in with the real API has a token
+// the mock can't read, so they are matched by email to whoever is assigned.
+function staffRoles(auth: StaffAuth, booking: AdminBooking) {
+  const type = staffTypeOf(auth);
   const ofType = STAFF_LINK_ROLES.filter((role) => linkRoleType(role) === type);
+  const email = auth.email?.trim().toLowerCase();
+  if (!email) return ofType.filter((role) => booking.staffTokens?.[role]?.gear === auth.gear);
 
-  const linked = ofType.filter((role) => booking.staffTokens?.[role]?.gear === auth.gear);
-  if (linked.length) return { booking, roles: linked };
-
-  const member = (type === "valet" ? db.valets : db.relationshipManagers).find(
-    (item) => mockStaffGear(item) === auth.gear,
-  );
-  if (!member) throw new Error("Your sign-in has expired. Sign in again to continue.");
   const assigned: Record<StaffLinkRole, StaffMember | null | undefined> = {
     pickup: booking.valet,
     advisor: booking.relationshipManager,
     delivery: booking.deliveryValet,
   };
-  const roles = ofType.filter((role) => assigned[role]?.id === member.id);
-  if (!roles.length) throw new Error("You're not assigned to this booking.");
+  return ofType.filter((role) => assigned[role]?.email.toLowerCase() === email);
+}
+
+// The booking a staff page opens, and which of its pages the caller may use
+function findStaffBooking(auth: StaffAuth, id: string) {
+  const booking = findBooking(id);
+  const roles = staffRoles(auth, booking);
+  if (!roles.length) {
+    throw new Error(
+      auth.email
+        ? "You're not assigned to this booking."
+        : "Your sign-in has expired. Sign in again to continue.",
+    );
+  }
   return { booking, roles };
 }
 
 // Every booking the caller has a task on, with the pages of it they may use: a
 // signed-in member gets all they're assigned to, a link's token just its booking
 function findStaffBookings(auth: StaffAuth) {
-  const type = STAFF_TYPES.find((item) => mockStaffTypeToken(item) === auth.token);
-  if (!type) throw new Error("This link isn't valid. Sign in again to continue.");
-  const ofType = STAFF_LINK_ROLES.filter((role) => linkRoleType(role) === type);
-  const member = (type === "valet" ? db.valets : db.relationshipManagers).find(
-    (item) => mockStaffGear(item) === auth.gear,
-  );
-
   const found = db.bookings.flatMap((booking) => {
-    const assigned: Record<StaffLinkRole, StaffMember | null | undefined> = {
-      pickup: booking.valet,
-      advisor: booking.relationshipManager,
-      delivery: booking.deliveryValet,
-    };
-    const roles = ofType.filter((role) =>
-      member
-        ? assigned[role]?.id === member.id
-        : booking.staffTokens?.[role]?.gear === auth.gear,
-    );
+    const roles = staffRoles(auth, booking);
     return roles.length ? [{ booking, roles }] : [];
   });
 
-  if (!member && !found.length) {
+  if (!auth.email && !found.length) {
     throw new Error("Your sign-in has expired. Sign in again to continue.");
   }
   return found;
@@ -1196,21 +1184,7 @@ export const mockServer = {
   },
 
   // ---- Staff pages (valet / advisor; signed in by the link's search params or
-  // by email + OTP, never by the app's session) ----
-  sendStaffOtp(email: string) {
-    if (!findStaffByEmail(email)) {
-      throw new Error("No valet or advisor account found for this email.");
-    }
-    return { sent: true };
-  },
-
-  // Like the app's login, the mock accepts any 6-digit code
-  verifyStaffOtp(email: string): StaffAuth {
-    const found = findStaffByEmail(email);
-    if (!found) throw new Error("No valet or advisor account found for this email.");
-    return { gear: mockStaffGear(found.member), token: mockStaffTypeToken(found.type) };
-  },
-
+  // by the real API's email + OTP, never by the app's session) ----
   listStaffBookings(auth: StaffAuth) {
     return findStaffBookings(auth).map(({ booking, roles }) => staffView(booking, roles));
   },

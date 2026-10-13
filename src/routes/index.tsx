@@ -99,11 +99,11 @@ const Router = createBrowserRouter([
       // The signed-in staff member's task list; a task opens its page below
       {
         path: "valet",
-        element: <StaffTasks />,
+        element: <StaffTasks type="valet" />,
       },
       {
         path: "advisor",
-        element: <StaffTasks />,
+        element: <StaffTasks type="advisor" />,
       },
       {
         path: "valet/:leg/:bookingId",

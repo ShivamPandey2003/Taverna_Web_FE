@@ -61,8 +61,11 @@ export type StaffLinkRole = ValetLeg | "advisor";
 export interface StaffAuth {
   // The auth token
   gear: string;
-  // Encrypted staff type ("valet" or "advisor"); only the server can read it
+  // The staff type: encrypted in a link (only the server can read it), plain
+  // "valet" / "advisor" after an email + OTP sign-in
   token: string;
+  // Who signed in with email + OTP; a link has none
+  email?: string;
 }
 
 export type StaffType = "valet" | "advisor";

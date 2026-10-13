@@ -60,7 +60,7 @@ export async function staffRequest<T>(
   data?: unknown,
 ): Promise<T> {
   const body = await staffApiRequest(auth, method, url, data ?? null);
-  return (body?.data ?? body) as T;
+  return (body?.data ?? body?.response ?? body) as T;
 }
 
 export function toQueryString(params: Record<string, string | number>) {

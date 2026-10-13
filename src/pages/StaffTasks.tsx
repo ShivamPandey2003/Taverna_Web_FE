@@ -19,16 +19,17 @@ import {
 } from "@/components/features/staffPortal/shared/tasks";
 import { cn, vehicleName } from "@/libs/utils";
 import { useStaffBookings } from "@/services/queries/staffQueries";
+import type { StaffType } from "@/types/admin";
 
 // /valet and /advisor — every task of the signed-in valet or advisor. Like the
 // booking pages, the sign-in comes from localStorage (useStaffAuth); without one
 // the email + OTP form shows first. A task opens its booking page.
-export function StaffTasks() {
+export function StaffTasks({ type }: { type: StaffType }) {
   const { auth, signedIn, signOut } = useStaffAuth();
   const bookings = useStaffBookings(auth);
 
   if (!signedIn) {
-    return <StaffLogin hint="Sign in with your Taverna staff email to see your tasks." />;
+    return <StaffLogin type={type} hint="Sign in with your Taverna staff email to see your tasks." />;
   }
   if (bookings.isPending) return <BookingSkeleton />;
   if (bookings.isError) {
