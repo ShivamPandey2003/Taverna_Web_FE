@@ -10,15 +10,14 @@ import { StatusChip } from "@/components/features/staffPortal/shared/StatusChip"
 import { useStaffAuth } from "@/components/features/staffPortal/shared/useStaffAuth";
 import {
   matchesTask,
-  staffTasks,
   TASKS_PAGE_SIZE,
   taskStateLabels,
   taskTitles,
   type StaffTask,
   type TaskState,
 } from "@/components/features/staffPortal/shared/tasks";
-import { cn, vehicleName } from "@/libs/utils";
-import { useStaffBookings } from "@/services/queries/staffQueries";
+import { cn } from "@/libs/utils";
+import { useStaffTasks } from "@/services/queries/staffQueries";
 import type { StaffType } from "@/types/admin";
 
 // /valet and /advisor — every task of the signed-in valet or advisor. Like the
@@ -26,24 +25,24 @@ import type { StaffType } from "@/types/admin";
 // the email + OTP form shows first. A task opens its booking page.
 export function StaffTasks({ type }: { type: StaffType }) {
   const { auth, signedIn, signOut } = useStaffAuth();
-  const bookings = useStaffBookings(auth);
+  const tasks = useStaffTasks(type, auth);
 
   if (!signedIn) {
     return <StaffLogin type={type} hint="Sign in with your Taverna staff email to see your tasks." />;
   }
-  if (bookings.isPending) return <BookingSkeleton />;
-  if (bookings.isError) {
+  if (tasks.isPending) return <BookingSkeleton />;
+  if (tasks.isError) {
     return (
       <BookingError
         title="Couldn't Load Your Tasks"
-        error={bookings.error}
-        onRetry={() => bookings.refetch()}
+        error={tasks.error}
+        onRetry={() => tasks.refetch()}
         onSignIn={signOut}
       />
     );
   }
 
-  return <TaskList tasks={staffTasks(bookings.data)} />;
+  return <TaskList tasks={tasks.data} />;
 }
 
 const filters: { value: TaskState | "all"; label: string }[] = [
@@ -73,7 +72,7 @@ function TaskList({ tasks }: { tasks: StaffTask[] }) {
     <div className="page-body pb-8">
       {tasks.length === 0 ? (
         <StateScreen icon={<TaskSquare size={30} />} title="No Tasks Yet">
-          Bookings the Taverna team assigns to you show up here. This page updates by itself.
+          Bookings the Taverna team assigns to you show up here.
         </StateScreen>
       ) : (
         <>
@@ -183,7 +182,7 @@ const cellClass =
 // booking page; the booking ID is the link for keyboards and screen readers.
 function TaskRow({ task }: { task: StaffTask }) {
   const navigate = useNavigate();
-  const { booking, role, state } = task;
+  const { role, state } = task;
 
   return (
     <tr onClick={() => navigate(task.path)} className="group cursor-pointer">
@@ -193,23 +192,23 @@ function TaskRow({ task }: { task: StaffTask }) {
           onClick={(event) => event.stopPropagation()}
           className="font-bold text-text"
         >
-          {booking.id}
+          {task.bookingId}
         </Link>
         {/* Tells a booking's pickup and delivery trips apart */}
         <span className="block text-xs text-text-secondary">{taskTitles[role]}</span>
       </td>
-      <td className={cn(cellClass, "max-w-[130px] truncate")} title={booking.customer.name}>
-        {booking.customer.name}
+      <td className={cn(cellClass, "max-w-[130px] truncate")} title={task.client}>
+        {task.client}
       </td>
       <td
         className={cn(cellClass, "max-w-[150px] truncate font-medium text-text")}
-        title={vehicleName(booking.vehicle)}
+        title={task.vehicle}
       >
-        {vehicleName(booking.vehicle)}
+        {task.vehicle}
       </td>
       <td className={cellClass}>
         <StatusChip tone={state === "todo" ? "pending" : state === "done" ? "muted" : "active"}>
-          {taskStateLabels[state]}
+          {task.status}
         </StatusChip>
       </td>
     </tr>

@@ -64,8 +64,9 @@ export interface StaffAuth {
   // The staff type: encrypted in a link (only the server can read it), plain
   // "valet" / "advisor" after an email + OTP sign-in
   token: string;
-  // Who signed in with email + OTP; a link has none
+  // Who signed in with email + OTP; a link has neither
   email?: string;
+  name?: string;
 }
 
 export type StaffType = "valet" | "advisor";
@@ -201,6 +202,27 @@ export interface StaffBooking extends AdminBooking {
   linkRoles?: StaffLinkRole[];
   // The valet's directions fall back to the dealership's name without it
   dealershipAddress?: string;
+}
+
+// One trip of a booking as its valet sees it, from staff/valet/bookings/:bmsId.
+// Everything arrives as text ready to show.
+export interface ValetTripDetails {
+  id: string;
+  leg: ValetLeg;
+  // "Pickup Trip"
+  title: string;
+  vehicle: { name: string; vin: string };
+  // "As soon as possible", or the date and time
+  scheduled: string;
+  // The API's label for the booking's status
+  status: string;
+  // Where the trip starts and ends; the customer's stop carries their number
+  from: { label: string; address: string; phone?: string };
+  to: { label: string; address: string; phone?: string };
+  // The trip's steps in order, each with when it was done
+  steps: { key: string; label: string; done: boolean; at?: string }[];
+  // The update the valet can make now; null when it isn't their turn
+  nextAction: { status: string; label: string } | null;
 }
 
 // A row of the admin bookings table, from booking/admin/list. The API sends the

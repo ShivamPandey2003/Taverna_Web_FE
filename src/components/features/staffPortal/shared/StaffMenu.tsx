@@ -15,7 +15,7 @@ export function StaffMenu({
   tasksPath,
   onSignOut,
 }: {
-  member: StaffMember | null;
+  member: Pick<StaffMember, "name" | "email"> | null;
   // The task list to go back to; null when that's the page already open
   tasksPath: string | null;
   onSignOut: () => void;

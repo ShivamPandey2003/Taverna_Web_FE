@@ -7,7 +7,7 @@ const STAFF_AUTH_KEY = "taverna_staff_auth";
 const listeners = new Set<() => void>();
 const notify = () => listeners.forEach((listener) => listener());
 
-// The valet / advisor sign-in (`gear` + `token`, and the email of an OTP sign-in), kept across reloads and pages.
+// The valet / advisor sign-in (`gear` + `token`, and who an OTP sign-in is), kept across reloads and pages.
 // `subscribe` / `read` feed useSyncExternalStore in useStaffAuth.
 export const staffAuthStorage = {
   // The raw JSON, so the same sign-in always reads as the same value
@@ -22,8 +22,8 @@ export const staffAuthStorage = {
   parse(raw: string | null): StaffAuth | null {
     if (!raw) return null;
     try {
-      const { gear, token, email } = JSON.parse(raw) as Partial<StaffAuth>;
-      return gear && token ? { gear, token, email } : null;
+      const { gear, token, email, name } = JSON.parse(raw) as Partial<StaffAuth>;
+      return gear && token ? { gear, token, email, name } : null;
     } catch {
       return null;
     }
@@ -31,7 +31,7 @@ export const staffAuthStorage = {
 
   save(auth: StaffAuth) {
     try {
-      localStorage.setItem(STAFF_AUTH_KEY, JSON.stringify({ gear: auth.gear, token: auth.token, email: auth.email }));
+      localStorage.setItem(STAFF_AUTH_KEY, JSON.stringify(auth));
     } catch {
       // Storage can be unavailable (private mode); the sign-in then lasts until reload
     }

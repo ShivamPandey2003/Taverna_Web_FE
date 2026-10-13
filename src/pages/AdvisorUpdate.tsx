@@ -22,7 +22,7 @@ import {
   valetMilestoneLabels,
   valetTrip,
 } from "@/components/features/admin/admin.utils";
-import { firstName, formatPickupTime, formatTime } from "@/libs/utils";
+import { firstName, formatPickupTime, formatTime, vehicleName } from "@/libs/utils";
 import {
   useStaffAdvisorProgress,
   useStaffBooking,
@@ -132,7 +132,10 @@ function AdvisorService({ booking, link }: { booking: StaffBooking; link: StaffL
 
         <BookingHero
           title="Service Updates"
-          booking={booking}
+          booking={{
+            ...booking,
+            vehicle: { ...booking.vehicle, name: vehicleName(booking.vehicle) },
+          }}
           columns
           when={{ label: "Booking date", value: formatPickupTime(booking.createdAt) }}
           status={

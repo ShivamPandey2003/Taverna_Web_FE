@@ -134,12 +134,8 @@ const staffClient = axios.create({
   baseURL: platform_url,
 });
 
-// Carries the encrypted staff type next to the Bearer token. Agree the header's
-// name with the backend.
-const STAFF_TYPE_HEADER = "X-Staff-Token";
-
-// Sends `gear` as the Bearer token and `token` in STAFF_TYPE_HEADER; the staff
-// sign-in calls pass null. Errors are thrown with a friendly message and never
+// Sends `gear` as the Bearer token (the API reads the staff type from it); the
+// staff sign-in calls pass null. Errors are thrown with a friendly message and never
 // toasted: failed loads show an error screen on the page, and failed updates are
 // toasted by the staff mutation hooks.
 export const staffApiRequest = async (
@@ -153,9 +149,7 @@ export const staffApiRequest = async (
       method,
       url,
       data,
-      headers: auth
-        ? { Authorization: `Bearer ${auth.gear}`, [STAFF_TYPE_HEADER]: auth.token }
-        : undefined,
+      headers: auth ? { Authorization: `Bearer ${auth.gear}` } : undefined,
     });
     const body = response?.data;
     const code: number | undefined = body?.header?.code ?? body?.code;

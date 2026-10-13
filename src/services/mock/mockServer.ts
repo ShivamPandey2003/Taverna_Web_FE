@@ -1194,14 +1194,6 @@ export const mockServer = {
     return staffView(booking, roles);
   },
 
-  staffUpdateValetProgress(auth: StaffAuth, id: string, leg: ValetLeg, milestone: ValetMilestone) {
-    const { booking, roles } = findStaffBooking(auth, id);
-    assertStaffRole(roles, leg);
-    markValetMilestone(booking, leg, milestone);
-    persist();
-    return staffView(booking, roles);
-  },
-
   staffUpdateAdvisorProgress(auth: StaffAuth, id: string, milestone: AdvisorMilestone) {
     const { booking, roles } = findStaffBooking(auth, id);
     assertStaffRole(roles, "advisor");

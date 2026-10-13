@@ -1,17 +1,29 @@
 import { isComplete, valetTrip } from "@/components/features/admin/admin.utils";
 import { vehicleName } from "@/libs/utils";
-import { TRIP_END, type StaffBooking, type StaffLinkRole } from "@/types/admin";
+import {
+  TRIP_END,
+  type StaffBooking,
+  type StaffLinkRole,
+  type StaffMember,
+} from "@/types/admin";
 
 export type TaskState = "todo" | "active" | "done";
 
-// One job of a staff member: a valet's trip or an advisor's service on a booking
+// One job of a staff member: a valet's trip or an advisor's service on a booking.
+// A row of the task list, with all it shows.
 export interface StaffTask {
   key: string;
-  booking: StaffBooking;
+  bookingId: string;
   role: StaffLinkRole;
+  client: string;
+  vehicle: string;
   state: TaskState;
+  // The status chip's text
+  status: string;
   // The booking page where the task is worked on
   path: string;
+  // Who the task is assigned to: the person signed in
+  staff: Pick<StaffMember, "name" | "email"> | null;
 }
 
 export const taskTitles: Record<StaffLinkRole, string> = {
@@ -25,6 +37,9 @@ export const taskStateLabels: Record<TaskState, string> = {
   active: "In progress",
   done: "Done",
 };
+
+export const taskPath = (role: StaffLinkRole, bookingId: string) =>
+  role === "advisor" ? `/advisor/${bookingId}` : `/valet/${role}/${bookingId}`;
 
 function taskState(booking: StaffBooking, role: StaffLinkRole): TaskState {
   if (isComplete(booking)) return "done";
@@ -45,29 +60,39 @@ export const TASKS_PAGE_SIZE = 8;
 export function matchesTask(task: StaffTask, search: string) {
   const query = search.trim().toLowerCase();
   if (!query) return true;
-  const { booking } = task;
-  return [
-    booking.id,
-    taskTitles[task.role],
-    vehicleName(booking.vehicle),
-    booking.customer.name,
-  ].some((text) => text.toLowerCase().includes(query));
+  return [task.bookingId, taskTitles[task.role], task.vehicle, task.client].some((text) =>
+    text.toLowerCase().includes(query),
+  );
 }
 
 const stateOrder: TaskState[] = ["active", "todo", "done"];
 
-// A task per page the staff member may use on each booking (`linkRoles`): what's
-// under way first, then what hasn't started, then what's finished
+// What's under way first, then what hasn't started, then what's finished
+export const sortTasks = (tasks: StaffTask[]) =>
+  [...tasks].sort(
+    (first, second) => stateOrder.indexOf(first.state) - stateOrder.indexOf(second.state),
+  );
+
+// A task per page the staff member may use on each booking (`linkRoles`)
 export function staffTasks(bookings: StaffBooking[]): StaffTask[] {
-  return bookings
-    .flatMap((booking) =>
-      (booking.linkRoles ?? []).map((role) => ({
-        key: `${booking.id}-${role}`,
-        booking,
-        role,
-        state: taskState(booking, role),
-        path: role === "advisor" ? `/advisor/${booking.id}` : `/valet/${role}/${booking.id}`,
-      })),
-    )
-    .sort((first, second) => stateOrder.indexOf(first.state) - stateOrder.indexOf(second.state));
+  return sortTasks(
+    bookings.flatMap((booking) =>
+      (booking.linkRoles ?? []).map((role) => {
+        const state = taskState(booking, role);
+        return {
+          key: `${booking.id}-${role}`,
+          bookingId: booking.id,
+          role,
+          client: booking.customer.name,
+          vehicle: vehicleName(booking.vehicle),
+          state,
+          status: taskStateLabels[state],
+          path: taskPath(role, booking.id),
+          staff:
+            (role === "advisor" ? booking.relationshipManager : valetTrip(booking, role).valet) ??
+            null,
+        };
+      }),
+    ),
+  );
 }
