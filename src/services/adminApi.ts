@@ -47,9 +47,9 @@ const toStaffMember = (member: StaffResponse): StaffMember => ({
   activeBookings: member.activeBookings ?? 0,
 });
 
-// The status booking/admin/update puts a booking at for each way in
+// The status booking/admin/update puts a booking at for a way in. Only the tow
+// truck has one to send: a valet is put on the booking by assigning them.
 const intakeStatuses: Partial<Record<IntakeMethod, string>> = {
-  valet: "VALET_ASSIGNED",
   towTruck: "TOW_ASSIGNED",
 };
 
@@ -324,10 +324,12 @@ export const adminApi = {
   },
 
   // How the vehicle gets to the dealership (pickup) or back to the customer
-  // (delivery). Real API for the intake by valet or tow truck: booking/admin/update
-  // puts the booking at that status, and the hook loads its details again (the
-  // mock's copy is told too, since it still remembers the choice). The other
-  // choices are still the mock's, on a proposed path.
+  // (delivery). Real API for the intake by tow truck: booking/admin/update puts
+  // the booking at TOW_ASSIGNED, and the hook loads its details again (the mock's
+  // copy is told too, since it still remembers the choice). Switching to a valet
+  // calls nothing: the choice is only remembered, the drawer shows the valet step,
+  // and assigning the valet there is what tells the API. The other choices are
+  // the mock's as well, on a proposed path.
   setLegMethod: async (id: string, leg: ValetLeg, method: IntakeMethod): Promise<void> => {
     const bookingStatus = leg === "pickup" ? intakeStatuses[method] : undefined;
     if (!bookingStatus) {
