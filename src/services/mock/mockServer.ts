@@ -958,7 +958,7 @@ export const mockServer = {
     syncAssigned(copy, real);
     // The valets post their trips to the API: the copy follows them, keeping the
     // times it already has
-    if (real.journey && copy.valet) {
+    if (real.journey && legMethod(copy, "pickup") !== "selfDrive") {
       copy.pickupProgress = journeyTripProgress(real.journey, "pickup", copy.pickupProgress);
     }
     if (real.journey && copy.deliveryValet) {

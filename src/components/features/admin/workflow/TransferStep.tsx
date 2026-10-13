@@ -3,7 +3,11 @@ import { Building, Car, Check, Truck, User } from "reicon-react";
 import { toast } from "sonner";
 import { cn } from "@/libs/utils";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { useConfirmLegDone, useSetLegMethod } from "@/services/queries/adminQueries";
+import {
+  useConfirmBooking,
+  useConfirmLegDone,
+  useSetLegMethod,
+} from "@/services/queries/adminQueries";
 import {
   LEG_METHODS,
   TRIP_END,
@@ -94,6 +98,8 @@ const legText: Record<
 export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
   const setMethod = useSetLegMethod();
   const confirmDone = useConfirmLegDone();
+  // A tow truck's intake is confirmed with the API, like a valet's
+  const confirmReceived = useConfirmBooking();
   // Picked in the row of choices, waiting for the admin to confirm
   const [picked, setPicked] = useState<IntakeMethod | null>(null);
   const closeConfirm = () => setPicked(null);
@@ -135,8 +141,13 @@ export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
     );
   };
 
-  const markDone = () =>
-    confirmDone.mutate({ id: booking.id, leg }, { onSuccess: () => toast.success(text.done) });
+  const viaApi = leg === "pickup" && method === "towTruck";
+  const confirming = viaApi ? confirmReceived.isPending : confirmDone.isPending;
+  const markDone = () => {
+    const onSuccess = () => toast.success(text.done);
+    if (viaApi) confirmReceived.mutate(booking.id, { onSuccess });
+    else confirmDone.mutate({ id: booking.id, leg }, { onSuccess });
+  };
 
   return (
     <div className="space-y-4">
@@ -214,7 +225,7 @@ export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
 
           <div className="mt-5 w-full max-w-xs">
             {!doneAt && (
-              <ActionButton pending={confirmDone.isPending} onClick={markDone}>
+              <ActionButton pending={confirming} onClick={markDone}>
                 {text.confirm}
               </ActionButton>
             )}

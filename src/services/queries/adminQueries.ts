@@ -144,12 +144,6 @@ function useBookingMutation<TVariables>(
 export const useConfirmBooking = () =>
   useBookingMutation((id: string) => adminApi.confirmBooking(id));
 
-export const useSetLegMethod = () =>
-  useBookingMutation(
-    ({ id, leg, method }: { id: string; leg: ValetLeg; method: IntakeMethod }) =>
-      adminApi.setLegMethod(id, leg, method),
-  );
-
 export const useConfirmLegDone = () =>
   useBookingMutation(({ id, leg }: { id: string; leg: ValetLeg }) =>
     adminApi.confirmLegDone(id, leg),
@@ -166,6 +160,12 @@ function useAssignMutation<TVariables>(mutationFn: (variables: TVariables) => Pr
     onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.bookings }),
   });
 }
+
+// Changing how the vehicle comes in is answered the same way
+export const useSetLegMethod = () =>
+  useAssignMutation(({ id, leg, method }: { id: string; leg: ValetLeg; method: IntakeMethod }) =>
+    adminApi.setLegMethod(id, leg, method),
+  );
 
 export const useAssignValet = () =>
   useAssignMutation(({ id, leg, valetId }: { id: string; leg: ValetLeg; valetId: string }) =>

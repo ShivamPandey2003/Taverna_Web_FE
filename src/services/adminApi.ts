@@ -47,6 +47,12 @@ const toStaffMember = (member: StaffResponse): StaffMember => ({
   activeBookings: member.activeBookings ?? 0,
 });
 
+// The status booking/admin/update puts a booking at for each way in
+const intakeStatuses: Partial<Record<IntakeMethod, string>> = {
+  valet: "VALET_ASSIGNED",
+  towTruck: "TOW_ASSIGNED",
+};
+
 const legPaths: Record<ValetLeg, string> = { pickup: "intake", delivery: "handover" };
 
 // GET booking/admin/list
@@ -318,13 +324,29 @@ export const adminApi = {
   },
 
   // How the vehicle gets to the dealership (pickup) or back to the customer
-  // (delivery). Changing it drops that trip's valet and their progress. The
-  // paths are a proposal: agree them with the backend.
-  setLegMethod: (id: string, leg: ValetLeg, method: IntakeMethod) =>
-    callApi(
-      () => mockServer.setLegMethod(id, leg, method),
-      () => request<AdminBooking>("put", `/admin/bookings/${id}/${legPaths[leg]}`, { method }),
-    ),
+  // (delivery). Real API for the intake by valet or tow truck: booking/admin/update
+  // puts the booking at that status, and the hook loads its details again (the
+  // mock's copy is told too, since it still remembers the choice). The other
+  // choices are still the mock's, on a proposed path.
+  setLegMethod: async (id: string, leg: ValetLeg, method: IntakeMethod): Promise<void> => {
+    const bookingStatus = leg === "pickup" ? intakeStatuses[method] : undefined;
+    if (!bookingStatus) {
+      await callApi(
+        () => mockServer.setLegMethod(id, leg, method),
+        () => request<AdminBooking>("put", `/admin/bookings/${id}/${legPaths[leg]}`, { method }),
+      );
+      return;
+    }
+
+    await request("post", "booking/admin/update", { bmsId: id, data: { bookingStatus } });
+    if (USE_MOCK_API) {
+      try {
+        mockServer.setLegMethod(id, leg, method);
+      } catch {
+        // The API has accepted the change; the copy catches up when it's loaded again
+      }
+    }
+  },
 
   // Without a valet: the vehicle is at the dealership / back with the customer
   confirmLegDone: (id: string, leg: ValetLeg) =>

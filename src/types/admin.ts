@@ -215,6 +215,10 @@ export function journeyTripProgress(
       progress[milestone] = known[milestone] ?? new Date().toISOString();
     }
   });
+  // A tow truck's intake has no trip: the vehicle is in once the admin confirms it
+  if (leg === "pickup" && !progress.reached && journeyReached(journey, INTAKE_CONFIRMED)) {
+    progress.reached = known.reached ?? new Date().toISOString();
+  }
   return progress;
 }
 

@@ -120,13 +120,14 @@ const tripDone = (booking: AdminBooking, leg: ValetLeg) => {
   const { valet, progress } = valetTrip(booking, leg);
   const method = legMethod(booking, leg);
   if (!method || (method === "valet" && !valet)) return false;
-  // A valet's trip is read off the API's journey. The pickup one isn't over until
-  // the admin confirms the vehicle was received.
-  if (method === "valet" && booking.journey) {
-    return journeyReached(
-      booking.journey,
-      leg === "pickup" ? INTAKE_CONFIRMED : HANDOVER_DELIVERED,
-    );
+  // Read off the API's journey. The intake, by valet or tow truck, isn't over
+  // until the admin confirms the vehicle was received; a valet's delivery is over
+  // once the vehicle is delivered.
+  if (booking.journey && leg === "pickup" && method !== "selfDrive") {
+    return journeyReached(booking.journey, INTAKE_CONFIRMED);
+  }
+  if (booking.journey && method === "valet") {
+    return journeyReached(booking.journey, HANDOVER_DELIVERED);
   }
   return !!progress[TRIP_END[leg]];
 };
