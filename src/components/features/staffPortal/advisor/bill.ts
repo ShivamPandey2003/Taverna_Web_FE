@@ -1,4 +1,4 @@
-import { INVOICE_TAX_RATE, type InvoiceLine } from "@/types/admin";
+import type { InvoiceLine } from "@/types/admin";
 
 // A bill row while the advisor is typing it; the price stays text until it's sent
 export interface BillLineDraft {
@@ -29,11 +29,8 @@ export function billItems(lines: BillLineDraft[]): InvoiceLine[] | null {
   return items.length ? items : null;
 }
 
-// Running totals as the advisor types (same sums the server does on sending)
-export function billTotals(lines: BillLineDraft[]) {
-  const subtotal = roundCents(
+// Running total as the advisor types: the sum of the prices, which is what's sent
+export const billTotal = (lines: BillLineDraft[]) =>
+  roundCents(
     lines.reduce((sum, line) => sum + (Number(line.amount) > 0 ? Number(line.amount) : 0), 0),
   );
-  const tax = roundCents(subtotal * INVOICE_TAX_RATE);
-  return { subtotal, tax, total: roundCents(subtotal + tax) };
-}

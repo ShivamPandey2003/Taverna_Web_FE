@@ -5,25 +5,21 @@ import { useStaffAuth } from "@/components/features/staffPortal/shared/useStaffA
 import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/libs/utils";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { useStaffBooking, useStaffTasks } from "@/services/queries/staffQueries";
+import { useStaffTasks } from "@/services/queries/staffQueries";
 
-// Who is signed in. An email + OTP sign-in says so itself; a link's is read off
-// what it's assigned to: the advisor's open booking, or on a task list the first
-// task. Shares the pages' queries, so it costs no extra request.
+// Who is signed in: the sign-in says so itself; one stored before it did is
+// read off the first task of the task list (the page's own query, so it costs
+// no extra request).
 function useStaffMember() {
-  const advisorMatch = useMatch("/advisor/:bookingId");
   const onAdvisorTasks = !!useMatch("/advisor");
   const onValetTasks = !!useMatch("/valet");
   const { auth } = useStaffAuth();
-  const none = { gear: "", token: "" };
-  const { data: booking } = useStaffBooking({ id: advisorMatch?.params.bookingId ?? "", ...auth });
   const { data: tasks } = useStaffTasks(
     onAdvisorTasks ? "advisor" : "valet",
-    onAdvisorTasks || onValetTasks ? auth : none,
+    onAdvisorTasks || onValetTasks ? auth : { gear: "", token: "" },
   );
 
   if (auth.name) return { name: auth.name, email: auth.email ?? "" };
-  if (booking) return booking.relationshipManager;
   return tasks?.find((task) => task.staff)?.staff ?? null;
 }
 

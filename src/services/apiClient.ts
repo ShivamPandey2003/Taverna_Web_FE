@@ -41,18 +41,8 @@ export async function request<T>(method: Method, url: string, data?: unknown): P
   return (body?.data ?? body?.response?.data ?? body?.response ?? body) as T;
 }
 
-// Staff page calls: answered by the same mock, or sent with the staff sign-in
-// (null for the sign-in calls themselves). Unlike callApi these never toast
-// (see staffApiRequest).
-export async function callStaffApi<T>(mock: () => T, real: () => Promise<T>): Promise<T> {
-  if (!USE_MOCK_API) {
-    return real();
-  }
-
-  await delay(MOCK_LATENCY_MS);
-  return structuredClone(mock());
-}
-
+// Staff page calls, sent with the staff sign-in (null for the sign-in calls
+// themselves). Unlike `request` these never toast (see staffApiRequest).
 export async function staffRequest<T>(
   auth: StaffAuth | null,
   method: Method,

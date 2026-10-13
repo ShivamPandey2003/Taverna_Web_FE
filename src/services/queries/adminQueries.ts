@@ -5,10 +5,15 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { adminApi, type StaffInput } from "@/services/adminApi";
-import { INTAKE_ARRIVED, INTAKE_JOURNEY, journeyReached } from "@/types/admin";
+import {
+  INTAKE_ARRIVED,
+  INTAKE_JOURNEY,
+  journeyReached,
+  SERVICE_JOURNEY,
+  SERVICE_PAID,
+} from "@/types/admin";
 import type {
   AdminBooking,
-  AdvisorMilestone,
   BookingListParams,
   StaffListParams,
   StaffRole,
@@ -39,15 +44,16 @@ export function useAdminBookings(params: BookingListParams) {
   });
 }
 
-const VALET_TRIP_REFRESH_MS = 15_000;
+const JOURNEY_REFRESH_MS = 15_000;
 
-// From the valet being assigned until they reach the dealership
-function valetOnTrip({ journey }: AdminBooking) {
-  return (
-    !!journey &&
-    journeyReached(journey, INTAKE_JOURNEY[0]) &&
-    !journeyReached(journey, INTAKE_ARRIVED)
-  );
+// Someone else is moving the booking on from their own page: the pickup valet
+// (from being assigned until they reach the dealership), or the advisor and then
+// the paying customer (from the advisor being assigned until the bill is paid)
+function othersTurn({ journey }: AdminBooking) {
+  if (!journey) return false;
+  const between = (from: string, to: string) =>
+    journeyReached(journey, from) && !journeyReached(journey, to);
+  return between(INTAKE_JOURNEY[0], INTAKE_ARRIVED) || between(SERVICE_JOURNEY[0], SERVICE_PAID);
 }
 
 export function useAdminBooking(id: string | null) {
@@ -55,10 +61,9 @@ export function useAdminBooking(id: string | null) {
     queryKey: adminKeys.booking(id ?? ""),
     queryFn: () => adminApi.getBooking(id!),
     enabled: !!id,
-    // The pickup valet moves the booking on from their own page: while their trip
-    // is under way the booking is loaded again every so often
+    // While it's someone else's turn the booking is loaded again every so often
     refetchInterval: (query) =>
-      query.state.data && valetOnTrip(query.state.data) ? VALET_TRIP_REFRESH_MS : false,
+      query.state.data && othersTurn(query.state.data) ? JOURNEY_REFRESH_MS : false,
   });
 }
 
@@ -168,11 +173,6 @@ export const useUpdateValetProgress = () =>
       adminApi.updateValetProgress(id, leg, milestone),
   );
 
-export const useUpdateAdvisorProgress = () =>
-  useBookingMutation(({ id, milestone }: { id: string; milestone: AdvisorMilestone }) =>
-    adminApi.updateAdvisorProgress(id, milestone),
-  );
-
 export const useAssignRelationshipManager = () =>
   useAssignMutation(({ id, managerId }: { id: string; managerId: string }) =>
     adminApi.assignRelationshipManager(id, managerId),
@@ -180,12 +180,6 @@ export const useAssignRelationshipManager = () =>
 
 export const useCompleteBooking = () =>
   useBookingMutation((id: string) => adminApi.completeBooking(id));
-
-export const useGenerateInvoice = () =>
-  useBookingMutation((id: string) => adminApi.generateInvoice(id));
-
-export const useConfirmPayment = () =>
-  useBookingMutation((id: string) => adminApi.confirmPayment(id));
 
 export function useAdminOffers(params: OfferListParams) {
   return useQuery({

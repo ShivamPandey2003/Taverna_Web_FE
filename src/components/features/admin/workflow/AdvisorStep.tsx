@@ -1,25 +1,15 @@
 import { toast } from "sonner";
+import { useAssignRelationshipManager, useConfirmBooking } from "@/services/queries/adminQueries";
 import {
-  useAssignRelationshipManager,
-  useConfirmPayment,
-  useGenerateInvoice,
-  useUpdateAdvisorProgress,
-} from "@/services/queries/adminQueries";
-import {
-  ADVISOR_HANDOVER,
-  ADVISOR_MILESTONES,
+  journeyReached,
+  SERVICE_INVOICED,
+  SERVICE_JOURNEY,
+  SERVICE_PAID,
+  SERVICE_READY,
   type AdminBooking,
-  type AdvisorMilestone,
   type Invoice,
 } from "@/types/admin";
-import {
-  advisorMilestoneLabels,
-  formatCurrency,
-  formatDateTime,
-  isComplete,
-  nextMilestone,
-  staffLink,
-} from "../admin.utils";
+import { formatCurrency, isComplete, staffLink } from "../admin.utils";
 import { MilestoneTracker, type Milestone } from "./MilestoneTracker";
 import { ActionButton, AssignmentRow, SectionCard, StepDone } from "./StepParts";
 
@@ -29,63 +19,40 @@ interface AdvisorStepProps {
 }
 
 // The advisor is the customer's contact while the vehicle is at the dealership:
-// assigned → inspecting → service in progress →
-// invoice generated → payment confirmed → ready to dispatch. Each update shows up on
-// the customer's tracking page; the delivery valet stays locked until the last one.
+// assigned → inspecting → service in progress → invoice generated → payment
+// confirmed → ready to dispatch. It's drawn from the API's journey
+// (`booking.journey`): the advisor posts their steps and the bill from their own
+// page, so the admin only watches those, and then makes the last two: confirming
+// the payment (unless the customer paid in the app) and marking the vehicle ready
+// to dispatch. The delivery valet stays locked until the last one.
 export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
   const assignAdvisor = useAssignRelationshipManager();
-  const updateProgress = useUpdateAdvisorProgress();
-  const generateInvoice = useGenerateInvoice();
-  const confirmPayment = useConfirmPayment();
+  // The API's one admin confirmation: it applies whichever the stage allows
+  const confirm = useConfirmBooking();
 
   const advisor = booking.relationshipManager;
-  const progress = booking.advisorProgress ?? {};
-  const { invoice, payment } = booking;
-  const paid = payment?.status === "paid";
-  const next = advisor ? nextMilestone(ADVISOR_MILESTONES, progress) : null;
-  const ready = !!progress[ADVISOR_HANDOVER];
+  const { journey, invoice } = booking;
+  const reached = (key: string) => !!journey && journeyReached(journey, key);
+  const paid = reached(SERVICE_PAID);
+  const ready = reached(SERVICE_READY);
+  const stepLabel = (key: string) => journey?.steps.find((step) => step.key === key)?.label;
 
-  const milestones: Milestone[] = [
-    {
-      key: "assigned",
-      label: "Advisor Assigned",
-      done: !!advisor,
-      at: booking.assignedAt?.advisor,
-    },
-    ...ADVISOR_MILESTONES.map((key) => ({
-      key,
-      label: advisorMilestoneLabels[key],
-      done: !!progress[key],
-      at: progress[key],
-    })),
-    { key: "invoice", label: "Invoice Generated", done: !!invoice, at: invoice?.issuedAt },
-    { key: "paid", label: "Payment Confirmed", done: paid, at: payment?.updatedAt },
-    {
-      key: ADVISOR_HANDOVER,
-      label: advisorMilestoneLabels[ADVISOR_HANDOVER],
-      done: ready,
-      at: progress[ADVISOR_HANDOVER],
-    },
-  ];
-
-  const mark = (milestone: AdvisorMilestone) =>
-    updateProgress.mutate(
-      { id: booking.id, milestone },
+  // The API only says when the current step was reached
+  const milestones: Milestone[] = SERVICE_JOURNEY.flatMap((key) => {
+    const label = stepLabel(key);
+    if (!label) return [];
+    return [
       {
-        onSuccess: () =>
-          toast.success(`${advisorMilestoneLabels[milestone]}: shared with the customer`),
+        key,
+        label,
+        done: reached(key),
+        at: key === journey?.current ? (journey.doneAt ?? undefined) : undefined,
       },
-    );
+    ];
+  });
 
-  const sendBill = () =>
-    generateInvoice.mutate(booking.id, {
-      onSuccess: () => toast.success(`Invoice sent to ${booking.customer.name}`),
-    });
-
-  const markPaid = () =>
-    confirmPayment.mutate(booking.id, {
-      onSuccess: () => toast.success(`Payment confirmed for ${booking.id}`),
-    });
+  const confirmStep = (message: string) =>
+    confirm.mutate(booking.id, { onSuccess: () => toast.success(message) });
 
   return (
     <div className="space-y-4">
@@ -122,7 +89,6 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
         <SectionCard>
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="text-sm font-bold text-gray-900">Service Progress</h3>
-            {/* <p className="text-xs text-gray-500">Each update is shared with the customer.</p> */}
           </div>
 
           <MilestoneTracker milestones={milestones} />
@@ -137,46 +103,30 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
         </p>
       )}
 
-      {next && (
-        <ActionButton pending={updateProgress.isPending} onClick={() => mark(next)}>
-          Share “{advisorMilestoneLabels[next]}”
-        </ActionButton>
-      )}
-
-      {advisor && !next && !invoice && (
-        <ActionButton
-          pending={generateInvoice.isPending}
-          pendingLabel="Sending..."
-          onClick={sendBill}
-        >
-          Generate & Send Invoice
-        </ActionButton>
-      )}
-
-      {invoice && !paid && (
+      {advisor && journey?.current === SERVICE_INVOICED && (
         <>
           <p className="text-xs text-gray-500">
             The customer can pay from their tracking page. Confirm here if they paid another way.
           </p>
           <ActionButton
-            pending={confirmPayment.isPending}
+            pending={confirm.isPending}
             pendingLabel="Confirming..."
-            onClick={markPaid}
+            onClick={() => confirmStep(`Payment confirmed for ${booking.id}`)}
           >
             Confirm Payment Received
           </ActionButton>
         </>
       )}
 
-      {paid && payment && !ready && (
+      {advisor && journey?.current === SERVICE_PAID && (
         <>
           <p className="text-xs text-gray-500">
-            {formatCurrency(payment.amount)} paid on {formatDateTime(payment.updatedAt)}. Mark
-            the vehicle ready once it's handed back to the dealership for delivery.
+            The bill is paid. Mark the vehicle ready once it's handed back to the dealership for
+            delivery.
           </p>
           <ActionButton
-            pending={updateProgress.isPending}
-            onClick={() => mark(ADVISOR_HANDOVER)}
+            pending={confirm.isPending}
+            onClick={() => confirmStep("Vehicle ready to dispatch")}
           >
             Mark “Vehicle Ready to Dispatch”
           </ActionButton>
@@ -185,7 +135,7 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
 
       {ready && (
         <StepDone
-          text={`Vehicle ready to dispatch since ${formatDateTime(progress[ADVISOR_HANDOVER] ?? null)}`}
+          text={stepLabel(SERVICE_READY) ?? "Ready to dispatch"}
           actionLabel={isComplete(booking) ? undefined : "Next: Assign Delivery Valet"}
           onAction={onDone}
         />
@@ -211,18 +161,23 @@ function BillSummary({ invoice, paid }: { invoice: Invoice; paid: boolean }) {
         </span>
       </div>
 
-      <ul className="mt-3 space-y-1.5 border-b border-gray-100 pb-3 text-sm">
-        {invoice.items.map((item) => (
-          <li key={item.label} className="flex justify-between gap-4">
-            <span className="text-gray-600">{item.label}</span>
-            <span className="font-medium text-gray-900">{formatCurrency(item.amount)}</span>
-          </li>
-        ))}
-        <li className="flex justify-between gap-4">
-          <span className="text-gray-600">Tax ({Math.round(invoice.taxRate * 100)}%)</span>
-          <span className="font-medium text-gray-900">{formatCurrency(invoice.tax)}</span>
-        </li>
-      </ul>
+      {(invoice.items.length > 0 || invoice.tax > 0) && (
+        <ul className="mt-3 space-y-1.5 border-b border-gray-100 pb-3 text-sm">
+          {/* Advisors type the labels, so two rows can share one */}
+          {invoice.items.map((item, index) => (
+            <li key={index} className="flex justify-between gap-4">
+              <span className="text-gray-600">{item.label}</span>
+              <span className="font-medium text-gray-900">{formatCurrency(item.amount)}</span>
+            </li>
+          ))}
+          {invoice.tax > 0 && (
+            <li className="flex justify-between gap-4">
+              <span className="text-gray-600">Tax ({Math.round(invoice.taxRate * 100)}%)</span>
+              <span className="font-medium text-gray-900">{formatCurrency(invoice.tax)}</span>
+            </li>
+          )}
+        </ul>
+      )}
 
       <div className="flex justify-between pt-3 text-sm font-bold text-gray-900">
         <span>Total</span>

@@ -197,6 +197,43 @@ export function journeyPickupProgress(
   return progress;
 }
 
+// The service on the journey, as the Service Details step shows it. The API
+// has more steps in between (inspection completed / approved, service completed);
+// they're left out.
+export const SERVICE_JOURNEY = [
+  "advisorAssigned",
+  "vehicleInInspection",
+  "vehicleInService",
+  "invoiceGenerated",
+  "paymentConfirmed",
+  "readyForDispatch",
+] as const;
+
+// The advisor's last step (the bill), then the admin's two that end the service
+export const SERVICE_INVOICED = "invoiceGenerated";
+export const SERVICE_PAID = "paymentConfirmed";
+export const SERVICE_READY = "readyForDispatch";
+
+const SERVICE_JOURNEY_STEPS: Record<AdvisorMilestone, string> = {
+  inspecting: "vehicleInInspection",
+  inService: "vehicleInService",
+  readyForDispatch: SERVICE_READY,
+};
+
+// The advisor's milestone log as the journey has it (see journeyPickupProgress)
+export function journeyAdvisorProgress(
+  journey: BookingJourney,
+  known: MilestoneLog<AdvisorMilestone> = {},
+): MilestoneLog<AdvisorMilestone> {
+  const progress: MilestoneLog<AdvisorMilestone> = {};
+  (Object.keys(SERVICE_JOURNEY_STEPS) as AdvisorMilestone[]).forEach((milestone) => {
+    if (journeyReached(journey, SERVICE_JOURNEY_STEPS[milestone])) {
+      progress[milestone] = known[milestone] ?? new Date().toISOString();
+    }
+  });
+  return progress;
+}
+
 // A booking as the admin API returns it
 export interface AdminBooking {
   id: string;
@@ -255,13 +292,36 @@ export interface AdminBooking {
   staffTokens?: Partial<Record<StaffLinkRole, StaffAuth>>;
 }
 
-// A booking as the staff link endpoints return it
-export interface StaffBooking extends AdminBooking {
-  // The pages of this booking the signed-in staff member may use; a valet can't
-  // open the advisor's page, nor the pickup valet the delivery trip
-  linkRoles?: StaffLinkRole[];
-  // The valet's directions fall back to the dealership's name without it
-  dealershipAddress?: string;
+// A step of a staff page's progress timeline, with when it was done (text ready
+// to show)
+export interface StaffStep {
+  key: string;
+  label: string;
+  done: boolean;
+  at?: string;
+}
+
+// The update a staff member can make now
+export interface StaffNextAction {
+  status: string;
+  label: string;
+}
+
+// A booking's service as its advisor sees it, from staff/advisor/bookings/:bmsId
+export interface AdvisorServiceDetails {
+  id: string;
+  vehicle: { name: string; vin: string };
+  customer: { name: string; phone: string };
+  // "Oct 9, 2026, 7:56 AM"
+  bookingDate: string;
+  // The API's label for the booking's status
+  status: string;
+  steps: StaffStep[];
+  // null when it isn't the advisor's turn, or the bill is what's next
+  nextAction: StaffNextAction | null;
+  // The service is at the point where the advisor sends the bill
+  canGenerateInvoice: boolean;
+  invoice: { items: InvoiceLine[]; total: number; generatedAt?: string } | null;
 }
 
 // One trip of a booking as its valet sees it, from staff/valet/bookings/:bmsId.
@@ -279,10 +339,10 @@ export interface ValetTripDetails {
   // Where the trip starts and ends; the customer's stop carries their number
   from: { label: string; address: string; phone?: string };
   to: { label: string; address: string; phone?: string };
-  // The trip's steps in order, each with when it was done
-  steps: { key: string; label: string; done: boolean; at?: string }[];
-  // The update the valet can make now; null when it isn't their turn
-  nextAction: { status: string; label: string } | null;
+  // The trip's steps in order
+  steps: StaffStep[];
+  // null when it isn't the valet's turn
+  nextAction: StaffNextAction | null;
 }
 
 // A row of the admin bookings table, from booking/admin/list. The API sends the

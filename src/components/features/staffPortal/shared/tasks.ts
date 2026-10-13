@@ -1,11 +1,4 @@
-import { isComplete, valetTrip } from "@/components/features/admin/admin.utils";
-import { vehicleName } from "@/libs/utils";
-import {
-  TRIP_END,
-  type StaffBooking,
-  type StaffLinkRole,
-  type StaffMember,
-} from "@/types/admin";
+import type { StaffLinkRole, StaffMember } from "@/types/admin";
 
 export type TaskState = "todo" | "active" | "done";
 
@@ -41,18 +34,6 @@ export const taskStateLabels: Record<TaskState, string> = {
 export const taskPath = (role: StaffLinkRole, bookingId: string) =>
   role === "advisor" ? `/advisor/${bookingId}` : `/valet/${role}/${bookingId}`;
 
-function taskState(booking: StaffBooking, role: StaffLinkRole): TaskState {
-  if (isComplete(booking)) return "done";
-  if (role === "advisor") {
-    // The advisor's part ends with the invoice (see AdvisorUpdate)
-    if (booking.invoice) return "done";
-    return booking.advisorProgress?.inspecting ? "active" : "todo";
-  }
-  const { progress } = valetTrip(booking, role);
-  if (progress[TRIP_END[role]]) return "done";
-  return progress.dispatched ? "active" : "todo";
-}
-
 // Tasks per page of the task list
 export const TASKS_PAGE_SIZE = 8;
 
@@ -72,27 +53,3 @@ export const sortTasks = (tasks: StaffTask[]) =>
   [...tasks].sort(
     (first, second) => stateOrder.indexOf(first.state) - stateOrder.indexOf(second.state),
   );
-
-// A task per page the staff member may use on each booking (`linkRoles`)
-export function staffTasks(bookings: StaffBooking[]): StaffTask[] {
-  return sortTasks(
-    bookings.flatMap((booking) =>
-      (booking.linkRoles ?? []).map((role) => {
-        const state = taskState(booking, role);
-        return {
-          key: `${booking.id}-${role}`,
-          bookingId: booking.id,
-          role,
-          client: booking.customer.name,
-          vehicle: vehicleName(booking.vehicle),
-          state,
-          status: taskStateLabels[state],
-          path: taskPath(role, booking.id),
-          staff:
-            (role === "advisor" ? booking.relationshipManager : valetTrip(booking, role).valet) ??
-            null,
-        };
-      }),
-    ),
-  );
-}

@@ -3,6 +3,7 @@ import {
   defaultLegMethod,
   INTAKE_CONFIRMED,
   journeyReached,
+  SERVICE_READY,
   TRIP_END,
   type AdminBooking,
   type AdvisorMilestone,
@@ -148,7 +149,10 @@ export function isStepDone(booking: AdminBooking, step: WorkflowStep) {
       return tripDone(booking, "pickup");
     case "advisor":
       // The advisor's part ends with the paid-up vehicle ready for the delivery valet
-      return !!booking.relationshipManager && !!booking.advisorProgress?.readyForDispatch;
+      if (!booking.relationshipManager) return false;
+      return booking.journey
+        ? journeyReached(booking.journey, SERVICE_READY)
+        : !!booking.advisorProgress?.readyForDispatch;
     case "delivery":
       return tripDone(booking, "delivery");
     case "complete":

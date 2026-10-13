@@ -14,9 +14,11 @@ import {
   type AdvisorMilestone,
   type Invoice,
   type InvoiceLine,
+  journeyAdvisorProgress,
   journeyPickupProgress,
+  journeyReached,
+  SERVICE_PAID,
   type StaffAuth,
-  type StaffBooking,
   type StaffLinkRole,
   type StaffMember,
   type StaffRole,
@@ -25,11 +27,9 @@ import {
   type ValetLeg,
   type ValetMilestone,
 } from "@/types/admin";
-import type { Dealership } from "@/types/dealership";
 import type { ServiceId } from "@/types/service";
 import { authStorage } from "@/services/authStorage";
 import { shortName } from "@/libs/utils";
-import { dealerships as seedDealerships } from "@/components/features/review/dealership.data";
 
 // In-browser stand-in for the parts of the backend that aren't wired up yet. Data is
 // kept in localStorage so bookings placed from the user dashboard show up in the
@@ -41,7 +41,6 @@ type MockDb = {
   bookings: AdminBooking[];
   valets: StaffMember[];
   relationshipManagers: StaffMember[];
-  dealerships: Dealership[];
   offers: Offer[];
 };
 
@@ -279,7 +278,6 @@ function loadDb(): MockDb {
     bookings: seedBookings(),
     valets,
     relationshipManagers,
-    dealerships: seedDealerships,
     offers: seedOffers(),
   };
 
@@ -409,9 +407,6 @@ function findBooking(id: string) {
   return booking;
 }
 
-const STAFF_TYPES: StaffType[] = ["valet", "advisor"];
-const STAFF_LINK_ROLES: StaffLinkRole[] = ["pickup", "advisor", "delivery"];
-
 const linkRoleType = (role: StaffLinkRole): StaffType => (role === "advisor" ? "advisor" : "valet");
 
 // Stand-in for the encrypted staff type (the `token` search param); the real API
@@ -426,79 +421,6 @@ function mockStaffTokens(bookingId: string): Record<StaffLinkRole, StaffAuth> {
     token: mockStaffTypeToken(linkRoleType(role)),
   });
   return { pickup: auth("pickup"), advisor: auth("advisor"), delivery: auth("delivery") };
-}
-
-// The staff type a sign-in is for: a link carries it encrypted, the email + OTP
-// sign-in (the real API's) as plain text
-function staffTypeOf(auth: StaffAuth) {
-  const type = STAFF_TYPES.find(
-    (item) => item === auth.token || mockStaffTypeToken(item) === auth.token,
-  );
-  if (!type) throw new Error("This link isn't valid. Sign in again to continue.");
-  return type;
-}
-
-// The pages of a booking the caller may use. A link's `gear` is good for that
-// one page of that booking. Someone who signed in with the real API has a token
-// the mock can't read, so they are matched by email to whoever is assigned.
-function staffRoles(auth: StaffAuth, booking: AdminBooking) {
-  const type = staffTypeOf(auth);
-  const ofType = STAFF_LINK_ROLES.filter((role) => linkRoleType(role) === type);
-  const email = auth.email?.trim().toLowerCase();
-  if (!email) return ofType.filter((role) => booking.staffTokens?.[role]?.gear === auth.gear);
-
-  const assigned: Record<StaffLinkRole, StaffMember | null | undefined> = {
-    pickup: booking.valet,
-    advisor: booking.relationshipManager,
-    delivery: booking.deliveryValet,
-  };
-  return ofType.filter((role) => assigned[role]?.email.toLowerCase() === email);
-}
-
-// The booking a staff page opens, and which of its pages the caller may use
-function findStaffBooking(auth: StaffAuth, id: string) {
-  const booking = findBooking(id);
-  const roles = staffRoles(auth, booking);
-  if (!roles.length) {
-    throw new Error(
-      auth.email
-        ? "You're not assigned to this booking."
-        : "Your sign-in has expired. Sign in again to continue.",
-    );
-  }
-  return { booking, roles };
-}
-
-// Every booking the caller has a task on, with the pages of it they may use: a
-// signed-in member gets all they're assigned to, a link's token just its booking
-function findStaffBookings(auth: StaffAuth) {
-  const found = db.bookings.flatMap((booking) => {
-    const roles = staffRoles(auth, booking);
-    return roles.length ? [{ booking, roles }] : [];
-  });
-
-  if (!auth.email && !found.length) {
-    throw new Error("Your sign-in has expired. Sign in again to continue.");
-  }
-  return found;
-}
-
-function assertStaffRole(roles: StaffLinkRole[], expected: StaffLinkRole) {
-  if (!roles.includes(expected)) {
-    throw new Error("You can't make that update on this booking.");
-  }
-}
-
-// What staff get back: the booking with the dealership's address for directions,
-// and without the links' tokens
-function staffView(booking: AdminBooking, linkRoles: StaffLinkRole[]): StaffBooking {
-  return {
-    ...booking,
-    linkRoles,
-    staffTokens: undefined,
-    dealershipAddress: db.dealerships.find((item) => item.name === booking.dealershipName)
-      ?.address,
-  };
 }
 
 // A booking the logged-in customer owns (admins can open any)
@@ -1039,6 +961,21 @@ export const mockServer = {
     if (real.journey && copy.valet) {
       copy.pickupProgress = journeyPickupProgress(real.journey, copy.pickupProgress);
     }
+    // So do the service, the bill and the payment, which the handover (still
+    // answered here) waits for
+    if (real.journey && copy.relationshipManager) {
+      copy.advisorProgress = journeyAdvisorProgress(real.journey, copy.advisorProgress);
+      copy.invoice = real.invoice ?? null;
+      if (journeyReached(real.journey, SERVICE_PAID) && copy.payment?.status !== "paid") {
+        copy.payment = {
+          amount: real.invoice?.total ?? 0,
+          method: "card",
+          status: "paid",
+          transactionId: `API-${real.id}`,
+          updatedAt: clock(),
+        };
+      }
+    }
     persist();
     return copy;
   },
@@ -1069,32 +1006,6 @@ export const mockServer = {
   },
 
   // Service updates the advisor shares with the customer
-  updateAdvisorProgress(id: string, milestone: AdvisorMilestone) {
-    requireAdmin();
-    const booking = findBooking(id);
-    markAdvisorMilestone(booking, milestone);
-    persist();
-    return booking;
-  },
-
-  // Sends the customer the standard bill; the admin never enters an amount
-  generateInvoice(id: string) {
-    requireAdmin();
-    const booking = findBooking(id);
-    generateBill(booking);
-    persist();
-    return booking;
-  },
-
-  // The admin only confirms that the customer paid the bill
-  confirmPayment(id: string) {
-    requireAdmin();
-    const booking = findBooking(id);
-    markPaid(booking);
-    persist();
-    return booking;
-  },
-
   completeBooking(id: string) {
     requireAdmin();
     const booking = findBooking(id);
@@ -1187,43 +1098,6 @@ export const mockServer = {
     db.offers = rows.slice(0, MOCK_OFFERS_LIMIT).map(toOffer);
     persist();
     return { imported: rows.length };
-  },
-
-  // ---- Staff pages (valet / advisor; signed in by the link's search params or
-  // by the real API's email + OTP, never by the app's session) ----
-  listStaffBookings(auth: StaffAuth) {
-    return findStaffBookings(auth).map(({ booking, roles }) => staffView(booking, roles));
-  },
-
-  getStaffBooking(auth: StaffAuth, id: string) {
-    const { booking, roles } = findStaffBooking(auth, id);
-    return staffView(booking, roles);
-  },
-
-  staffUpdateAdvisorProgress(auth: StaffAuth, id: string, milestone: AdvisorMilestone) {
-    const { booking, roles } = findStaffBooking(auth, id);
-    assertStaffRole(roles, "advisor");
-    markAdvisorMilestone(booking, milestone);
-    persist();
-    return staffView(booking, roles);
-  },
-
-  // The advisor types the bill's rows; tax and totals are added here
-  staffGenerateInvoice(auth: StaffAuth, id: string, items: InvoiceLine[]) {
-    const { booking, roles } = findStaffBooking(auth, id);
-    assertStaffRole(roles, "advisor");
-    generateBill(booking, items);
-    persist();
-    return staffView(booking, roles);
-  },
-
-  // The advisor has checked that the customer paid another way
-  staffConfirmPayment(auth: StaffAuth, id: string) {
-    const { booking, roles } = findStaffBooking(auth, id);
-    assertStaffRole(roles, "advisor");
-    markPaid(booking);
-    persist();
-    return staffView(booking, roles);
   },
 
   // ---- Staff (valets and advisors) ----

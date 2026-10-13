@@ -2,11 +2,10 @@ import { USE_MOCK_API, callApi, request, toQueryString } from "./apiClient";
 import { mockServer } from "./mock/mockServer";
 import { BookingStatus } from "@/types/booking";
 import type { ServiceId } from "@/types/service";
-import { journeyPickupProgress } from "@/types/admin";
+import { journeyAdvisorProgress, journeyPickupProgress } from "@/types/admin";
 import type {
   AdminBooking,
   AdminBookingRow,
-  AdvisorMilestone,
   BookingJourney,
   BookingListParams,
   IntakeMethod,
@@ -85,9 +84,8 @@ const toBookingStatus = (code: string) =>
   Object.values(BookingStatus).find((status) => statusLetters(status) === statusLetters(code)) ??
   null;
 
-// GET booking/admin/:bmsId/details. The invoice fields (`invoiceTotal`,
-// `invoiceItems`, …) and the staff links (`pickupValetLink`, …) are not read yet:
-// they have only been seen empty.
+// GET booking/admin/:bmsId/details. The staff links (`pickupValetLink`, …) are
+// not read yet: they have only been seen empty.
 interface BookingDetailsResponse {
   bmsId: string;
   bookingStatus: string;
@@ -115,6 +113,28 @@ interface BookingDetailsResponse {
   bookingDate: string;
   confirmedAt: string | null;
   serviceDescription: string | null;
+  // The advisor's bill, once sent. Only seen empty: the items are taken to be
+  // what the advisor sent, `{ description, amount }`.
+  invoiceTotal?: string | number | null;
+  invoiceItems?: { description?: string; amount?: string | number }[] | null;
+  invoiceGeneratedAt?: string | null;
+}
+
+// The API's bill has no tax: the total is the sum of its items
+function toInvoice(details: BookingDetailsResponse): AdminBooking["invoice"] {
+  if (details.invoiceTotal == null) return null;
+  const total = Number(details.invoiceTotal) || 0;
+  return {
+    issuedAt: details.invoiceGeneratedAt ?? "",
+    items: (details.invoiceItems ?? []).map((item) => ({
+      label: item.description ?? "",
+      amount: Number(item.amount) || 0,
+    })),
+    subtotal: total,
+    taxRate: 0,
+    tax: 0,
+    total,
+  };
 }
 
 // The API sends no staff ids here, so the email stands in for one
@@ -159,6 +179,7 @@ function toAdminBooking(details: BookingDetailsResponse): AdminBooking {
       details.deliveryValetEmail,
     ),
     payment: null,
+    invoice: toInvoice(details),
   };
 }
 
@@ -264,8 +285,8 @@ export const adminApi = {
   },
 
   // Real API: the booking's details and where it is on its journey, which the
-  // pickup trip's progress is read from. The later workflow steps are still the
-  // mock's, so while the mock is on it keeps a copy of the booking and the answer
+  // pickup trip's and the service's progress are read from. The handover and
+  // completing are still the mock's, so while the mock is on it keeps a copy of the booking and the answer
   // carries that copy's progress for them.
   getBooking: async (id: string): Promise<AdminBooking> => {
     const [details, { journey, status }] = await Promise.all([
@@ -274,15 +295,22 @@ export const adminApi = {
     ]);
     const booking: AdminBooking = { ...toAdminBooking(details), journey };
     booking.pickupProgress = journeyPickupProgress(journey);
+    booking.advisorProgress = journeyAdvisorProgress(journey);
     if (!USE_MOCK_API) return booking;
 
     const copy = structuredClone(mockServer.syncBooking(booking));
     // The copy's status only moves with the mock's own steps
-    return { ...copy, journey, status: toBookingStatus(status) ?? copy.status };
+    return {
+      ...copy,
+      journey,
+      status: toBookingStatus(status) ?? copy.status,
+      invoice: booking.invoice,
+    };
   },
 
   // Real API: the admin confirmation the booking's stage allows (the new
-  // booking, then the vehicle received at the dealership). Its answer is only a
+  // booking, the vehicle received at the dealership, the payment, the vehicle
+  // ready to dispatch). Its answer is only a
   // summary of the new status, so the booking is loaded again for the drawer.
   confirmBooking: async (id: string) => {
     await request("post", `booking/admin/${id}/confirm`);
@@ -328,30 +356,6 @@ export const adminApi = {
   // The advisor, assigned with the real API like the valets
   assignRelationshipManager: (id: string, managerId: string) =>
     assignStaff(id, "advisorId", managerId),
-
-  // Service updates the advisor shares with the customer (in order)
-  updateAdvisorProgress: (id: string, milestone: AdvisorMilestone) =>
-    callApi(
-      () => mockServer.updateAdvisorProgress(id, milestone),
-      () =>
-        request<AdminBooking>("put", `/admin/bookings/${id}/relationship-manager/progress`, {
-          milestone,
-        }),
-    ),
-
-  // Sends the customer the bill; the server works out the amount
-  generateInvoice: (id: string) =>
-    callApi(
-      () => mockServer.generateInvoice(id),
-      () => request<AdminBooking>("post", `/admin/bookings/${id}/invoice`),
-    ),
-
-  // Marks the bill as paid by the customer
-  confirmPayment: (id: string) =>
-    callApi(
-      () => mockServer.confirmPayment(id),
-      () => request<AdminBooking>("put", `/admin/bookings/${id}/payment/confirm`),
-    ),
 
   completeBooking: (id: string) =>
     callApi(
