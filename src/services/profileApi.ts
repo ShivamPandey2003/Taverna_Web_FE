@@ -1,5 +1,5 @@
 import { request } from "./apiClient";
-import type { Profile, ProfileInput } from "@/types/profile";
+import type { NotificationPreferences, Profile, ProfileInput } from "@/types/profile";
 
 // GET and PUT user/profile answer with the same shape
 interface ProfileResponse {
@@ -7,7 +7,7 @@ interface ProfileResponse {
   lastName: string | null;
   email: string;
   phone: string | null;
-  // Has its own endpoint (user/notification-preferences); not used here
+  // Has its own endpoint (user/notification-preferences), which the app uses
   notificationPreferences?: {
     smsEnabled: boolean;
     pushEnabled: boolean;
@@ -33,4 +33,11 @@ export const profileApi = {
 
   update: async (input: ProfileInput) =>
     toProfile(await request<ProfileResponse>("put", "user/profile", input)),
+
+  // GET and PUT answer with the same three flags; PUT takes all three
+  getNotificationPreferences: () =>
+    request<NotificationPreferences>("get", "user/notification-preferences"),
+
+  updateNotificationPreferences: (preferences: NotificationPreferences) =>
+    request<NotificationPreferences>("put", "user/notification-preferences", preferences),
 };

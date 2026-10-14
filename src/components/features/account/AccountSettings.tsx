@@ -7,7 +7,8 @@ import {
   type AccountSection,
 } from '@/redux/account/accountSlice';
 
-const settings: { id: AccountSection; label: string; icon: typeof Bell }[] = [
+// `disabled`: not built yet, shown greyed out and can't be opened
+const settings: { id: AccountSection; label: string; icon: typeof Bell; disabled?: boolean }[] = [
   {
     id: "notifications",
     label: "Notifications",
@@ -22,11 +23,13 @@ const settings: { id: AccountSection; label: string; icon: typeof Bell }[] = [
     id: "privacy",
     label: "Privacy & Security",
     icon: Shield2,
+    disabled: true,
   },
   {
     id: "support",
     label: "Help & Support",
     icon: HelpCircle,
+    disabled: true,
   },
 ];
 
@@ -55,7 +58,9 @@ export function AccountSettings() {
               onClick={() =>
                 handleSettingClick(setting.id)
               }
-              className={cn("flex h-11 w-full items-center cursor-pointer gap-4 rounded-lg px-2 text-left transition hover:bg-gray-50", selectedRoute ===setting.id && "bg-black hover:bg-black/90")}
+              disabled={setting.disabled}
+              title={setting.disabled ? "Coming soon" : undefined}
+              className={cn("flex h-11 w-full items-center cursor-pointer gap-4 rounded-lg px-2 text-left transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent", selectedRoute ===setting.id && "bg-black hover:bg-black/90")}
             >
               <Icon
                 size={19}

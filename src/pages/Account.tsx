@@ -1,6 +1,7 @@
 import { ProfileSummary } from "@/components/features/account/ProfileSummary";
 import { AccountSettings } from "@/components/features/account/AccountSettings";
 import { EditProfile } from "@/components/features/account/EditProfile";
+import { NotificationSettings } from "@/components/features/account/NotificationSettings";
 
 import { AccountAddresses } from "@/components/features/addresses/AccountAddresses";
 import { AddAddressModal } from "@/components/features/addresses/AddAddressModal";
@@ -61,6 +62,9 @@ const Content = () => {
     }
     case "addresses": {
       return <AccountAddresses />
+    }
+    case "notifications": {
+      return <NotificationSettings />
     }
     default:
       return null;
