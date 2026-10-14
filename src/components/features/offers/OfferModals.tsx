@@ -67,7 +67,9 @@ export function OfferDetailsModal() {
   );
 }
 
-function OfferDetails({ offer }: { offer: Offer }) {
+// Every field of an offer, with its description and disclaimer. Also the
+// customer's Specials page details.
+export function OfferDetails({ offer }: { offer: Offer }) {
   const rows: { label: string; value: string }[] = [
     { label: "Condition", value: offer.condition },
     { label: "Offer type", value: offer.offerType },

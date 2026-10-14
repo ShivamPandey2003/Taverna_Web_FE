@@ -1,6 +1,7 @@
 import { USE_MOCK_API, callApi, request, toQueryString } from "./apiClient";
 import { toast } from "sonner";
 import { mockServer } from "./mock/mockServer";
+import { toOfferPage, type OfferPagination, type OfferResponse } from "./offerApi";
 import { BookingStatus } from "@/types/booking";
 import type { ServiceId } from "@/types/service";
 import { journeyAdvisorProgress, journeyTripProgress } from "@/types/admin";
@@ -32,60 +33,10 @@ const staffTypes: Record<StaffRole, string> = {
 // The longest search offers/list takes
 export const OFFER_SEARCH_MAX = 200;
 
-// A row of GET offers/list
-interface OfferResponse {
-  vehicleOfferId: string;
-  vin: string;
-  stockNumber: string;
-  condition: string;
-  year: number;
-  brandName: string;
-  model: string;
-  trim: string;
-  offerType: string;
-  lender: string;
-  payment: number;
-  paymentNoTax: number;
-  termMonths: number;
-  apr: number;
-  downPayment: number;
-  dueAtSigning: number;
-  totalRebate: number;
-  description: string | null;
-  disclaimer: string | null;
-  vehicleName: string | null;
-}
-
+// GET offers/list (rows mapped by toOffer, shared with the customer's offers)
 interface OfferListResponse {
   records: OfferResponse[];
-  pagination: { page: number; pageSize: number; totalItems: number; totalPages: number };
-}
-
-function toOffer(offer: OfferResponse): Offer {
-  return {
-    id: offer.vehicleOfferId,
-    vin: offer.vin,
-    stockNumber: offer.stockNumber,
-    brand: offer.brandName,
-    year: offer.year,
-    model: offer.model,
-    trim: offer.trim,
-    vehicleName:
-      offer.vehicleName ||
-      [offer.year, offer.brandName, offer.model, offer.trim].filter(Boolean).join(" "),
-    condition: offer.condition,
-    offerType: offer.offerType,
-    payment: offer.payment,
-    paymentNoTax: offer.paymentNoTax,
-    totalRebate: offer.totalRebate,
-    term: offer.termMonths,
-    downPayment: offer.downPayment,
-    dueAtSigning: offer.dueAtSigning,
-    apr: offer.apr,
-    lender: offer.lender,
-    description: offer.description ?? "",
-    disclaimer: offer.disclaimer ?? "",
-  };
+  pagination: OfferPagination;
 }
 
 // Bulk upload (presigned S3 URL)
@@ -525,13 +476,7 @@ export const adminApi = {
       `offers/list${query}`,
     );
 
-    return {
-      items: records.map(toOffer),
-      total: pagination.totalItems,
-      page: pagination.page,
-      pageSize: pagination.pageSize,
-      totalPages: pagination.totalPages,
-    };
+    return toOfferPage(records, pagination);
   },
 
   // Real API: saves every field of one offer, in the API's names. It answers

@@ -33,6 +33,16 @@ export interface Offer {
 // and the name the API builds from year, brand, model and trim
 export type OfferInput = Omit<Offer, "id" | "vehicleName">;
 
+// What the customer's offers (GET offers) are asked for: a model they own
+// (both empty for every offer) and a kind of deal ("all" for any)
+export interface CustomerOfferParams {
+  page: number;
+  pageSize: number;
+  brandName: string;
+  model: string;
+  offerType: string;
+}
+
 // What offers/list is asked for; "all" sends no filter. The API has no sorting.
 export interface OfferListParams {
   page: number;
