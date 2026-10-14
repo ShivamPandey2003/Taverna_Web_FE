@@ -41,7 +41,7 @@ interface VehicleResponse {
 }
 
 // 45230 -> "45,230 mi". The API stores 0 for a vehicle whose mileage was never given.
-const formatMiles = (mileage: number | null) =>
+export const formatMiles =(mileage: number | null) =>
   mileage ? `${mileage.toLocaleString("en-US")} mi` : null;
 
 function toVehicle(vehicle: VehicleResponse): Vehicle {

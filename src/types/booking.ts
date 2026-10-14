@@ -40,7 +40,8 @@ export interface Booking {
   status: BookingStatus;
 }
 
-// Where a booking stands for its customer, from the API's service-status
+// Where a booking stands for its customer, from the API's
+// booking/customer/:bmsId/status-summary
 export interface ServiceStatus {
   id: string;
   // The API's status code, e.g. "VALET_DISPATCHED"
@@ -48,12 +49,45 @@ export interface ServiceStatus {
   // The stage it belongs to, for the colour and icon; null for a code the app
   // doesn't know
   status: BookingStatus | null;
-  // The current status by name ("Advisor Assigned") and the API's line about it
-  // ("Your vehicle reached the dealership")
+  // The current status by name ("Advisor Assigned")
   label: string;
-  heading: string;
-  // The customer's contact at the dealership, once assigned
-  advisor: { name: string; phone: string; email: string } | null;
+  // When it got there, as text ready to show ("Oct 13, 2026, 7:54 AM")
+  doneAt: string | null;
+  // The status before it, e.g. "VEHICLE_AT_DEALERSHIP_CONFIRMED"
+  previousStatus: string | null;
+}
+
+// One booking as its customer sees it, from booking/customer/:bmsId/details.
+// Dates arrive as text ready to show.
+export interface CustomerBookingDetails {
+  id: string;
+  dealershipName: string;
+  // "2026 RAM 1500", and the same split up
+  vehicle: string;
+  vehicleYear: number;
+  vehicleMake: string;
+  vehicleModel: string;
+  vin: string;
+  maskedVin: string;
+  // "45,230 mi", or null when not set
+  miles: string | null;
+  // "Pickup & Delivery"
+  service: string;
+  // "Oct 12, 2026, 12:30 PM"
+  scheduled: string;
+  bookingDate: string;
+  code: string;
+  isDriveable: boolean;
+  towRequested: boolean;
+  pickupAddress: string;
+  customerName: string;
+  customerPhone: string;
+  invoice: {
+    total: number;
+    currency: string;
+    items: { description: string; amount: number }[];
+    generatedAt: string | null;
+  } | null;
 }
 
 // One of the customer's bookings as booking/list has it: enough for the status

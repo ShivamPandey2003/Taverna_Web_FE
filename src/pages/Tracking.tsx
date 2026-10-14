@@ -1,5 +1,4 @@
 import { useNavigate, useParams } from "react-router";
-import { StaffContactCard } from "@/components/features/tracking/StaffContactCard";
 import { TrackingMap } from "@/components/features/tracking/TrackingMap";
 import { TrackingHeader } from "@/components/features/tracking/TrackingHeader";
 import { BookingActions } from "@/components/features/tracking/BookingActions";
@@ -11,8 +10,12 @@ import {
   useActiveServices,
 } from "@/components/features/tracking/serviceStatus";
 import { formatPickupTime } from "@/libs/utils";
-import { useServiceStatus } from "@/services/queries/bookingQueries";
+import {
+  useCustomerBookingDetails,
+  useServiceStatus,
+} from "@/services/queries/bookingQueries";
 import { BookingStatus as Status } from "@/types/booking";
+import type { Vehicle } from "@/types/vehicle";
 
 export function ServiceTracking() {
   const navigate = useNavigate();
@@ -22,6 +25,8 @@ export function ServiceTracking() {
   // Where it stands, from the API and kept fresh while the page is open; the
   // Redux snapshot covers the first render and API failures
   const { data: live } = useServiceStatus(booking?.id ?? null);
+  // What was booked, loaded again when the status moves on
+  const { data: details } = useCustomerBookingDetails(booking?.id ?? null, live?.code);
 
   if (!booking) {
     return (
@@ -45,9 +50,24 @@ export function ServiceTracking() {
     );
   }
 
-  const subtitle = booking.scheduledAt
-    ? `Pickup scheduled for ${formatPickupTime(booking.scheduledAt)}`
-    : `Booked ${formatPickupTime(booking.createdAt)}`;
+  // The API's details replace the snapshot's once loaded; the photo is only the
+  // saved vehicle's
+  const vehicle: Vehicle = details
+    ? {
+        ...booking.vehicle,
+        year: details.vehicleYear,
+        brand: details.vehicleMake,
+        model: details.vehicleModel,
+        vin: details.vin,
+        miles: details.miles,
+      }
+    : booking.vehicle;
+
+  const subtitle = details?.scheduled
+    ? `Pickup scheduled for ${details.scheduled}`
+    : booking.scheduledAt
+      ? `Pickup scheduled for ${formatPickupTime(booking.scheduledAt)}`
+      : `Booked ${formatPickupTime(booking.createdAt)}`;
 
   const status = live?.status ?? booking.status;
   const display = getStatusDisplay(status, live);
@@ -58,8 +78,8 @@ export function ServiceTracking() {
       <div className="mx-auto max-w-[1200px] space-y-6">
         {/* Vehicle and live status together */}
         <TrackingHeader
-          vehicle={booking.vehicle}
-          dealership={booking.dealership.name}
+          vehicle={vehicle}
+          dealership={details?.dealershipName ?? booking.dealership.name}
           title={display.message}
           subtitle={subtitle}
           status={status}
@@ -70,14 +90,13 @@ export function ServiceTracking() {
         {/* Before anyone is assigned: what was booked */}
         {stage === "details" && (
           <>
-            <BookingDetailsCard booking={booking} />
-            <BookingActions booking={booking} canCancel={status === Status.IN_QUEUE} />
+            <BookingDetailsCard booking={booking} details={details} />
+            <BookingActions
+              booking={booking}
+              details={details}
+              canCancel={status === Status.IN_QUEUE}
+            />
           </>
-        )}
-
-        {/* The customer's contact while the vehicle is at the dealership */}
-        {stage === "advisor" && live?.advisor && (
-          <StaffContactCard member={live.advisor} role="Advisor" />
         )}
 
         {/* Only while a valet is moving the vehicle */}

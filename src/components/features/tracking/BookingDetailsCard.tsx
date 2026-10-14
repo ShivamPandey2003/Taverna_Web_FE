@@ -1,15 +1,21 @@
 import { cn } from "@/libs/utils";
 import { selectAccountUser } from "@/redux/account/accountSlice";
 import { useAppSelector } from "@/redux/hooks";
-import type { Booking } from "@/types/booking";
+import type { Booking, CustomerBookingDetails } from "@/types/booking";
 import { getBookingDetailGroups, type Detail } from "./bookingDetails";
+
+interface BookingDetailsCardProps {
+  booking: Booking;
+  // The API's details, once loaded
+  details?: CustomerBookingDetails | null;
+}
 
 // What the customer booked: the booking, the vehicle as it was booked and who
 // booked it. Fills the tracking page before anyone is assigned.
-export function BookingDetailsCard({ booking }: { booking: Booking }) {
+export function BookingDetailsCard({ booking, details }: BookingDetailsCardProps) {
   const user = useAppSelector(selectAccountUser);
   const concern = booking.concern.trim();
-  const [bookingGroup, ...others] = getBookingDetailGroups(booking, user);
+  const [bookingGroup, ...others] = getBookingDetailGroups(booking, user, details);
 
   return (
     <section className="rounded-2xl border border-gray-200 bg-white p-5">

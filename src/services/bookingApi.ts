@@ -1,7 +1,13 @@
-import { USE_MOCK_API, callApi, request, toQueryString } from "./apiClient";
+import { USE_MOCK_API, callApi, request } from "./apiClient";
 import { mockServer } from "./mock/mockServer";
+import { formatMiles } from "./vehicleApi";
 import type { AdminBooking } from "@/types/admin";
-import { BookingStatus, type BookingSummary, type ServiceStatus } from "@/types/booking";
+import {
+  BookingStatus,
+  type BookingSummary,
+  type CustomerBookingDetails,
+  type ServiceStatus,
+} from "@/types/booking";
 import type { ServiceId } from "@/types/service";
 
 // What the mock keeps of a booking, plus the ids the real API books with
@@ -43,12 +49,41 @@ function toAppointment(scheduledAt: string | null) {
   };
 }
 
-// GET service-status (only the fields the app shows)
-interface ServiceStatusResponse {
+// GET booking/customer/:bmsId/status-summary
+interface StatusSummaryResponse {
   bmsId: string;
   currentStatus: string;
-  statusDisplay: { statusCode: string; label: string; heading: string };
-  advisor: { name: string | null; phone: string | null; email: string | null } | null;
+  label: string;
+  doneAt: string | null;
+  previousStatus: string | null;
+}
+
+// GET booking/customer/:bmsId/details
+interface CustomerDetailsResponse {
+  bmsId: string;
+  dealershipName: string;
+  vehicle: string;
+  service: string;
+  scheduled: string;
+  bookingStatus: string;
+  statusLabel: string;
+  invoiceTotal: number | string | null;
+  invoiceCurrency: string | null;
+  // Only seen empty; taken to be the same rows the advisor sends
+  invoiceItems: { description: string; amount: number | string }[];
+  invoiceGeneratedAt: string | null;
+  bookingDate: string;
+  isDriveable: boolean;
+  towRequested: boolean;
+  pickupAddress: string;
+  vehicleYear: number;
+  vehicleMake: string;
+  vehicleModel: string;
+  vin: string;
+  maskedVin: string;
+  mileage: number | null;
+  customerName: string;
+  customerPhone: string;
 }
 
 // The stage each of the API's statuses belongs to: the app has one colour and
@@ -92,21 +127,54 @@ const statusName = (code: string) =>
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
 
-function toServiceStatus(response: ServiceStatusResponse): ServiceStatus {
-  const { advisor } = response;
-
+function toServiceStatus(response: StatusSummaryResponse): ServiceStatus {
   return {
     id: response.bmsId,
     code: response.currentStatus,
     status: statusStages[response.currentStatus] ?? null,
-    // The status the booking is actually at. The API's own `statusDisplay.label`
-    // groups several statuses under one name ("Vehicle Arrived" for
-    // ADVISOR_ASSIGNED), so it isn't used.
+    // The status the booking is actually at. The API's own `label` groups
+    // several statuses under one name ("Vehicle Arrived" for ADVISOR_ASSIGNED),
+    // so it isn't used.
     label: statusName(response.currentStatus),
-    heading: response.statusDisplay.heading,
-    advisor: advisor?.name
-      ? { name: advisor.name, phone: advisor.phone ?? "", email: advisor.email ?? "" }
-      : null,
+    doneAt: response.doneAt,
+    previousStatus: response.previousStatus,
+  };
+}
+
+function toCustomerDetails(response: CustomerDetailsResponse): CustomerBookingDetails {
+  const items = (response.invoiceItems ?? []).map((item) => ({
+    description: item.description,
+    amount: Number(item.amount),
+  }));
+
+  return {
+    id: response.bmsId,
+    dealershipName: response.dealershipName,
+    vehicle: response.vehicle,
+    vehicleYear: response.vehicleYear,
+    vehicleMake: response.vehicleMake,
+    vehicleModel: response.vehicleModel,
+    vin: response.vin,
+    maskedVin: response.maskedVin,
+    miles: formatMiles(response.mileage),
+    service: response.service,
+    scheduled: response.scheduled,
+    bookingDate: response.bookingDate,
+    code: response.bookingStatus,
+    isDriveable: response.isDriveable,
+    towRequested: response.towRequested,
+    pickupAddress: response.pickupAddress,
+    customerName: response.customerName,
+    customerPhone: response.customerPhone,
+    invoice:
+      response.invoiceTotal != null
+        ? {
+            total: Number(response.invoiceTotal),
+            currency: response.invoiceCurrency ?? "USD",
+            items,
+            generatedAt: response.invoiceGeneratedAt,
+          }
+        : null,
   };
 }
 
@@ -168,13 +236,16 @@ export const bookingApi = {
     }));
   },
 
-  // Real API: where a booking stands, and the advisor
+  // Real API: where a booking stands
   getStatus: async (id: string): Promise<ServiceStatus> =>
     toServiceStatus(
-      await request<ServiceStatusResponse>(
-        "get",
-        `service-status${toQueryString({ bmsId: id })}`,
-      ),
+      await request<StatusSummaryResponse>("get", `booking/customer/${id}/status-summary`),
+    ),
+
+  // Real API: what was booked (vehicle, pickup, dealership, customer, bill)
+  getDetails: async (id: string): Promise<CustomerBookingDetails> =>
+    toCustomerDetails(
+      await request<CustomerDetailsResponse>("get", `booking/customer/${id}/details`),
     ),
 
   // Real API: the customer withdraws a booking (the API decides whether it still

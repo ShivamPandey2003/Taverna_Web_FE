@@ -2,7 +2,7 @@ import { toast } from "sonner";
 import { services } from "@/components/features/booking/booking.data";
 import { brandName, formatPickupTime } from "@/libs/utils";
 import type { AccountUser } from "@/redux/account/accountSlice";
-import type { Booking } from "@/types/booking";
+import type { Booking, CustomerBookingDetails } from "@/types/booking";
 
 export interface Detail {
   label: string;
@@ -23,9 +23,15 @@ function pickupLabel(pickup: Booking["pickup"]) {
     : `${pickup.address}, ${pickup.city}, ${pickup.state} ${pickup.zip}`;
 }
 
-// The booking, the vehicle as it was booked and who booked it. The booking group
-// always comes first; it has no title of its own.
-export function getBookingDetailGroups(booking: Booking, user: AccountUser): DetailGroup[] {
+// The booking, the vehicle as it was booked and who booked it, from the API's
+// details once loaded (the Redux snapshot until then). The booking group always
+// comes first; it has no title of its own.
+export function getBookingDetailGroups(
+  booking: Booking,
+  user: AccountUser,
+  details?: CustomerBookingDetails | null,
+): DetailGroup[] {
+  if (details) return detailGroupsFromApi(details);
   const { vehicle } = booking;
 
   return [
@@ -69,6 +75,40 @@ export function getBookingDetailGroups(booking: Booking, user: AccountUser): Det
   ].filter((group) => group.details.length > 0);
 }
 
+function detailGroupsFromApi(details: CustomerBookingDetails): DetailGroup[] {
+  return [
+    {
+      title: "",
+      details: [
+        { label: "Booking ID", value: `#${details.id}` },
+        { label: "Service", value: details.service || "—" },
+        { label: "Scheduled pickup", value: details.scheduled || details.bookingDate || "—" },
+        { label: "Vehicle driveable", value: details.isDriveable ? "Yes" : "No" },
+        ...(details.isDriveable
+          ? []
+          : [{ label: "Tow truck", value: details.towRequested ? "Included" : "Not included" }]),
+        { label: "Pickup address", value: details.pickupAddress || "—", wide: true },
+        { label: "Dealership", value: details.dealershipName || "—", wide: true },
+      ],
+    },
+    {
+      title: "Vehicle",
+      details: [
+        { label: "Make", value: brandName(details.vehicleMake) },
+        { label: "Model", value: `${details.vehicleYear} ${details.vehicleModel}` },
+        { label: "VIN", value: details.vin },
+      ],
+    },
+    {
+      title: "User Details",
+      details: [
+        { label: "Name", value: details.customerName ?? "" },
+        { label: "Phone", value: details.customerPhone ?? "" },
+      ].filter((detail) => detail.value.trim()),
+    },
+  ].filter((group) => group.details.length > 0);
+}
+
 // The details as plain text, for the share sheet or the clipboard
 function shareText(groups: DetailGroup[], concern: string) {
   const lines = groups.flatMap((group) => [
@@ -82,9 +122,13 @@ function shareText(groups: DetailGroup[], concern: string) {
 
 // Shares the booking's details through the device's share sheet where there is
 // one (phones), otherwise copies them to the clipboard
-export async function shareBooking(booking: Booking, user: AccountUser) {
+export async function shareBooking(
+  booking: Booking,
+  user: AccountUser,
+  details?: CustomerBookingDetails | null,
+) {
   const title = `Taverna booking #${booking.id}`;
-  const text = shareText(getBookingDetailGroups(booking, user), booking.concern.trim());
+  const text = shareText(getBookingDetailGroups(booking, user, details), booking.concern.trim());
 
   try {
     if (navigator.share) {
