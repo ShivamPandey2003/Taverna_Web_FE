@@ -4,6 +4,7 @@ import { formatMiles } from "./vehicleApi";
 import {
   BookingStatus,
   type BookingSummary,
+  type ConfirmationAnswer,
   type CustomerBookingDetails,
   type ServiceStatus,
   type StaffContact,
@@ -53,10 +54,51 @@ function toAppointment(scheduledAt: string | null) {
 // GET booking/customer/:bmsId/status-summary
 interface StatusSummaryResponse {
   bmsId: string;
+  // null when there's nothing to confirm; its other shapes are a guess, see
+  // readConfirmation
+  user_confirmation?: unknown;
   currentStatus: string;
   label: string;
   doneAt: string | null;
   previousStatus: string | null;
+}
+
+const ANSWERS = ["APPROVED", "REJECTED"];
+
+const textField = (value: Record<string, unknown>, ...keys: string[]) => {
+  for (const key of keys) {
+    if (typeof value[key] === "string" && value[key]) return value[key] as string;
+  }
+  return null;
+};
+
+// Whether the customer has to answer. null means nothing to confirm. Any other
+// value is read tolerantly, since only null has been seen: an answer
+// ("APPROVED" / "REJECTED") means it's done; anything else (an object,
+// "PENDING", ...) is a request, with its text if it has some.
+function readConfirmation(
+  summary: StatusSummaryResponse,
+): Pick<ServiceStatus, "needsConfirmation" | "confirmationPrompt"> {
+  const value = summary.user_confirmation;
+  if (value == null) return { needsConfirmation: false, confirmationPrompt: null };
+  if (typeof value === "string") {
+    return { needsConfirmation: !ANSWERS.includes(value.toUpperCase()), confirmationPrompt: null };
+  }
+  if (typeof value === "object") {
+    const fields = value as Record<string, unknown>;
+    const answered = textField(fields, "status", "confirmation", "answer");
+    if (answered && ANSWERS.includes(answered.toUpperCase())) {
+      return { needsConfirmation: false, confirmationPrompt: null };
+    }
+    return {
+      needsConfirmation: true,
+      confirmationPrompt: {
+        title: textField(fields, "title", "heading", "label"),
+        message: textField(fields, "message", "description", "body"),
+      },
+    };
+  }
+  return { needsConfirmation: true, confirmationPrompt: null };
 }
 
 // GET booking/:bmsId/staff-details/valet-operator and …/advisor
@@ -199,6 +241,7 @@ function toServiceStatus(response: StatusSummaryResponse): ServiceStatus {
     label: statusName(response.currentStatus),
     doneAt: response.doneAt,
     previousStatus: response.previousStatus,
+    ...readConfirmation(response),
   };
 }
 
@@ -338,6 +381,12 @@ export const bookingApi = {
     if (USE_MOCK_API) mockServer.removeBooking(id);
     return { id };
   },
+
+  // Real API: the customer approves or rejects the step waiting for them (the
+  // pickup, the inspection, the delivery). POST is a guess at the method; the
+  // answer isn't known, so it isn't read.
+  confirm: (id: string, confirmation: ConfirmationAnswer) =>
+    request<unknown>("post", `booking/confirmation/${id}`, { confirmation }),
 
   // The customer pays the bill the advisor sent (a stand-in for a real payment
   // provider). The status stays INVOICE_GENERATED until the admin confirms the

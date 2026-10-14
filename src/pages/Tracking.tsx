@@ -10,6 +10,7 @@ import {
   useActiveServices,
 } from "@/components/features/tracking/serviceStatus";
 import { formatPickupTime } from "@/libs/utils";
+import { ConfirmationCard } from "@/components/features/tracking/ConfirmationCard";
 import { InvoiceCard } from "@/components/features/tracking/InvoiceCard";
 import { StaffContactCard } from "@/components/features/tracking/StaffContactCard";
 import { staffNeeded } from "@/services/bookingApi";
@@ -93,6 +94,9 @@ export function ServiceTracking() {
           statusLabel={live?.label ?? status}
           gradient={display.color.gradient}
         />
+
+        {/* The step waiting for the customer's approval, first thing under the header */}
+        {live?.needsConfirmation && <ConfirmationCard key={live.code} status={live} />}
 
         {/* Before anyone is assigned: what was booked */}
         {stage === "details" && (

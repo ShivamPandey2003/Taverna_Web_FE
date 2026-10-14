@@ -55,7 +55,13 @@ export interface ServiceStatus {
   doneAt: string | null;
   // The status before it, e.g. "VEHICLE_AT_DEALERSHIP_CONFIRMED"
   previousStatus: string | null;
+  // The customer has to approve or reject this step (booking/confirmation)
+  needsConfirmation: boolean;
+  // What the API says about it, when it sends text of its own
+  confirmationPrompt: { title: string | null; message: string | null } | null;
 }
+
+export type ConfirmationAnswer = "APPROVED" | "REJECTED";
 
 // Someone handling the customer's booking, from booking/:bmsId/staff-details
 export interface StaffContact {

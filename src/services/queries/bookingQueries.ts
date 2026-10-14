@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { bookingApi, staffNeeded } from "@/services/bookingApi";
-import type { BookingSummary, StaffNeed } from "@/types/booking";
+import type { BookingSummary, ConfirmationAnswer, StaffNeed } from "@/types/booking";
 
 export const bookingKeys = {
   list: ["bookings", "list"] as const,
@@ -80,6 +80,23 @@ export function useMyBookings(enabled = true) {
     enabled,
     refetchInterval: LIST_REFRESH_MS,
     retry: false,
+  });
+}
+
+// The customer's answer to the step waiting for them. The booking moves on, so
+// its status, details, staff and the list load again.
+export function useConfirmStep() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, answer }: { id: string; answer: ConfirmationAnswer }) =>
+      bookingApi.confirm(id, answer),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: bookingKeys.status(id) });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.details(id) });
+      queryClient.invalidateQueries({ queryKey: ["bookings", "staff", id] });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.list });
+    },
   });
 }
 
