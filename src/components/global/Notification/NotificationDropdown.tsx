@@ -6,16 +6,20 @@ import { NotificationList } from "./NotificationList";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   closeNotifications,
-  markAllAsRead,
   selectNotificationsOpen,
-  selectUnreadCount,
   toggleNotifications,
 } from "@/redux/notification/notificationSlice";
+import {
+  useMarkAllNotificationsRead,
+  useNotifications,
+} from "@/services/queries/notificationQueries";
 
 export function NotificationDropdown() {
   const dispatch = useAppDispatch();
   const open = useAppSelector(selectNotificationsOpen);
-  const unreadCount = useAppSelector(selectUnreadCount);
+  const { data: notifications } = useNotifications();
+  const markAllRead = useMarkAllNotificationsRead();
+  const unreadCount = notifications?.filter((item) => !item.read).length ?? 0;
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Close on a click outside the bell + panel, or on Escape
@@ -83,8 +87,8 @@ export function NotificationDropdown() {
 
               <button
                 type="button"
-                onClick={() => dispatch(markAllAsRead())}
-                disabled={unreadCount === 0}
+                onClick={() => markAllRead.mutate()}
+                disabled={unreadCount === 0 || markAllRead.isPending}
                 className="text-sm font-medium text-gray-900 underline underline-offset-4 transition hover:text-black disabled:cursor-default disabled:opacity-40"
               >
                 Mark All Read

@@ -119,8 +119,11 @@ const statusStages: Record<string, BookingStatus> = {
   SERVICE_COMPLETE: BookingStatus.SERVICE_COMPLETE,
 };
 
+// The stage of one of the API's status codes; null for a code the app doesn't know
+export const statusStage = (code: string): BookingStatus | null => statusStages[code] ?? null;
+
 // "ADVISOR_ASSIGNED" -> "Advisor Assigned"
-const statusName = (code: string) =>
+const statusName =(code: string) =>
   code
     .toLowerCase()
     .split("_")

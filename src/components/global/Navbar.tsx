@@ -2,13 +2,14 @@ import { NavLink } from "react-router";
 import { cn } from "@/libs/utils";
 import { Logo } from "@/components/ui/Logo";
 import { useAppSelector } from "@/redux/hooks";
-import { selectIsAdmin } from "@/redux/auth/authSlice";
+import { selectIsAdmin, selectIsAuthenticated } from "@/redux/auth/authSlice";
 import { NotificationDropdown } from "./Notification/NotificationDropdown";
 import { ProfileDropdown } from "./ProfileDropdown";
 import { adminNavigation, customerNavigation, exactPaths, type NavItem } from "./navigation";
 
 export function Navbar() {
   const isAdmin = useAppSelector(selectIsAdmin);
+  const isAuthenticated = useAppSelector(selectIsAuthenticated);
 
   return (
     <header className="h-[60px] border-b border-gray-200 bg-white">
@@ -22,14 +23,8 @@ export function Navbar() {
         {/* Right side */}
         <div className="flex items-center gap-5">
 
-          {/* Notification */}
-          {/* <button
-            type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-50 text-gray-700 transition hover:bg-gray-100"
-          >
-            <Bell size={20} strokeWidth={2} />
-          </button> */}
-          <NotificationDropdown/>
+          {/* Notifications: anyone signed in (user/notifications) */}
+          {isAuthenticated && <NotificationDropdown />}
 
           {/* Profile and log out */}
           <ProfileDropdown />
