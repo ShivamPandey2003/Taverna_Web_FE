@@ -1,4 +1,5 @@
 import { USE_MOCK_API, callApi, request, toQueryString } from "./apiClient";
+import { toast } from "sonner";
 import { mockServer } from "./mock/mockServer";
 import { BookingStatus } from "@/types/booking";
 import type { ServiceId } from "@/types/service";
@@ -16,8 +17,7 @@ import type {
   StaffRole,
   ValetLeg,
 } from "@/types/admin";
-import type { Offer, OfferInput, OfferList, OfferListParams } from "@/types/offer";
-import type { OfferCsvRow } from "@/components/features/offers/offerCsv";
+import type { Offer, OfferInput, OfferListParams } from "@/types/offer";
 
 export type StaffInput = Pick<StaffMember, "name" | "email" | "phone" | "available">;
 
@@ -26,6 +26,123 @@ const staffTypes: Record<StaffRole, string> = {
   valet: "valet-operator",
   manager: "advisor",
 };
+
+// ---- Offers ----
+
+// The longest search offers/list takes
+export const OFFER_SEARCH_MAX = 200;
+
+// A row of GET offers/list
+interface OfferResponse {
+  vehicleOfferId: string;
+  vin: string;
+  stockNumber: string;
+  condition: string;
+  year: number;
+  brandName: string;
+  model: string;
+  trim: string;
+  offerType: string;
+  lender: string;
+  payment: number;
+  paymentNoTax: number;
+  termMonths: number;
+  apr: number;
+  downPayment: number;
+  dueAtSigning: number;
+  totalRebate: number;
+  description: string | null;
+  disclaimer: string | null;
+  vehicleName: string | null;
+}
+
+interface OfferListResponse {
+  records: OfferResponse[];
+  pagination: { page: number; pageSize: number; totalItems: number; totalPages: number };
+}
+
+function toOffer(offer: OfferResponse): Offer {
+  return {
+    id: offer.vehicleOfferId,
+    vin: offer.vin,
+    stockNumber: offer.stockNumber,
+    brand: offer.brandName,
+    year: offer.year,
+    model: offer.model,
+    trim: offer.trim,
+    vehicleName:
+      offer.vehicleName ||
+      [offer.year, offer.brandName, offer.model, offer.trim].filter(Boolean).join(" "),
+    condition: offer.condition,
+    offerType: offer.offerType,
+    payment: offer.payment,
+    paymentNoTax: offer.paymentNoTax,
+    totalRebate: offer.totalRebate,
+    term: offer.termMonths,
+    downPayment: offer.downPayment,
+    dueAtSigning: offer.dueAtSigning,
+    apr: offer.apr,
+    lender: offer.lender,
+    description: offer.description ?? "",
+    disclaimer: offer.disclaimer ?? "",
+  };
+}
+
+// Bulk upload (presigned S3 URL)
+
+const OFFER_CSV_TYPE = "text/csv";
+
+// POST offers/bulk-upload/prepare
+interface PrepareUploadResponse {
+  fileKey: string;
+  uploadUrl: string;
+  method: string;
+  headers: Record<string, string> | null;
+  expiresInSeconds: number;
+}
+
+// POST offers/bulk-upload/complete
+interface CompleteUploadResponse {
+  dealershipId: string | null;
+  vehiclesImported: number;
+  offersImported: number;
+  failedRows: number;
+  // Not seen filled in yet
+  errors: unknown[] | null;
+  uploadedBy: string;
+}
+
+export type OfferUploadStep = "preparing" | "uploading" | "importing";
+
+export interface OfferUploadResult {
+  offersImported: number;
+  vehiclesImported: number;
+  failedRows: number;
+  errors: unknown[];
+}
+
+// The file goes straight to S3 at the signed URL, with exactly the headers it
+// was signed for: a plain fetch, not the API client (whose Bearer token S3
+// would refuse). Not the API layer, so a failure is toasted here.
+async function putToStorage(target: PrepareUploadResponse, file: File) {
+  const failed = "Couldn't upload the file. Please try again.";
+  let response: Response;
+  try {
+    response = await fetch(target.uploadUrl, {
+      method: target.method || "PUT",
+      headers: target.headers ?? { "Content-Type": OFFER_CSV_TYPE },
+      body: file,
+    });
+  } catch (error) {
+    toast.error(failed);
+    throw new Error(failed, { cause: error });
+  }
+  if (!response.ok) {
+    // An expired link (it lasts expiresInSeconds) reads as 403
+    toast.error(response.status === 403 ? "The upload link expired. Please try again." : failed);
+    throw new Error(`Storage upload failed (${response.status})`);
+  }
+}
 
 // What staff/:staffType/list filters on (the server does the search and filter)
 export type StaffFilters = Pick<StaffListParams, "search" | "availability">;
@@ -391,38 +508,92 @@ export const adminApi = {
       () => request<AdminBooking>("put", `/admin/bookings/${id}/complete`),
     ),
 
-  // The uploaded offers, a page at a time; search, filters and sorting happen on
-  // the server. The path is a proposal: agree it with the backend.
-  listOffers: (params: OfferListParams) =>
-    callApi(
-      () => mockServer.listOffers(params),
-      () => request<OfferList>("get", `/admin/offers${toQueryString({ ...params })}`),
-    ),
+  // Real API: the uploaded offers, a page at a time (at most 100). Search
+  // (VIN, stock number, vehicle, lender; at most 200 characters) and the
+  // condition / offer type filters are the server's; "all" and an empty search
+  // are left out. There is no sorting.
+  listOffers: async (params: OfferListParams): Promise<Paginated<Offer>> => {
+    const query = toQueryString({
+      page: params.page,
+      pageSize: Math.min(params.pageSize, 100),
+      search: params.search.trim().slice(0, OFFER_SEARCH_MAX),
+      condition: params.condition,
+      offerType: params.offerType,
+    });
+    const { records, pagination } = await request<OfferListResponse>(
+      "get",
+      `offers/list${query}`,
+    );
 
+    return {
+      items: records.map(toOffer),
+      total: pagination.totalItems,
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      totalPages: pagination.totalPages,
+    };
+  },
+
+  // Real API: saves every field of one offer, in the API's names. It answers
+  // with the id alone, so the list is loaded again.
   updateOffer: (id: string, input: OfferInput) =>
-    callApi(
-      () => mockServer.updateOffer(id, input),
-      () => request<Offer>("put", `/admin/offers/${id}`, input),
-    ),
+    request<{ vehicleOfferId: string }>("put", `offers/update/${id}`, {
+      vin: input.vin,
+      stockNumber: input.stockNumber,
+      condition: input.condition,
+      year: input.year,
+      brandName: input.brand,
+      model: input.model,
+      trim: input.trim,
+      offerType: input.offerType,
+      lender: input.lender,
+      payment: input.payment,
+      paymentNoTax: input.paymentNoTax,
+      termMonths: input.term,
+      apr: input.apr,
+      downPayment: input.downPayment,
+      dueAtSigning: input.dueAtSigning,
+      totalRebate: input.totalRebate,
+      description: input.description,
+      disclaimer: input.disclaimer,
+    }),
 
+  // Real API
   deleteOffer: (id: string) =>
-    callApi(
-      () => mockServer.deleteOffer(id),
-      () => request<{ id: string }>("delete", `/admin/offers/${id}`),
-    ),
+    request<{ vehicleOfferId: string }>("delete", `offers/delete/${id}`),
 
-  // Sends the offers CSV as multipart form data; the server parses and stores it,
-  // replacing the offers it had. The path is a proposal: agree it with the backend.
-  // `rows` (the file as parsed in the browser) only feeds the mock.
-  uploadOffers: (file: File, rows: OfferCsvRow[]) =>
-    callApi(
-      () => mockServer.uploadOffers(rows),
-      () => {
-        const form = new FormData();
-        form.append("file", file);
-        return request<{ imported: number }>("post", "/admin/offers/upload", form);
-      },
-    ),
+  // Real API, through a presigned S3 URL: offers/bulk-upload/prepare names the
+  // file and answers with where to PUT it, the file goes straight to S3, then
+  // offers/bulk-upload/complete imports it (replacing the offers there were).
+  // `onStep` reports each step for the button.
+  uploadOffers: async (
+    file: File,
+    onStep?: (step: OfferUploadStep) => void,
+  ): Promise<OfferUploadResult> => {
+    onStep?.("preparing");
+    const target = await request<PrepareUploadResponse>("post", "offers/bulk-upload/prepare", {
+      fileName: file.name,
+      // Always text/csv: browsers report a CSV as all sorts of types, and the
+      // URL is signed for the type named here
+      contentType: OFFER_CSV_TYPE,
+      fileSize: file.size,
+    });
+
+    onStep?.("uploading");
+    await putToStorage(target, file);
+
+    onStep?.("importing");
+    const result = await request<CompleteUploadResponse>("post", "offers/bulk-upload/complete", {
+      fileKey: target.fileKey,
+    });
+
+    return {
+      offersImported: result.offersImported,
+      vehiclesImported: result.vehiclesImported,
+      failedRows: result.failedRows,
+      errors: result.errors ?? [],
+    };
+  },
 
   // Real API: everyone of a role matching `search` (name, email or phone; at most
   // 200 characters) and the availability `status`, all at once (no sorting or

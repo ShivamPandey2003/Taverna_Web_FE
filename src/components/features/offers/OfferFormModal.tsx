@@ -13,7 +13,7 @@ import {
 import { useDeleteOffer, useUpdateOffer } from "@/services/queries/adminQueries";
 import { offerSchema, type OfferFormData } from "@/schema/offer.schema";
 import type { Offer } from "@/types/offer";
-import { offerVehicle } from "./offer.utils";
+import { OFFER_CONDITIONS } from "./offer.utils";
 
 // Edits one offer, opened from its row or its details modal
 export function OfferFormModal() {
@@ -27,9 +27,10 @@ export function OfferFormModal() {
   return <OfferForm offer={editing} />;
 }
 
-// What each plain input edits; the two long texts are textareas below them
+// What each plain input edits; condition is a select and the two long texts
+// are textareas
 const fields: {
-  name: Exclude<keyof OfferFormData, "description" | "disclaimer">;
+  name: Exclude<keyof OfferFormData, "condition" | "description" | "disclaimer">;
   label: string;
   // Number inputs; `step` allows cents or APR decimals
   number?: boolean;
@@ -37,7 +38,6 @@ const fields: {
 }[] = [
   { name: "vin", label: "VIN" },
   { name: "stockNumber", label: "Stock number" },
-  { name: "condition", label: "Condition" },
   { name: "year", label: "Year", number: true },
   { name: "brand", label: "Brand" },
   { name: "model", label: "Model" },
@@ -53,29 +53,36 @@ const fields: {
   { name: "totalRebate", label: "Total rebate ($)", number: true, step: "0.01" },
 ];
 
+// The API's condition in the form's spelling ("new" -> "New"); anything else
+// is left for the admin to pick
+const toCondition = (condition: string) =>
+  OFFER_CONDITIONS.find((item) => item.toLowerCase() === condition.trim().toLowerCase());
+
 function OfferForm({ offer }: { offer: Offer }) {
   const dispatch = useAppDispatch();
   const updateOffer = useUpdateOffer();
+  const saving = updateOffer.isPending;
 
-  // Everything but the id is editable
-  const { id, ...values } = offer;
+  // Everything but the id and the API-built name is editable
+  const { id, vehicleName, ...values } = offer;
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<OfferFormData>({
     resolver: zodResolver(offerSchema),
-    defaultValues: values,
+    defaultValues: { ...values, condition: toCondition(values.condition) },
   });
 
   const onClose = () => dispatch(closeEditOffer());
 
+  // A failed save is toasted by the API layer; the form stays open
   const onSubmit = (data: OfferFormData) =>
     updateOffer.mutate(
       { id, input: { ...data, vin: data.vin.toUpperCase() } },
       {
-        onSuccess: (updated) => {
-          toast.success(`Offer for ${offerVehicle(updated)} updated`);
+        onSuccess: () => {
+          toast.success(`Offer for ${data.year} ${data.brand} ${data.model} updated`);
           onClose();
         },
       },
@@ -84,7 +91,7 @@ function OfferForm({ offer }: { offer: Offer }) {
   return (
     <Modal
       title={<h2>Edit Offer</h2>}
-      subtitle={`${offerVehicle(offer)} · Stock ${offer.stockNumber}`}
+      subtitle={`${vehicleName} · Stock ${offer.stockNumber}`}
       onClose={onClose}
       width="max-w-[820px]"
       footer={
@@ -100,56 +107,78 @@ function OfferForm({ offer }: { offer: Offer }) {
           <button
             type="submit"
             form="offer-form"
-            disabled={updateOffer.isPending}
+            disabled={saving || !isDirty}
             className="h-10 rounded-lg bg-black px-5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {updateOffer.isPending ? "Saving..." : "Save Changes"}
+            {saving ? "Saving..." : "Save Changes"}
           </button>
         </>
       }
     >
-      <form id="offer-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {fields.map((field) => (
+      <form id="offer-form" onSubmit={handleSubmit(onSubmit)}>
+        {/* Locked while saving */}
+        <fieldset disabled={saving} className="space-y-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <FormField
-              key={field.name}
-              label={field.label}
-              htmlFor={`offer-${field.name}`}
-              error={errors[field.name]?.message}
+              label="Condition"
+              htmlFor="offer-condition"
+              error={errors.condition?.message}
             >
-              <input
-                id={`offer-${field.name}`}
-                type={field.number ? "number" : "text"}
-                step={field.step}
-                min={field.number ? 0 : undefined}
-                {...register(field.name, { valueAsNumber: !!field.number })}
-                className="form-input"
-              />
+              <select id="offer-condition" {...register("condition")} className="form-input">
+                <option value="">Choose...</option>
+                {OFFER_CONDITIONS.map((condition) => (
+                  <option key={condition} value={condition}>
+                    {condition}
+                  </option>
+                ))}
+              </select>
             </FormField>
-          ))}
-        </div>
 
-        <FormField
-          label="Description"
-          htmlFor="offer-description"
-          error={errors.description?.message}
-        >
-          <textarea
-            id="offer-description"
-            rows={2}
-            {...register("description")}
-            className="form-input h-auto resize-none py-2.5"
-          />
-        </FormField>
+            {fields.map((field) => (
+              <FormField
+                key={field.name}
+                label={field.label}
+                htmlFor={`offer-${field.name}`}
+                error={errors[field.name]?.message}
+              >
+                <input
+                  id={`offer-${field.name}`}
+                  type={field.number ? "number" : "text"}
+                  step={field.step}
+                  min={field.number ? 0 : undefined}
+                  {...register(field.name, { valueAsNumber: !!field.number })}
+                  className="form-input"
+                />
+              </FormField>
+            ))}
+          </div>
 
-        <FormField label="Disclaimer" htmlFor="offer-disclaimer" error={errors.disclaimer?.message}>
-          <textarea
-            id="offer-disclaimer"
-            rows={3}
-            {...register("disclaimer")}
-            className="form-input h-auto resize-none py-2.5"
-          />
-        </FormField>
+          <FormField
+            label="Description"
+            htmlFor="offer-description"
+            error={errors.description?.message}
+          >
+            <textarea
+              id="offer-description"
+              rows={2}
+              {...register("description")}
+              className="form-input h-auto resize-none py-2.5"
+            />
+          </FormField>
+
+          <FormField
+            label="Disclaimer"
+            htmlFor="offer-disclaimer"
+            error={errors.disclaimer?.message}
+          >
+            <textarea
+              id="offer-disclaimer"
+              rows={4}
+              {...register("disclaimer")}
+              className="form-input h-auto resize-none py-2.5"
+            />
+          </FormField>
+        </fieldset>
       </form>
     </Modal>
   );
@@ -171,7 +200,7 @@ export function DeleteOfferModal() {
   const handleDelete = () =>
     deleteOffer.mutate(deleting.id, {
       onSuccess: () => {
-        toast.success(`Offer for ${offerVehicle(deleting)} deleted`);
+        toast.success(`Offer for ${deleting.vehicleName} deleted`);
         onClose();
       },
     });
@@ -186,8 +215,8 @@ export function DeleteOfferModal() {
     >
       Are you sure you want to delete the{" "}
       <span className="font-semibold text-gray-900">{deleting.offerType}</span> offer for the{" "}
-      <span className="font-semibold text-gray-900">{offerVehicle(deleting)}</span>? This can't
-      be undone.
+      <span className="font-semibold text-gray-900">{deleting.vehicleName}</span>? This can't be
+      undone.
     </ConfirmModal>
   );
 }

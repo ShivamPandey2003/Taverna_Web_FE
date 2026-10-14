@@ -3,6 +3,7 @@ import { AlertCircle, CheckCircle, CloudUpload, Download, FileText, X } from "re
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/Spinner";
 import { cn } from "@/libs/utils";
+import type { OfferUploadStep } from "@/services/adminApi";
 import { useUploadOffers } from "@/services/queries/adminQueries";
 import {
   checkOfferCsv,
@@ -16,7 +17,14 @@ import {
 // How many bad line numbers to spell out before "and N more"
 const SHOWN_BAD_ROWS = 8;
 
-const formatSize = (bytes: number) =>
+// The button while each part of the upload runs
+const uploadStepLabels: Record<OfferUploadStep, string> = {
+  preparing: "Preparing...",
+  uploading: "Uploading...",
+  importing: "Importing offers...",
+};
+
+const formatSize =(bytes: number) =>
   bytes < 1024 * 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 
 // Pick (or drop) an offers CSV, check its columns in the browser, look over the
@@ -55,10 +63,15 @@ export function OfferUpload({ onUploaded }: { onUploaded?: () => void }) {
   const upload = () => {
     if (!selected) return;
     uploadOffers.mutate(
-      { file: selected.file, rows: selected.check.rows },
+      selected.file,
       {
-        onSuccess: ({ imported }) => {
-          toast.success(`${imported.toLocaleString()} offers uploaded`);
+        onSuccess: ({ offersImported, vehiclesImported, failedRows }) => {
+          const imported = `${offersImported.toLocaleString()} offers for ${vehiclesImported.toLocaleString()} vehicles uploaded`;
+          if (failedRows > 0) {
+            toast.warning(`${imported}. ${failedRows.toLocaleString()} rows couldn't be imported.`);
+          } else {
+            toast.success(imported);
+          }
           clear();
           onUploaded?.();
         },
@@ -122,6 +135,7 @@ export function OfferUpload({ onUploaded }: { onUploaded?: () => void }) {
               file={selected.file}
               check={selected.check}
               uploading={uploadOffers.isPending}
+              uploadLabel={uploadOffers.step ? uploadStepLabels[uploadOffers.step] : "Uploading..."}
               onClear={clear}
               onUpload={upload}
             />
@@ -178,12 +192,15 @@ function SelectedFile({
   file,
   check,
   uploading,
+  uploadLabel,
   onClear,
   onUpload,
 }: {
   file: File;
   check: OfferCsvCheck;
   uploading: boolean;
+  // What the upload is doing, while it runs
+  uploadLabel: string;
   onClear: () => void;
   onUpload: () => void;
 }) {
@@ -216,7 +233,7 @@ function SelectedFile({
           className="flex h-9 items-center gap-1.5 rounded-lg bg-black px-4 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {uploading ? <Spinner className="h-4 w-4" /> : <CloudUpload size={16} />}
-          {uploading ? "Uploading..." : "Upload Offers"}
+          {uploading ? uploadLabel : "Upload Offers"}
         </button>
       </div>
 

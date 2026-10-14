@@ -4,7 +4,8 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { adminApi, type StaffInput } from "@/services/adminApi";
+import { useState } from "react";
+import { adminApi, type OfferUploadStep, type StaffInput } from "@/services/adminApi";
 import {
   HANDOVER_DELIVERED,
   HANDOVER_JOURNEY,
@@ -24,7 +25,6 @@ import type {
 } from "@/types/admin";
 import { staffPage } from "@/components/features/staff/staff.utils";
 import type { OfferInput, OfferListParams } from "@/types/offer";
-import type { OfferCsvRow } from "@/components/features/offers/offerCsv";
 
 export const adminKeys = {
   bookings: ["admin", "bookings"] as const,
@@ -214,13 +214,18 @@ export function useDeleteOffer() {
   });
 }
 
-// A new file replaces the offers, so every page of the list is refetched
+// A new file replaces the offers, so every page of the list is refetched.
+// `step` is where the three-part upload has got to (prepare, S3, import), for
+// the button; null when nothing is running.
 export function useUploadOffers() {
   const queryClient = useQueryClient();
+  const [step, setStep] = useState<OfferUploadStep | null>(null);
 
-  return useMutation({
-    mutationFn: ({ file, rows }: { file: File; rows: OfferCsvRow[] }) =>
-      adminApi.uploadOffers(file, rows),
+  const mutation = useMutation({
+    mutationFn: (file: File) => adminApi.uploadOffers(file, setStep),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.offers }),
+    onSettled: () => setStep(null),
   });
+
+  return { ...mutation, step };
 }

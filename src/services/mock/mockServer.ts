@@ -1,5 +1,3 @@
-import type { Offer, OfferInput, OfferList, OfferListParams } from "@/types/offer";
-import type { OfferCsvRow } from "@/components/features/offers/offerCsv";
 import { BookingStatus } from "@/types/booking";
 import {
   ADVISOR_HANDOVER,
@@ -42,7 +40,6 @@ type MockDb = {
   bookings: AdminBooking[];
   valets: StaffMember[];
   relationshipManagers: StaffMember[];
-  offers: Offer[];
 };
 
 const staff = (id: string, name: string, phone: string, available: boolean): StaffMember => ({
@@ -190,96 +187,11 @@ function seedBookings(): AdminBooking[] {
   });
 }
 
-// How much of an upload the mock keeps: localStorage is small
-const MOCK_OFFERS_LIMIT = 2000;
-
-const toNumber = (value: string) => Number(value.replace(/[^0-9.-]/g, "")) || 0;
-
-function toOffer(row: OfferCsvRow, index: number): Offer {
-  return {
-    id: `offer-${index + 1}`,
-    vin: row.VIN.toUpperCase(),
-    stockNumber: row["Stock Number"],
-    brand: row["Brand Name"],
-    year: toNumber(row.Year),
-    model: row.Model,
-    trim: row.Trim,
-    condition: row.Condition,
-    offerType: row["Offer Type"],
-    payment: toNumber(row.Payment),
-    paymentNoTax: toNumber(row["Payment No Tax"]),
-    totalRebate: toNumber(row["Total Rebate"]),
-    term: toNumber(row.Term),
-    downPayment: toNumber(row["Down Payment"]),
-    dueAtSigning: toNumber(row["Due At Signing"]),
-    apr: toNumber(row.APR),
-    lender: row.Lender,
-    description: row.Description,
-    disclaimer: row.Disclaimer,
-  };
-}
-
-// Offers the admin sees before uploading a file of their own
-function seedOffers(): Offer[] {
-  const random = createRandom(7);
-  const pick = <T,>(items: readonly T[]) => items[Math.floor(random() * items.length)];
-  const models = [
-    ["Ram", "1500", "Big Horn"],
-    ["Ram", "2500", "Tradesman"],
-    ["Jeep", "Grand Cherokee", "Limited"],
-    ["Jeep", "Wrangler", "Sahara"],
-    ["Jeep", "Compass", "Latitude"],
-    ["Dodge", "Durango", "GT"],
-    ["Dodge", "Hornet", "R/T"],
-    ["Chrysler", "Pacifica", "Touring L"],
-  ] as const;
-  const deals = [
-    ["First and Fees", "CAL", "Cal Automotive Closed End Lease"],
-    ["Zero Down Lease", "CAL", "Cal Automotive Closed End Lease"],
-    ["Low APR Finance Deal", "SFS", "Stellantis Financial Services Stand-Alone APR Program"],
-    ["Cash Rebate Deal", "SFS", "Stellantis Financial Services Retail Bonus Cash"],
-  ] as const;
-
-  return Array.from({ length: 34 }, (_, index) => {
-    const [brand, model, trim] = pick(models);
-    const [offerType, lender, description] = pick(deals);
-    const finance = offerType === "Low APR Finance Deal" || offerType === "Cash Rebate Deal";
-    const used = random() < 0.2;
-    const payment = (finance ? 520 : 229) + Math.floor(random() * 40) * 10;
-    const term = finance ? pick([48, 60, 72]) : pick([24, 36, 39]);
-    const dueAtSigning = finance || offerType === "Zero Down Lease" ? 0 : 2500 + Math.floor(random() * 30) * 100;
-    const stock = `${brand.charAt(0)}${200000 + Math.floor(random() * 9999)}`;
-
-    return {
-      id: `offer-${index + 1}`,
-      vin: `3C6RR${String(10000000000000 + Math.floor(random() * 89999999999999)).slice(0, 12)}`,
-      stockNumber: stock,
-      brand,
-      year: used ? 2023 + Math.floor(random() * 2) : 2026,
-      model,
-      trim,
-      condition: used ? "Used" : "New",
-      offerType,
-      payment,
-      paymentNoTax: Math.round(payment / 1.07),
-      totalRebate: finance ? Math.floor(random() * 6) * 500 : 13000 - Math.floor(random() * 10) * 500,
-      term,
-      downPayment: 0,
-      dueAtSigning,
-      apr: finance ? pick([0, 1.9, 2.9, 3.9]) : Math.round((5 + random() * 3) * 1000) / 1000,
-      lender,
-      description,
-      disclaimer: `*Stock#: ${stock}. $${payment}/Mo. for ${term} Months. $${dueAtSigning.toLocaleString("en-US")} total due at signing. See dealer for details.`,
-    };
-  });
-}
-
 function loadDb(): MockDb {
   const seed: MockDb = {
     bookings: seedBookings(),
     valets,
     relationshipManagers,
-    offers: seedOffers(),
   };
 
   try {
@@ -949,92 +861,6 @@ export const mockServer = {
     complete(booking);
     persist();
     return booking;
-  },
-
-  listOffers(params: OfferListParams): OfferList {
-    requireAdmin();
-    const search = params.search.trim().toLowerCase();
-    const vehicle = (offer: Offer) => `${offer.year} ${offer.brand} ${offer.model} ${offer.trim}`;
-
-    const filtered = db.offers.filter((offer) => {
-      if (params.condition !== "all" && offer.condition !== params.condition) return false;
-      if (params.offerType !== "all" && offer.offerType !== params.offerType) return false;
-      if (!search) return true;
-
-      return [offer.vin, offer.stockNumber, vehicle(offer), offer.lender].some((value) =>
-        value.toLowerCase().includes(search),
-      );
-    });
-
-    const sortValue = (offer: Offer) => {
-      switch (params.sortBy) {
-        case "vin":
-          return offer.vin;
-        case "stockNumber":
-          return offer.stockNumber;
-        case "offerType":
-          return offer.offerType.toLowerCase();
-        case "payment":
-          return offer.payment;
-        case "term":
-          return offer.term;
-        case "apr":
-          return offer.apr;
-        default:
-          return vehicle(offer).toLowerCase();
-      }
-    };
-
-    const direction = params.sortOrder === "asc" ? 1 : -1;
-    const sorted = [...filtered].sort((first, second) =>
-      sortValue(first) < sortValue(second)
-        ? -direction
-        : sortValue(first) > sortValue(second)
-          ? direction
-          : 0,
-    );
-
-    const totalPages = Math.max(1, Math.ceil(sorted.length / params.pageSize));
-    const page = Math.min(params.page, totalPages);
-    const start = (page - 1) * params.pageSize;
-    const distinct = (values: string[]) => [...new Set(values.filter(Boolean))].sort();
-
-    return {
-      items: sorted.slice(start, start + params.pageSize),
-      total: sorted.length,
-      page,
-      pageSize: params.pageSize,
-      totalPages,
-      conditions: distinct(db.offers.map((offer) => offer.condition)),
-      offerTypes: distinct(db.offers.map((offer) => offer.offerType)),
-    };
-  },
-
-  updateOffer(id: string, input: OfferInput) {
-    requireAdmin();
-    const offer = db.offers.find((item) => item.id === id);
-    if (!offer) throw new Error("We couldn't find this offer.");
-    Object.assign(offer, input);
-    persist();
-    return offer;
-  },
-
-  deleteOffer(id: string) {
-    requireAdmin();
-    const index = db.offers.findIndex((item) => item.id === id);
-    if (index === -1) throw new Error("We couldn't find this offer.");
-    db.offers.splice(index, 1);
-    persist();
-    return { id };
-  },
-
-  // A new file replaces the offers there were. The mock keeps the first
-  // MOCK_OFFERS_LIMIT of them but reports them all as imported.
-  uploadOffers(rows: OfferCsvRow[]) {
-    requireAdmin();
-    db.offers = rows.slice(0, MOCK_OFFERS_LIMIT).map(toOffer);
-    persist();
-    return { imported: rows.length };
   },
 
   // ---- Staff (valets and advisors) ----

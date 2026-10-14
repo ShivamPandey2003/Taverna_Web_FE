@@ -10,7 +10,6 @@ import {
 import { formatCurrency } from "@/components/features/admin/admin.utils";
 import type { Offer } from "@/types/offer";
 import { OfferUpload } from "./OfferUpload";
-import { offerVehicle } from "./offer.utils";
 
 // Bulk upload: pick a CSV, check it, upload it. Closes once the upload goes through.
 export function OfferUploadModal() {
@@ -41,7 +40,7 @@ export function OfferDetailsModal() {
 
   return (
     <Modal
-      title={<h2>{offerVehicle(viewing)}</h2>}
+      title={<h2>{viewing.vehicleName}</h2>}
       subtitle={`VIN ${viewing.vin} · Stock ${viewing.stockNumber}`}
       onClose={() => dispatch(closeOfferDetails())}
       footer={
