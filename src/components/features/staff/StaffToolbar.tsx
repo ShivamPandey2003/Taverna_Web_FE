@@ -8,6 +8,7 @@ import {
   setStaffSearch,
 } from "@/redux/adminStaff/adminStaffSlice";
 import { openAddStaffMember } from "@/redux/modals/staffModal/staffModalSlice";
+import { STAFF_SEARCH_MAX } from "@/services/adminApi";
 import type { StaffAvailability, StaffRole } from "@/types/admin";
 import { availabilityOptions, staffRoleLabels } from "./staff.utils";
 
@@ -24,6 +25,7 @@ export function StaffToolbar({ role }: { role: StaffRole }) {
         value={search}
         onSearch={(value) => dispatch(setStaffSearch({ role, value }))}
         placeholder={`Search ${roleLabel}s by name, email or phone`}
+        maxLength={STAFF_SEARCH_MAX}
       />
 
       {/* Availability */}

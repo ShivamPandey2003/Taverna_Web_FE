@@ -22,25 +22,9 @@ export const availabilityOptions: { value: StaffAvailability; label: string }[] 
   { value: "busy", label: "Busy" },
 ];
 
-const phoneDigits = (phone: string) => phone.replace(/\D/g, "");
-
-// One page of the staff table. The API sends everyone of a role at once, so the
-// search, the availability filter, sorting and paging are done here.
+// One page of the staff table. The API searches and filters, then sends every
+// match at once, so sorting and paging are done here.
 export function staffPage(staff: StaffMember[], params: StaffListParams): Paginated<StaffMember> {
-  const search = params.search.trim().toLowerCase();
-  const digits = phoneDigits(search);
-
-  const filtered = staff.filter((member) => {
-    if (params.availability === "available" && !member.available) return false;
-    if (params.availability === "busy" && member.available) return false;
-    if (!search) return true;
-
-    return (
-      member.name.toLowerCase().includes(search) ||
-      member.email.toLowerCase().includes(search) ||
-      (digits !== "" && phoneDigits(member.phone).includes(digits))
-    );
-  });
 
   const sortValue = (member: StaffMember) => {
     switch (params.sortBy) {
@@ -56,7 +40,7 @@ export function staffPage(staff: StaffMember[], params: StaffListParams): Pagina
   };
 
   const direction = params.sortOrder === "asc" ? 1 : -1;
-  const sorted = [...filtered].sort((first, second) =>
+  const sorted = [...staff].sort((first, second) =>
     sortValue(first) < sortValue(second)
       ? -direction
       : sortValue(first) > sortValue(second)

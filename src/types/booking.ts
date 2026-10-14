@@ -57,6 +57,17 @@ export interface ServiceStatus {
   previousStatus: string | null;
 }
 
+// Someone handling the customer's booking, from booking/:bmsId/staff-details
+export interface StaffContact {
+  name: string;
+  phone: string;
+}
+
+// Who the tracking page needs to show, by where the booking stands
+export type StaffNeed =
+  | { type: "valet"; leg: "pickup" | "delivery" }
+  | { type: "advisor" };
+
 // One booking as its customer sees it, from booking/customer/:bmsId/details.
 // Dates arrive as text ready to show.
 export interface CustomerBookingDetails {
@@ -97,6 +108,8 @@ export interface BookingSummary {
   dealershipName: string;
   // "2026 RAM 1500"
   vehicle: string;
+  // What ties the booking to one of the customer's vehicles (names repeat)
+  vin: string;
   // "Oct 13, 2026, 9:00 AM"
   scheduled: string;
   // The API's status code, its stage (null for a code the app doesn't know) and

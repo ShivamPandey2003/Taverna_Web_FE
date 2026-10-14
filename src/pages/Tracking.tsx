@@ -10,7 +10,11 @@ import {
   useActiveServices,
 } from "@/components/features/tracking/serviceStatus";
 import { formatPickupTime } from "@/libs/utils";
+import { InvoiceCard } from "@/components/features/tracking/InvoiceCard";
+import { StaffContactCard } from "@/components/features/tracking/StaffContactCard";
+import { staffNeeded } from "@/services/bookingApi";
 import {
+  useBookingStaff,
   useCustomerBookingDetails,
   useServiceStatus,
 } from "@/services/queries/bookingQueries";
@@ -27,6 +31,9 @@ export function ServiceTracking() {
   const { data: live } = useServiceStatus(booking?.id ?? null);
   // What was booked, loaded again when the status moves on
   const { data: details } = useCustomerBookingDetails(booking?.id ?? null, live?.code);
+  // The valet or advisor, only at a status that has one to show
+  const staffNeed = live ? staffNeeded(live.code) : null;
+  const { data: staff } = useBookingStaff(booking?.id ?? null, live?.code);
 
   if (!booking) {
     return (
@@ -99,8 +106,28 @@ export function ServiceTracking() {
           </>
         )}
 
-        {/* Only while a valet is moving the vehicle */}
-        {stage === "valet" && <TrackingMap />}
+        {/* The valet of the current leg, or the advisor, while either is handling it */}
+        {staffNeed && staff && (
+          <StaffContactCard
+            member={staff}
+            role={
+              staffNeed.type === "advisor"
+                ? "Advisor"
+                : staffNeed.leg === "pickup"
+                  ? "Pickup Valet"
+                  : "Delivery Valet"
+            }
+          />
+        )}
+
+        {/* The bill, only until it's paid (the status moves past INVOICE_GENERATED) */}
+        {details?.invoice && (live?.code ?? details.code) === "INVOICE_GENERATED" && (
+          <InvoiceCard bookingId={booking.id} invoice={details.invoice} />
+        )}
+
+        {/* While a valet has the trip, either way (the delivery valet's statuses
+            count as the vehicle's return, not the valet stage) */}
+        {(stage === "valet" || staffNeed?.type === "valet") && <TrackingMap />}
       </div>
     </div>
   );

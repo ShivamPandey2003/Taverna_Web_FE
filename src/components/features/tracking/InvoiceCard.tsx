@@ -1,38 +1,38 @@
-import { CheckCircle } from "reicon-react";
+import { useState } from "react";
 import { toast } from "sonner";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { usePayInvoice } from "@/services/queries/bookingQueries";
-import type { Invoice, PaymentInfo } from "@/types/admin";
+import type { CustomerBookingDetails } from "@/types/booking";
 
 interface InvoiceCardProps {
   bookingId: string;
-  invoice: Invoice;
-  payment: PaymentInfo | null;
+  invoice: NonNullable<CustomerBookingDetails["invoice"]>;
 }
 
-const formatMoney = (amount: number) =>
-  amount.toLocaleString("en-US", { style: "currency", currency: "USD" });
+const formatMoney = (amount: number, currency: string) => {
+  try {
+    return amount.toLocaleString("en-US", { style: "currency", currency });
+  } catch {
+    // An unknown currency code
+    return `${amount.toFixed(2)} ${currency}`;
+  }
+};
 
-// "AUG 18, 2026, 3:00 PM"
-const formatInvoiceDate = (value: string) =>
-  new Date(value)
-    .toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    })
-    .toUpperCase();
-
-export function InvoiceCard({ bookingId, invoice, payment }: InvoiceCardProps) {
+// The unpaid bill the advisor sent, from the booking's details, with Pay Now
+// (after a confirmation). The tracking page drops it once the bill is paid. The
+// API layer toasts a failed payment.
+export function InvoiceCard({ bookingId, invoice }: InvoiceCardProps) {
+  const money = (amount: number) => formatMoney(amount, invoice.currency);
   const payInvoice = usePayInvoice();
-  const paid = payment?.status === "paid";
+  const [confirming, setConfirming] = useState(false);
 
-  const handlePay = () => {
+  const handlePay = () =>
     payInvoice.mutate(bookingId, {
-      onSuccess: () => toast.success("Payment successful. A valet will bring your vehicle back."),
+      onSuccess: () => {
+        setConfirming(false);
+        toast.success("Payment successful. A valet will bring your vehicle back.");
+      },
     });
-  };
 
   return (
     <section className="space-y-2">
@@ -41,54 +41,56 @@ export function InvoiceCard({ bookingId, invoice, payment }: InvoiceCardProps) {
         <h2 className="text-base font-bold text-gray-900">Invoice</h2>
         <p className="mt-1 text-[13px] text-gray-500">Booking reference #{bookingId}</p>
 
-        <div className="mt-4 flex items-center justify-between border-y border-gray-200 py-3 text-[13px]">
-          <span className="text-gray-500">Date</span>
-          <span className="font-semibold text-gray-900">{formatInvoiceDate(invoice.issuedAt)}</span>
-        </div>
-
-        <ul className="space-y-2 border-b border-gray-200 py-3 text-[13px]">
-          {invoice.items.map((item) => (
-            <li key={item.label} className="flex items-center justify-between gap-4">
-              <span className="text-gray-900">{item.label}</span>
-              <span className="font-semibold text-gray-900">{formatMoney(item.amount)}</span>
-            </li>
-          ))}
-        </ul>
-
-        <dl className="space-y-1.5 pt-3 text-[13px]">
-          <div className="flex items-center justify-between">
-            <dt className="text-gray-500">Subtotal</dt>
-            <dd className="font-semibold text-gray-900">{formatMoney(invoice.subtotal)}</dd>
+        {invoice.generatedAt && (
+          <div className="mt-4 flex items-center justify-between border-t border-gray-200 py-3 text-[13px]">
+            <span className="text-gray-500">Date</span>
+            <span className="font-semibold text-gray-900">{invoice.generatedAt}</span>
           </div>
-          <div className="flex items-center justify-between">
-            <dt className="text-gray-500">Tax ({Math.round(invoice.taxRate * 100)}%)</dt>
-            <dd className="font-semibold text-gray-900">{formatMoney(invoice.tax)}</dd>
-          </div>
-          <div className="flex items-center justify-between">
-            <dt className="font-bold text-gray-900">Total</dt>
-            <dd className="font-bold text-gray-900">{formatMoney(invoice.total)}</dd>
-          </div>
-        </dl>
-      </div>
-
-      {/* Action */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-2">
-        {paid ? (
-          <div className="flex h-9 items-center justify-center gap-2 text-sm font-semibold text-status-active">
-            <CheckCircle size={17} />
-            Paid {formatMoney(payment.amount)}
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={handlePay}
-            disabled={payInvoice.isPending}
-            className="h-9 w-full rounded-lg bg-status-active text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {payInvoice.isPending ? "Processing..." : `Pay Now · ${formatMoney(invoice.total)}`}
-          </button>
         )}
+
+        {invoice.items.length > 0 && (
+          <ul className="space-y-2 border-t border-gray-200 py-3 text-[13px]">
+            {invoice.items.map((item, index) => (
+              <li key={`${item.description}-${index}`} className="flex items-center justify-between gap-4">
+                <span className="text-gray-900">{item.description}</span>
+                <span className="font-semibold text-gray-900">{money(item.amount)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="flex items-center justify-between border-t border-gray-200 pt-3 text-[13px]">
+          <span className="font-bold text-gray-900">Total</span>
+          <span className="font-bold text-gray-900">{money(invoice.total)}</span>
+        </div>
       </div>
+
+      {/* Payment */}
+      <div className="rounded-2xl border border-gray-200 bg-white p-2">
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          disabled={payInvoice.isPending}
+          className="h-9 w-full rounded-lg bg-status-active text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {payInvoice.isPending ? "Processing..." : `Pay Now · ${money(invoice.total)}`}
+        </button>
+      </div>
+
+      {confirming && (
+        <ConfirmModal
+          title="Pay Invoice?"
+          confirmLabel={`Pay ${money(invoice.total)}`}
+          cancelLabel="Not Now"
+          pendingLabel="Processing..."
+          pending={payInvoice.isPending}
+          onConfirm={handlePay}
+          onClose={() => setConfirming(false)}
+        >
+          You'll pay {money(invoice.total)} for booking #{bookingId}. A valet can then bring
+          your vehicle back.
+        </ConfirmModal>
+      )}
     </section>
   );
 }

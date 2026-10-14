@@ -10,6 +10,8 @@ import type {
   BookingListParams,
   IntakeMethod,
   Paginated,
+  StaffAvailability,
+  StaffListParams,
   StaffMember,
   StaffRole,
   ValetLeg,
@@ -23,6 +25,19 @@ export type StaffInput = Pick<StaffMember, "name" | "email" | "phone" | "availab
 const staffTypes: Record<StaffRole, string> = {
   valet: "valet-operator",
   manager: "advisor",
+};
+
+// What staff/:staffType/list filters on (the server does the search and filter)
+export type StaffFilters = Pick<StaffListParams, "search" | "availability">;
+
+// The list's `search` can be at most this long
+export const STAFF_SEARCH_MAX = 200;
+
+// The `status` sent for each availability filter. A guess: the API hasn't said
+// which values it takes. "all" sends no status.
+const staffStatuses: Record<Exclude<StaffAvailability, "all">, string> = {
+  available: "available",
+  busy: "busy",
 };
 
 // A staff member, from staff/:staffType/list and staff/:staffType/save
@@ -409,12 +424,20 @@ export const adminApi = {
       },
     ),
 
-  // Real API: everyone of a role at once (it has no search, sorting or paging).
-  // While the mock is on it keeps a copy, for the calls it still answers.
-  listStaff: async (role: StaffRole): Promise<StaffMember[]> => {
+  // Real API: everyone of a role matching `search` (name, email or phone; at most
+  // 200 characters) and the availability `status`, all at once (no sorting or
+  // paging). Empty filters are left out. While the mock is on it keeps a copy,
+  // for the calls it still answers.
+  listStaff: async (
+    role: StaffRole,
+    { search = "", availability = "all" }: Partial<StaffFilters> = {},
+  ): Promise<StaffMember[]> => {
     const { records } = await request<{ records: StaffResponse[] }>(
       "get",
-      `staff/${staffTypes[role]}/list`,
+      `staff/${staffTypes[role]}/list${toQueryString({
+        search: search.trim().slice(0, STAFF_SEARCH_MAX),
+        status: availability === "all" ? "" : staffStatuses[availability],
+      })}`,
     );
     const staff = records.filter((member) => member.isActive !== false).map(toStaffMember);
 

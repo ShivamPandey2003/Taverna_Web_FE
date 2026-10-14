@@ -30,6 +30,16 @@ const trackingSlice = createSlice({
       const known = new Set(state.activeBookings.map((booking) => booking.id));
       state.activeBookings.push(...action.payload.filter((booking) => !known.has(booking.id)));
     },
+    // Puts the right vehicle on tracked bookings the API ties to another one (by VIN)
+    bookingVehiclesCorrected: (
+      state,
+      action: PayloadAction<{ id: string; vehicle: Booking["vehicle"] }[]>,
+    ) => {
+      action.payload.forEach(({ id, vehicle }) => {
+        const booking = state.activeBookings.find((item) => item.id === id);
+        if (booking) booking.vehicle = vehicle;
+      });
+    },
     // A cancelled booking is gone for good
     clearActiveBooking: (state, action: PayloadAction<string>) => {
       state.activeBookings = state.activeBookings.filter(
@@ -46,6 +56,7 @@ const trackingSlice = createSlice({
 export const {
   bookingCreated,
   activeBookingsRestored,
+  bookingVehiclesCorrected,
   clearActiveBooking,
 } = trackingSlice.actions;
 

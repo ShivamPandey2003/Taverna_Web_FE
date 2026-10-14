@@ -1,13 +1,14 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { bookingApi } from "@/services/bookingApi";
-import type { AdminBooking } from "@/types/admin";
-import type { BookingSummary } from "@/types/booking";
+import { bookingApi, staffNeeded } from "@/services/bookingApi";
+import type { BookingSummary, StaffNeed } from "@/types/booking";
 
 export const bookingKeys = {
   list: ["bookings", "list"] as const,
   status: (id: string | null) => ["bookings", "status", id] as const,
   details: (id: string | null) => ["bookings", "details", id] as const,
+  staff: (id: string | null, need: StaffNeed | null, code: string | undefined) =>
+    ["bookings", "staff", id, need, code] as const,
 };
 
 const STATUS_REFRESH_MS = 15_000;
@@ -21,6 +22,25 @@ export function useServiceStatus(id: string | null) {
     queryFn: () => bookingApi.getStatus(id!),
     enabled: !!id,
     refetchInterval: STATUS_REFRESH_MS,
+    retry: false,
+  });
+}
+
+// The valet or advisor the tracking page shows (the real API's staff-details).
+// Called only while the status (`code`) needs someone (staffNeeded): never before
+// the status is known, nor at a stage with nobody to show. Not polled: asked
+// again when the status moves on, in case the dealership swapped the person;
+// the last answer stays on screen meanwhile.
+export function useBookingStaff(id: string | null, code: string | undefined) {
+  const need = code ? staffNeeded(code) : null;
+
+  return useQuery({
+    queryKey: bookingKeys.staff(id, need, code),
+    queryFn: () => bookingApi.getStaff(id!, need!),
+    enabled: !!id && !!need,
+    placeholderData: (previous, previousQuery) =>
+      // Keep showing the same person only while it's the same role and leg
+      JSON.stringify(previousQuery?.queryKey[3]) === JSON.stringify(need) ? previous : undefined,
     retry: false,
   });
 }
@@ -63,15 +83,15 @@ export function useMyBookings(enabled = true) {
   });
 }
 
-// Customer booking changes refresh the booking and whether it's still open
-function useMyBookingMutation(mutationFn: (id: string) => Promise<AdminBooking>) {
+// Paying moves the booking on, so its status, details (paid) and the list load again
+export function usePayInvoice() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn,
-    onSuccess: (booking) => {
-      queryClient.invalidateQueries({ queryKey: bookingKeys.status(booking.id) });
-      queryClient.invalidateQueries({ queryKey: bookingKeys.details(booking.id) });
+    mutationFn: (id: string) => bookingApi.pay(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: bookingKeys.status(id) });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.details(id) });
       queryClient.invalidateQueries({ queryKey: bookingKeys.list });
     },
   });
@@ -91,8 +111,7 @@ export function useCancelBooking() {
       );
       queryClient.removeQueries({ queryKey: bookingKeys.status(id) });
       queryClient.removeQueries({ queryKey: bookingKeys.details(id) });
+      queryClient.removeQueries({ queryKey: ["bookings", "staff", id] });
     },
   });
 }
-
-export const usePayInvoice =() => useMyBookingMutation((id) => bookingApi.pay(id));

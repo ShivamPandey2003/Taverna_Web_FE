@@ -12,13 +12,16 @@ import {
   UserTick,
 } from "reicon-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { activeBookingsRestored, selectActiveBookings } from "@/redux/tracking/trackingSlice";
+import {
+  activeBookingsRestored,
+  bookingVehiclesCorrected,
+  selectActiveBookings,
+} from "@/redux/tracking/trackingSlice";
 import { selectVehicles } from "@/redux/vehicle/vehicleSlice";
 import { useMyBookings } from "@/services/queries/bookingQueries";
 import defaultVehicleImage from "@/assets/jeep-grand-cherokee.webp";
 import { statusColors, type StatusColor } from "@/libs/statusColors";
 import { BookingStatus, type Booking, type BookingSummary } from "@/types/booking";
-import { vehicleName } from "@/libs/utils";
 import type { Vehicle } from "@/types/vehicle";
 
 export const TRACKING_PATH = "/dashboard/book-service/tracking";
@@ -176,16 +179,17 @@ function parseVehicle(name: string) {
   return { year: Number.isNaN(year) ? 0 : year, brand, model: model.join(" ") };
 }
 
+// The same vehicle: by VIN, since two vehicles can share a name
+const sameVin = (a: string, b: string) => !!a && a.toUpperCase() === b.toUpperCase();
+
 // A tracked booking rebuilt from the API's list, which says little about it: the
-// vehicle only by name (matched to the customer's saved ones), no pickup address
-// and no concern
+// vehicle (matched to the customer's saved ones by VIN), no pickup address and
+// no concern
 function toTrackingBooking(summary: BookingSummary, vehicles: Vehicle[]): Booking {
-  const sameName = (vehicle: Vehicle) =>
-    vehicleName(vehicle).toLowerCase() === vehicleName(parseVehicle(summary.vehicle)).toLowerCase();
-  const vehicle: Vehicle = vehicles.find(sameName) ?? {
+  const vehicle: Vehicle = vehicles.find((saved) => sameVin(saved.vin, summary.vin)) ?? {
     id: summary.id,
     ...parseVehicle(summary.vehicle),
-    vin: "",
+    vin: summary.vin,
     miles: "—",
     image: defaultVehicleImage,
   };
@@ -238,5 +242,15 @@ export function useSyncActiveBookings(enabled: boolean) {
         activeBookingsRestored(missing.map((booking) => toTrackingBooking(booking, vehicles))),
       );
     }
+
+    // Tracked bookings on a different vehicle than the API says (by VIN) get the
+    // saved vehicle with that VIN
+    const corrections = activeBookings.flatMap((booking) => {
+      const summary = list.find((item) => item.id === booking.id);
+      if (!summary?.vin || sameVin(booking.vehicle.vin, summary.vin)) return [];
+      const vehicle = vehicles.find((saved) => sameVin(saved.vin, summary.vin));
+      return vehicle ? [{ id: booking.id, vehicle }] : [];
+    });
+    if (corrections.length > 0) dispatch(bookingVehiclesCorrected(corrections));
   }, [dispatch, enabled, list, activeBookings, vehicles]);
 }

@@ -72,12 +72,17 @@ export function useAdminBooking(id: string | null) {
   });
 }
 
-// Everyone of the role is fetched once; the page asked for is cut out in the browser
+// The search and availability filter are the server's (a new search or filter
+// loads the list again, the current rows staying up meanwhile); the sorting and
+// the page asked for are cut out in the browser
 export function useStaffList(role: StaffRole, params: StaffListParams) {
+  const filters = { search: params.search.trim(), availability: params.availability };
+
   return useQuery({
-    queryKey: adminKeys.staffList(role),
-    queryFn: () => adminApi.listStaff(role),
+    queryKey: [...adminKeys.staffList(role), filters],
+    queryFn: () => adminApi.listStaff(role, filters),
     select: (staff) => staffPage(staff, params),
+    placeholderData: keepPreviousData,
   });
 }
 

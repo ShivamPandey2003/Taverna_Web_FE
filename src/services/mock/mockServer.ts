@@ -423,16 +423,6 @@ function mockStaffTokens(bookingId: string): Record<StaffLinkRole, StaffAuth> {
   return { pickup: auth("pickup"), advisor: auth("advisor"), delivery: auth("delivery") };
 }
 
-// A booking the logged-in customer owns (admins can open any)
-function findMyBooking(id: string) {
-  const user = currentUser();
-  const booking = findBooking(id);
-  if (booking.customer.id !== user.id && user.role !== "admin") {
-    throw new Error("We couldn't find this booking.");
-  }
-  return booking;
-}
-
 const roundCents = (value: number) => Math.round(value * 100) / 100;
 
 function serviceLine(booking: AdminBooking) {
@@ -867,14 +857,6 @@ export const mockServer = {
     if (index === -1) return;
     db.bookings.splice(index, 1);
     persist();
-  },
-
-  // Pays the generated bill; the delivery valet can then bring the vehicle back
-  payInvoice(id: string) {
-    const booking = findMyBooking(id);
-    markPaid(booking);
-    persist();
-    return booking;
   },
 
   // ---- Admin ----

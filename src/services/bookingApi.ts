@@ -1,12 +1,13 @@
-import { USE_MOCK_API, callApi, request } from "./apiClient";
+import { USE_MOCK_API, request } from "./apiClient";
 import { mockServer } from "./mock/mockServer";
 import { formatMiles } from "./vehicleApi";
-import type { AdminBooking } from "@/types/admin";
 import {
   BookingStatus,
   type BookingSummary,
   type CustomerBookingDetails,
   type ServiceStatus,
+  type StaffContact,
+  type StaffNeed,
 } from "@/types/booking";
 import type { ServiceId } from "@/types/service";
 
@@ -57,6 +58,25 @@ interface StatusSummaryResponse {
   doneAt: string | null;
   previousStatus: string | null;
 }
+
+// GET booking/:bmsId/staff-details/valet-operator and …/advisor
+interface ValetDetailsResponse {
+  bmsId: string;
+  pickupValetFullName: string | null;
+  pickupValetPhone: string | null;
+  deliveryValetFullName: string | null;
+  deliveryValetPhone: string | null;
+}
+
+interface AdvisorDetailsResponse {
+  bmsId: string;
+  advisorFullName: string | null;
+  advisorPhone: string | null;
+}
+
+// Null until someone is assigned
+const toStaffContact = (name: string | null, phone: string | null): StaffContact | null =>
+  name ? { name, phone: phone ?? "" } : null;
 
 // GET booking/customer/:bmsId/details
 interface CustomerDetailsResponse {
@@ -121,6 +141,42 @@ const statusStages: Record<string, BookingStatus> = {
 
 // The stage of one of the API's status codes; null for a code the app doesn't know
 export const statusStage = (code: string): BookingStatus | null => statusStages[code] ?? null;
+
+// The statuses during which the customer is shown the valet of a leg, or the
+// advisor; at any other status nobody is shown and staff-details isn't called
+const PICKUP_VALET_STATUSES = [
+  "VALET_ASSIGNED",
+  "VALET_DISPATCHED",
+  "VALET_ARRIVED_AT_CUSTOMER",
+  "VEHICLE_HANDED_OVER_TO_VALET",
+  "VALET_PICKUP_CONFIRMED",
+  "VEHICLE_PICKED_UP",
+];
+const DELIVERY_VALET_STATUSES = [
+  "DELIVERY_VALET_ASSIGNED",
+  "DELIVERY_VALET_DISPATCHED",
+  "DELIVERY_VEHICLE_PICKED_UP",
+  "DELIVERY_VALET_ARRIVED_AT_CUSTOMER",
+  "VEHICLE_DELIVERED",
+];
+const ADVISOR_STATUSES = [
+  "ADVISOR_ASSIGNED",
+  "VEHICLE_IN_INSPECTION",
+  "INSPECTION_COMPLETED",
+  "INSPECTION_APPROVED",
+  "VEHICLE_IN_SERVICE",
+  "SERVICE_COMPLETED",
+  "INVOICE_GENERATED",
+  "PAYMENT_CONFIRMED",
+  "READY_FOR_DISPATCH",
+];
+
+export function staffNeeded(code: string): StaffNeed | null {
+  if (PICKUP_VALET_STATUSES.includes(code)) return { type: "valet", leg: "pickup" };
+  if (DELIVERY_VALET_STATUSES.includes(code)) return { type: "valet", leg: "delivery" };
+  if (ADVISOR_STATUSES.includes(code)) return { type: "advisor" };
+  return null;
+}
 
 // "ADVISOR_ASSIGNED" -> "Advisor Assigned"
 const statusName =(code: string) =>
@@ -190,6 +246,7 @@ interface BookingListItem {
   scheduled: string;
   bookingStatus: string;
   statusLabel: string;
+  vin: string | null;
 }
 
 // Only SERVICE_COMPLETE has been seen for a booking that's over; a cancelled
@@ -231,6 +288,7 @@ export const bookingApi = {
       id: booking.bmsId,
       dealershipName: booking.dealershipName,
       vehicle: booking.vehicle,
+      vin: booking.vin ?? "",
       scheduled: booking.scheduled,
       code: booking.bookingStatus,
       status: statusStages[booking.bookingStatus] ?? null,
@@ -244,6 +302,25 @@ export const bookingApi = {
     toServiceStatus(
       await request<StatusSummaryResponse>("get", `booking/customer/${id}/status-summary`),
     ),
+
+  // Real API: the valet of one leg, or the advisor (null until assigned)
+  getStaff: async (id: string, need: StaffNeed): Promise<StaffContact | null> => {
+    if (need.type === "advisor") {
+      const advisor = await request<AdvisorDetailsResponse>(
+        "get",
+        `booking/${id}/staff-details/advisor`,
+      );
+      return toStaffContact(advisor.advisorFullName, advisor.advisorPhone);
+    }
+
+    const valets = await request<ValetDetailsResponse>(
+      "get",
+      `booking/${id}/staff-details/valet-operator`,
+    );
+    return need.leg === "pickup"
+      ? toStaffContact(valets.pickupValetFullName, valets.pickupValetPhone)
+      : toStaffContact(valets.deliveryValetFullName, valets.deliveryValetPhone);
+  },
 
   // Real API: what was booked (vehicle, pickup, dealership, customer, bill)
   getDetails: async (id: string): Promise<CustomerBookingDetails> =>
@@ -259,10 +336,7 @@ export const bookingApi = {
     return { id };
   },
 
-  // Pays the generated invoice
-  pay: (id: string) =>
-    callApi(
-      () => mockServer.payInvoice(id),
-      () => request<AdminBooking>("post", `/bookings/${id}/pay`),
-    ),
+  // The customer pays the bill the advisor sent. PROPOSED path: the API has no
+  // customer payment endpoint yet, so agree it (and any body) with the backend.
+  pay: (id: string) => request<unknown>("post", `booking/customer/${id}/pay`),
 };
