@@ -92,6 +92,8 @@ interface CustomerDetailsResponse {
   // Only seen empty; taken to be the same rows the advisor sends
   invoiceItems: { description: string; amount: number | string }[];
   invoiceGeneratedAt: string | null;
+  // Not seen yet: read in case the details start saying the bill is paid
+  paymentStatus?: string | null;
   bookingDate: string;
   isDriveable: boolean;
   towRequested: boolean;
@@ -232,6 +234,7 @@ function toCustomerDetails(response: CustomerDetailsResponse): CustomerBookingDe
             currency: response.invoiceCurrency ?? "USD",
             items,
             generatedAt: response.invoiceGeneratedAt,
+            paid: response.paymentStatus === "PAID",
           }
         : null,
   };
@@ -336,7 +339,45 @@ export const bookingApi = {
     return { id };
   },
 
-  // The customer pays the bill the advisor sent. PROPOSED path: the API has no
-  // customer payment endpoint yet, so agree it (and any body) with the backend.
-  pay: (id: string) => request<unknown>("post", `booking/customer/${id}/pay`),
+  // The customer pays the bill the advisor sent (a stand-in for a real payment
+  // provider). The status stays INVOICE_GENERATED until the admin confirms the
+  // payment, so the booking is remembered as paid in this browser.
+  pay: async (id: string) => {
+    const payment = await request<PaymentResponse>("post", `booking/payment/mock-success/${id}`);
+    if (payment.paymentStatus === "PAID") rememberPaid(id);
+    return payment;
+  },
 };
+
+// POST booking/payment/mock-success/:bmsId
+interface PaymentResponse {
+  bmsId: string;
+  currentStatus: string;
+  paymentStatus: string;
+  paidAt: string | null;
+  pendingFrom: string | null;
+}
+
+// Bookings the customer has paid that the admin hasn't confirmed yet. Kept in
+// localStorage because the API's details don't say the bill is paid until then,
+// and a reload must not offer Pay Now again.
+const PAID_KEY = "taverna_paid_bookings";
+
+function paidBookings(): string[] {
+  try {
+    const stored = JSON.parse(localStorage.getItem(PAID_KEY) ?? "[]");
+    return Array.isArray(stored) ? stored : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberPaid(id: string) {
+  try {
+    localStorage.setItem(PAID_KEY, JSON.stringify([...new Set([...paidBookings(), id])]));
+  } catch {
+    // Storage unavailable: the card still shows paid until the page is reloaded
+  }
+}
+
+export const isPaidLocally = (id: string) => paidBookings().includes(id);

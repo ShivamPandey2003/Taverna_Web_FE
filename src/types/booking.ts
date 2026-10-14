@@ -98,6 +98,8 @@ export interface CustomerBookingDetails {
     currency: string;
     items: { description: string; amount: number }[];
     generatedAt: string | null;
+    // The API says the customer has paid (they may still await the admin's confirmation)
+    paid: boolean;
   } | null;
 }
 

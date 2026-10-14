@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { CheckCircle } from "reicon-react";
 import { toast } from "sonner";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { isPaidLocally } from "@/services/bookingApi";
 import { usePayInvoice } from "@/services/queries/bookingQueries";
 import type { CustomerBookingDetails } from "@/types/booking";
 
@@ -18,19 +20,20 @@ const formatMoney = (amount: number, currency: string) => {
   }
 };
 
-// The unpaid bill the advisor sent, from the booking's details, with Pay Now
-// (after a confirmation). The tracking page drops it once the bill is paid. The
-// API layer toasts a failed payment.
+// The bill the advisor sent, from the booking's details, with Pay Now (after a
+// confirmation). Once paid it says so until the dealership confirms the payment;
+// the tracking page then drops it. The API layer toasts a failed payment.
 export function InvoiceCard({ bookingId, invoice }: InvoiceCardProps) {
   const money = (amount: number) => formatMoney(amount, invoice.currency);
   const payInvoice = usePayInvoice();
   const [confirming, setConfirming] = useState(false);
+  const paid = invoice.paid || payInvoice.isSuccess || isPaidLocally(bookingId);
 
   const handlePay = () =>
     payInvoice.mutate(bookingId, {
       onSuccess: () => {
         setConfirming(false);
-        toast.success("Payment successful. A valet will bring your vehicle back.");
+        toast.success("Payment received. The dealership will confirm it shortly.");
       },
     });
 
@@ -67,14 +70,24 @@ export function InvoiceCard({ bookingId, invoice }: InvoiceCardProps) {
 
       {/* Payment */}
       <div className="rounded-2xl border border-gray-200 bg-white p-2">
-        <button
-          type="button"
-          onClick={() => setConfirming(true)}
-          disabled={payInvoice.isPending}
-          className="h-9 w-full rounded-lg bg-status-active text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {payInvoice.isPending ? "Processing..." : `Pay Now · ${money(invoice.total)}`}
-        </button>
+        {paid ? (
+          <div className="flex min-h-9 flex-wrap items-center justify-center gap-x-2 gap-y-0.5 px-2 text-center text-sm">
+            <span className="flex items-center gap-2 font-semibold text-status-active">
+              <CheckCircle size={17} />
+              Paid {money(invoice.total)}
+            </span>
+            <span className="text-gray-500">· Waiting for the dealership to confirm</span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirming(true)}
+            disabled={payInvoice.isPending}
+            className="h-9 w-full rounded-lg bg-status-active text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {payInvoice.isPending ? "Processing..." : `Pay Now · ${money(invoice.total)}`}
+          </button>
+        )}
       </div>
 
       {confirming && (

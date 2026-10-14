@@ -83,7 +83,7 @@ export function useMyBookings(enabled = true) {
   });
 }
 
-// Paying moves the booking on, so its status, details (paid) and the list load again
+// Pays the bill; the admin then confirms it, which moves the status on (polled)
 export function usePayInvoice() {
   const queryClient = useQueryClient();
 
@@ -91,7 +91,6 @@ export function usePayInvoice() {
     mutationFn: (id: string) => bookingApi.pay(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: bookingKeys.status(id) });
-      queryClient.invalidateQueries({ queryKey: bookingKeys.details(id) });
       queryClient.invalidateQueries({ queryKey: bookingKeys.list });
     },
   });
