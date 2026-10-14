@@ -1,8 +1,11 @@
 import { toast } from "sonner";
 import { services } from "@/components/features/booking/booking.data";
-import { brandName, formatPickupTime } from "@/libs/utils";
+import { brandName, formatPickupTime, maskedVin } from "@/libs/utils";
 import type { AccountUser } from "@/redux/account/accountSlice";
 import type { Booking, CustomerBookingDetails } from "@/types/booking";
+
+// The booking details show only the VIN's end: "***50575"
+const VIN_VISIBLE = 5;
 
 export interface Detail {
   label: string;
@@ -60,7 +63,7 @@ export function getBookingDetailGroups(
       details: [
         { label: "Make", value: brandName(vehicle.brand) },
         { label: "Model", value: `${vehicle.year} ${vehicle.model}` },
-        { label: "VIN", value: vehicle.vin },
+        { label: "VIN", value: maskedVin(vehicle.vin, VIN_VISIBLE) },
         // { label: "Miles at booking", value: vehicle.miles || "—" },
       ],
     },
@@ -96,7 +99,7 @@ function detailGroupsFromApi(details: CustomerBookingDetails): DetailGroup[] {
       details: [
         { label: "Make", value: brandName(details.vehicleMake) },
         { label: "Model", value: `${details.vehicleYear} ${details.vehicleModel}` },
-        { label: "VIN", value: details.vin },
+        { label: "VIN", value: maskedVin(details.vin, VIN_VISIBLE) },
       ],
     },
     {
