@@ -201,6 +201,30 @@ const TRIP_JOURNEY_STEPS: Record<ValetLeg, Partial<Record<ValetMilestone, string
   },
 };
 
+// The vehicle is in at the dealership, by whatever means: the admin confirmed it,
+// or the booking is already further on (the service or the handover). Read off
+// the API alone, so it holds in any browser.
+export function journeyIntakeDone(journey: BookingJourney) {
+  return [INTAKE_CONFIRMED, ...SERVICE_JOURNEY, ...HANDOVER_JOURNEY].some((step) =>
+    journeyReached(journey, step),
+  );
+}
+
+// How the vehicle came in, as the API tells it: a tow truck while the status is
+// TOW_ASSIGNED, or once it's in with no pickup valet (a Pickup & Delivery intake
+// is a valet or a tow truck). null when the API doesn't say. The admin's choice
+// of tow truck is only kept in the browser it was made in, so this is what other
+// browsers go by.
+export function journeyIntakeMethod(
+  booking: Pick<AdminBooking, "serviceId" | "journey" | "valet">,
+): IntakeMethod | null {
+  const { journey } = booking;
+  if (!journey || !LEG_METHODS[booking.serviceId].pickup.includes("towTruck")) return null;
+  if (journey.current === "towAssigned") return "towTruck";
+  if (journeyIntakeDone(journey) && !booking.valet) return "towTruck";
+  return null;
+}
+
 // A trip's milestone log as the journey has it. The API doesn't send when each
 // step happened, so a step keeps the time it's `known` by, or gets now.
 export function journeyTripProgress(
@@ -216,7 +240,7 @@ export function journeyTripProgress(
     }
   });
   // A tow truck's intake has no trip: the vehicle is in once the admin confirms it
-  if (leg === "pickup" && !progress.reached && journeyReached(journey, INTAKE_CONFIRMED)) {
+  if (leg === "pickup" && !progress.reached && journeyIntakeDone(journey)) {
     progress.reached = known.reached ?? new Date().toISOString();
   }
   return progress;

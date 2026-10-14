@@ -15,6 +15,7 @@ import {
   type Invoice,
   type InvoiceLine,
   journeyAdvisorProgress,
+  journeyIntakeMethod,
   journeyTripProgress,
   journeyReached,
   SERVICE_PAID,
@@ -892,6 +893,8 @@ export const mockServer = {
       confirm(copy);
     }
     syncAssigned(copy, real);
+    // A tow truck picked in another browser isn't remembered here: take it from the API
+    if (!copy.intakeMethod) copy.intakeMethod = journeyIntakeMethod(real) ?? undefined;
     // The valets post their trips to the API: the copy follows them, keeping the
     // times it already has
     if (real.journey && legMethod(copy, "pickup") !== "selfDrive") {

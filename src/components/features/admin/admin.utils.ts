@@ -3,6 +3,8 @@ import {
   defaultLegMethod,
   HANDOVER_DELIVERED,
   INTAKE_CONFIRMED,
+  journeyIntakeDone,
+  journeyIntakeMethod,
   journeyReached,
   SERVICE_READY,
   TRIP_END,
@@ -89,12 +91,15 @@ export const intakeMethodLabels: Record<IntakeMethod, string> = {
   selfDrive: "Self-Drive",
 };
 
-// How the vehicle makes a trip: what the admin picked, else "valet" for a booking
-// that already has the trip's valet, else what the booking starts with
-// (defaultLegMethod). null when the admin still has to pick.
+// How the vehicle makes a trip: what the admin picked (kept only in this
+// browser), else for the way in what the API's journey says (journeyIntakeMethod),
+// else "valet" for a booking that already has the trip's valet, else what the
+// booking starts with (defaultLegMethod). null when the admin still has to pick.
 export function legMethod(booking: AdminBooking, leg: ValetLeg): IntakeMethod | null {
   const saved = leg === "pickup" ? booking.intakeMethod : booking.handoverMethod;
   if (saved) return saved;
+  const fromApi = leg === "pickup" ? journeyIntakeMethod(booking) : null;
+  if (fromApi) return fromApi;
   if (valetTrip(booking, leg).valet) return "valet";
   return defaultLegMethod(booking, leg);
 }
@@ -117,6 +122,9 @@ export function nextMilestone<T extends string>(
 // A trip is done once the vehicle is at the other end: taken by the valet (their
 // last milestone), a tow truck or the customer (confirmed by the admin)
 const tripDone = (booking: AdminBooking, leg: ValetLeg) => {
+  // The API says the vehicle is in: done, however it came (a tow truck chosen in
+  // another browser leaves this one guessing the method)
+  if (leg === "pickup" && booking.journey && journeyIntakeDone(booking.journey)) return true;
   const { valet, progress } = valetTrip(booking, leg);
   const method = legMethod(booking, leg);
   if (!method || (method === "valet" && !valet)) return false;
