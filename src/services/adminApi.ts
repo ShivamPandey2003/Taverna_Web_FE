@@ -374,7 +374,7 @@ export const adminApi = {
 
   // Real API: the booking's details and where it is on its journey, which the
   // two trips' and the service's progress are read from. Picking how the vehicle
-  // travels and completing the service are still the mock's, so while the mock is on it keeps a copy of the booking and the answer
+  // travels is still the mock's, so while the mock is on it keeps a copy of the booking and the answer
   // carries that copy's progress for them.
   getBooking: async (id: string): Promise<AdminBooking> => {
     const [details, { journey, status }] = await Promise.all([
@@ -453,11 +453,21 @@ export const adminApi = {
   assignRelationshipManager: (id: string, managerId: string) =>
     assignStaff(id, "advisorId", managerId),
 
-  completeBooking: (id: string) =>
-    callApi(
-      () => mockServer.completeBooking(id),
-      () => request<AdminBooking>("put", `/admin/bookings/${id}/complete`),
-    ),
+  // Real API: "Mark Service Complete" is the same admin confirmation as the
+  // others (booking/admin/:bmsId/confirm), applied at the end of the handover.
+  // The mock's copy is completed too, for the summary's time; the drawer's status
+  // is the API's, so the booking only shows as complete once the API says so.
+  completeBooking: async (id: string) => {
+    await request("post", `booking/admin/${id}/confirm`);
+    if (USE_MOCK_API) {
+      try {
+        mockServer.completeBooking(id);
+      } catch {
+        // The API has accepted it; the copy catches up when it's loaded again
+      }
+    }
+    return adminApi.getBooking(id);
+  },
 
   // Real API: the uploaded offers, a page at a time (at most 100). Search
   // (VIN, stock number, vehicle, lender; at most 200 characters) and the
