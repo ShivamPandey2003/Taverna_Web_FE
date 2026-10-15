@@ -7,8 +7,18 @@ type Coordinates = {
   accuracy: number;
 };
 
+// The device location's address in the fields a saved address has, so it can be
+// saved as one (user/addresses)
+export type AddressParts = {
+  street: string;
+  city: string;
+  state: string;
+  zip: string;
+};
+
 type LocationState = {
   address: string | null;
+  parts: AddressParts | null;
   coordinates: Coordinates | null;
   loading: boolean;
   error: string | null;
@@ -16,10 +26,37 @@ type LocationState = {
 
 const initialState: LocationState = {
   address: null,
+  parts: null,
   coordinates: null,
   loading: false,
   error: null,
 };
+
+// Nominatim's reverse lookup names the parts of an address by the kind of place,
+// which differs from country to country: take the first one that's there
+type NominatimAddress = Partial<Record<string, string>>;
+
+function toAddressParts(
+  address: NominatimAddress | undefined,
+  displayName: string | null,
+): AddressParts | null {
+  if (!address) return null;
+
+  const first = (...keys: string[]) =>
+    keys.map((key) => address[key]?.trim()).find((value) => !!value) ?? "";
+  const street =
+    [address.house_number, address.road].filter(Boolean).join(" ") ||
+    first("neighbourhood", "suburb", "quarter", "residential") ||
+    displayName?.split(",")[0]?.trim() ||
+    "";
+
+  return {
+    street,
+    city: first("city", "town", "village", "municipality", "city_district", "county", "state_district"),
+    state: first("state", "region", "state_district"),
+    zip: first("postcode"),
+  };
+}
 
 function getPosition() {
   return new Promise<GeolocationPosition>((resolve, reject) => {
@@ -47,7 +84,7 @@ function getPositionErrorMessage(error: GeolocationPositionError) {
 type LocationError = { message: string; coordinates?: Coordinates };
 
 export const fetchCurrentLocation = createAsyncThunk<
-  { address: string | null; coordinates: Coordinates },
+  { address: string | null; parts: AddressParts | null; coordinates: Coordinates },
   void,
   { rejectValue: LocationError }
 >("location/fetchCurrentLocation", async (_, { rejectWithValue }) => {
@@ -78,7 +115,8 @@ export const fetchCurrentLocation = createAsyncThunk<
     }
 
     const data = await response.json();
-    return { address: data.display_name ?? null, coordinates };
+    const address: string | null = data.display_name ?? null;
+    return { address, parts: toAddressParts(data.address, address), coordinates };
   } catch (err) {
     console.error(err);
     return rejectWithValue({ message: "Unable to get your address.", coordinates });
@@ -98,6 +136,7 @@ const locationSlice = createSlice({
       .addCase(fetchCurrentLocation.fulfilled, (state, action) => {
         state.loading = false;
         state.address = action.payload.address;
+        state.parts = action.payload.parts;
         state.coordinates = action.payload.coordinates;
       })
       .addCase(fetchCurrentLocation.rejected, (state, action) => {

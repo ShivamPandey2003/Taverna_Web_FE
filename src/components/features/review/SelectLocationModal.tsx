@@ -9,7 +9,7 @@ import type { Address, AddressType } from "@/types/address";
 import { useLocation } from "@/hooks/useLocation";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectAddresses } from "@/redux/address/addressSlice";
-import { useAddresses } from "@/services/queries/addressQueries";
+import { useAddresses, useCreateAddress } from "@/services/queries/addressQueries";
 import {
   selectBooking,
   selectBookingAddress,
@@ -55,10 +55,13 @@ function SelectLocationContent({
   const bookingAddress = useAppSelector(selectBookingAddress);
   const {
     address: currentAddress,
+    parts: currentParts,
+    coordinates,
     loading: locating,
     error: locationError,
     getLocation,
   } = useLocation();
+  const createAddress = useCreateAddress();
 
   const [selectedType, setSelectedType] = useState<
     "current" | "saved"
@@ -90,20 +93,47 @@ function SelectLocationContent({
     ? "Getting location..."
     : currentAddress ?? locationError ?? "Use your device location";
 
+  const pickSaved = (addressId: string) => {
+    dispatch(setPickupLocation({ type: "saved", addressId }));
+    onClose();
+  };
+
+  // The current location is saved as an address first (user/addresses): a
+  // booking needs a saved address. One already saved with the same street and
+  // ZIP is picked instead, so confirming again doesn't save it twice.
+  const confirmCurrentLocation = () => {
+    if (!currentAddress || !currentParts) return;
+
+    const saved = addresses.find(
+      (address) =>
+        sameText(address.address, currentParts.street) && sameText(address.zip, currentParts.zip),
+    );
+    if (saved) {
+      pickSaved(saved.id);
+      return;
+    }
+
+    createAddress.mutate(
+      {
+        type: "other",
+        address: currentParts.street,
+        apartment: "",
+        city: currentParts.city,
+        state: currentParts.state,
+        zip: currentParts.zip,
+        latitude: coordinates?.latitude ?? null,
+        longitude: coordinates?.longitude ?? null,
+        // The customer's first address becomes their default
+        isDefault: addresses.length === 0,
+      },
+      // A failed save is toasted by the API layer; the modal stays open
+      { onSuccess: (address) => pickSaved(address.id) },
+    );
+  };
+
   const handleConfirm = () => {
     if (selectedType === "current") {
-      if (!currentAddress) {
-        return;
-      }
-
-      dispatch(
-        setPickupLocation({
-          type: "current",
-          label: currentAddress,
-        })
-      );
-      onClose();
-
+      confirmCurrentLocation();
       return;
     }
 
@@ -111,14 +141,10 @@ function SelectLocationContent({
       return;
     }
 
-    dispatch(
-      setPickupLocation({
-        type: "saved",
-        addressId: selectedAddress.id,
-      })
-    );
-    onClose();
+    pickSaved(selectedAddress.id);
   };
+
+  const saving = createAddress.isPending;
 
   return (
     <div className="absolute inset-0 z-50">
@@ -281,14 +307,18 @@ function SelectLocationContent({
             <button
               type="button"
               disabled={
-                selectedType === "saved"
+                saving ||
+                (selectedType === "saved"
                   ? !selectedAddress
-                  : !currentAddress
+                  : !currentAddress || !currentParts)
               }
               onClick={handleConfirm}
-              className="h-10 rounded-lg bg-[#111827] px-5 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-10 items-center gap-2 rounded-lg bg-[#111827] px-5 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Confirm Selection
+              {saving && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              )}
+              {saving ? "Saving Address..." : "Confirm Selection"}
             </button>
           </div>
         </div>
@@ -296,6 +326,9 @@ function SelectLocationContent({
     </div>
   );
 }
+
+const sameText = (a: string, b: string) =>
+  a.trim().toLowerCase() === b.trim().toLowerCase();
 
 interface SavedAddressCardProps {
   address: Address;
