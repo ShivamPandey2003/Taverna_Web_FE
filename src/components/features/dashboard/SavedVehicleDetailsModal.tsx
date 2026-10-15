@@ -228,10 +228,12 @@ function ServiceHistorySection({
           Service History
         </h3>
 
+        {/* Disabled until there's a full service history to open */}
         <button
           type="button"
           onClick={onViewHistory}
-          className="text-xs font-medium text-gray-500 transition hover:text-gray-900"
+          disabled={!onViewHistory}
+          className="text-xs font-medium text-gray-500 transition hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:text-gray-300"
         >
           View all &gt;
         </button>

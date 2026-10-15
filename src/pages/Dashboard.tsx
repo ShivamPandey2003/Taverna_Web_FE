@@ -48,8 +48,8 @@ export function Dashboard() {
         />
       ) : (
         <>
-          {/* Page Header */}
-          <div className="flex items-start justify-between sticky top-0 py-4 border-b border-gray-100 px-10 bg-gray-50">
+          {/* Page Header: above the cards, whose photos would otherwise scroll over it */}
+          <div className="sticky top-0 z-10 flex items-start justify-between border-b border-gray-100 bg-gray-50 px-10 py-4">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-gray-900">
                 Vehicle List

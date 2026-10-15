@@ -5,6 +5,8 @@ import { NotificationSettings } from "@/components/features/account/Notification
 
 import { AccountAddresses } from "@/components/features/addresses/AccountAddresses";
 import { AddAddressModal } from "@/components/features/addresses/AddAddressModal";
+import { useOverflowing } from "@/hooks/useOverflowing";
+import { cn } from "@/libs/utils";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectActiveSection } from "@/redux/account/accountSlice";
 import {
@@ -16,14 +18,24 @@ import {
 export function Account() {
   const dispatch = useAppDispatch();
   const { addressModalOpen, editingAddressId } = useAppSelector(selectAccountModal);
+  // Room for the status bubbles under the section, only once it scrolls
+  const {
+    containerRef: sectionRef,
+    contentRef: sectionContentRef,
+    overflowing,
+  } = useOverflowing<HTMLDivElement, HTMLDivElement>();
 
   return (
-    <main className="min-h-[calc(100vh-72px)] bg-[#f8f9fa] px-6 py-4 lg:px-10">
-      <div className="mx-auto">
+    // The layout clips its content, so the page scrolls itself. Side by side (lg)
+    // each column scrolls on its own: the menu stays put while the section
+    // scrolls. Stacked (phones) the whole page scrolls, with room for the
+    // status bubbles at the bottom.
+    <main className="flex h-full flex-col overflow-y-auto bg-[#f8f9fa] px-6 pb-24 pt-4 lg:overflow-hidden lg:px-10 lg:pb-4">
+      <div className="lg:min-h-0 lg:flex-1">
         {/* Content */}
-        <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+        <div className="grid gap-6 lg:h-full lg:grid-cols-[280px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
           {/* Left */}
-          <aside className="space-y-6">
+          <aside className="space-y-6 lg:overflow-y-auto">
             <header>
               <h1 className="text-3xl font-bold tracking-tight text-gray-900">
                 Account
@@ -38,8 +50,10 @@ export function Account() {
 
             <AccountSettings />
           </aside>
-        <div>
-          <Content />
+        <div ref={sectionRef} className={cn("lg:overflow-y-auto", overflowing && "pb-24")}>
+          <div ref={sectionContentRef}>
+            <Content />
+          </div>
         </div>
 
         </div>
