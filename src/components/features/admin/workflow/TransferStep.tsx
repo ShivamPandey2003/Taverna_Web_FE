@@ -97,8 +97,9 @@ const legText: Record<
 // confirms that the vehicle got there.
 export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
   const setMethod = useSetLegMethod();
+  // Both post booking/admin/:bmsId/confirm. A tow truck's intake is read off the
+  // API's journey, like a valet's; self-drive also stamps the mock's copy
   const confirmDone = useConfirmLegDone();
-  // A tow truck's intake is confirmed with the API, like a valet's
   const confirmReceived = useConfirmBooking();
   // Picked in the row of choices, waiting for the admin to confirm
   const [picked, setPicked] = useState<IntakeMethod | null>(null);

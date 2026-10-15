@@ -433,16 +433,22 @@ export const adminApi = {
     }
   },
 
-  // Without a valet: the vehicle is at the dealership / back with the customer
-  confirmLegDone: (id: string, leg: ValetLeg) =>
-    callApi(
-      () => mockServer.confirmLegDone(id, leg),
-      () =>
-        request<AdminBooking>(
-          "put",
-          `/admin/bookings/${id}/${legPaths[leg]}/${leg === "pickup" ? "arrived" : "delivered"}`,
-        ),
-    ),
+  // Without a valet (self-drive, or a tow truck bringing the vehicle back): the
+  // vehicle is at the dealership / back with the customer. Real API: the same
+  // admin confirmation as the others (booking/admin/:bmsId/confirm). The mock's
+  // copy stamps the trip's end too, since a self-drive trip's progress is still
+  // read from it; then the booking is loaded again.
+  confirmLegDone: async (id: string, leg: ValetLeg) => {
+    await request("post", `booking/admin/${id}/confirm`);
+    if (USE_MOCK_API) {
+      try {
+        mockServer.confirmLegDone(id, leg);
+      } catch {
+        // The API has accepted it; the copy catches up when it's loaded again
+      }
+    }
+    return adminApi.getBooking(id);
+  },
 
   // Pickup or delivery valet; assigning someone new restarts that trip. Real API:
   // its answer is a status summary, so the hook loads the booking's details again.
