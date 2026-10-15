@@ -106,7 +106,7 @@ function SelectLocationContent({
 
     const saved = addresses.find(
       (address) =>
-        sameText(address.address, currentParts.street) && sameText(address.zip, currentParts.zip),
+        sameText(address.address, currentParts.address) && sameText(address.zip, currentParts.zip),
     );
     if (saved) {
       pickSaved(saved.id);
@@ -116,7 +116,7 @@ function SelectLocationContent({
     createAddress.mutate(
       {
         type: "other",
-        address: currentParts.street,
+        address: currentParts.address,
         apartment: "",
         city: currentParts.city,
         state: currentParts.state,

@@ -75,3 +75,93 @@ async function firstMatch(attempts: Record<string, string>[]): Promise<Coordinat
 
   throw new GeocodeError("notFound");
 }
+
+// ---- Position → address ----
+
+// Nominatim's reverse lookup names the parts of an address by the kind of place,
+// which differs from country to country: take the first one that's there
+type NominatimAddress = Partial<Record<string, string>>;
+
+export function fromNominatimAddress(
+  address: NominatimAddress | undefined,
+  displayName: string | null,
+): AddressPlace | null {
+  if (!address) return null;
+
+  const first = (...keys: string[]) =>
+    keys.map((key) => address[key]?.trim()).find((value) => !!value) ?? "";
+
+  return {
+    address:
+      [address.house_number, address.road].filter(Boolean).join(" ") ||
+      first("neighbourhood", "suburb", "quarter", "residential") ||
+      displayName?.split(",")[0]?.trim() ||
+      "",
+    city: first("city", "town", "village", "municipality", "city_district", "county", "state_district"),
+    state: first("state", "region", "state_district"),
+    zip: first("postcode"),
+  };
+}
+
+async function reverseWithNominatim(latitude: number, longitude: number) {
+  const query = new URLSearchParams({ lat: String(latitude), lon: String(longitude), format: "json" });
+  const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${query}`, {
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) throw new Error(`Reverse lookup answered ${response.status}`);
+  const data = await response.json();
+  return fromNominatimAddress(data.address, data.display_name ?? null);
+}
+
+// Google's answer, in our fields. The state is its short name ("FL"), as the
+// address form asks for.
+function fromGoogleResult(result: google.maps.GeocoderResult): AddressPlace {
+  const part = (type: string, short = false) => {
+    const component = result.address_components.find((item) => item.types.includes(type));
+    return (short ? component?.short_name : component?.long_name) ?? "";
+  };
+
+  return {
+    address:
+      [part("street_number"), part("route")].filter(Boolean).join(" ") ||
+      part("neighborhood") ||
+      part("sublocality") ||
+      result.formatted_address.split(",")[0]?.trim() ||
+      "",
+    city: part("locality") || part("postal_town") || part("sublocality") || part("administrative_area_level_2"),
+    state: part("administrative_area_level_1", true),
+    zip: part("postal_code"),
+  };
+}
+
+async function reverseWithGoogle(latitude: number, longitude: number) {
+  const { Geocoder } = (await google.maps.importLibrary("geocoding")) as google.maps.GeocodingLibrary;
+  const { results } = await new Geocoder().geocode({ location: { lat: latitude, lng: longitude } });
+  return results[0] ? fromGoogleResult(results[0]) : null;
+}
+
+// The address at a position (a dropped pin, the device's location). Google's
+// Geocoding when the map is loaded and the API is enabled for the key;
+// otherwise, or if it fails, OpenStreetMap's. Throws a GeocodeError.
+export async function reverseGeocode(latitude: number, longitude: number): Promise<AddressPlace> {
+  // Only once Google's script has loaded (the types assume it always has)
+  const maps =
+    typeof google === "undefined" ? undefined : (google.maps as Partial<typeof google.maps> | undefined);
+  if (maps?.importLibrary) {
+    try {
+      const place = await reverseWithGoogle(latitude, longitude);
+      if (place) return place;
+    } catch {
+      // Not enabled for the key, or down: fall back to OpenStreetMap
+    }
+  }
+
+  let place: AddressPlace | null;
+  try {
+    place = await reverseWithNominatim(latitude, longitude);
+  } catch {
+    throw new GeocodeError("failed");
+  }
+  if (!place) throw new GeocodeError("notFound");
+  return place;
+}

@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
+import { fromNominatimAddress, type AddressPlace } from "@/services/geocodeApi";
 
 type Coordinates = {
   latitude: number;
@@ -9,12 +10,7 @@ type Coordinates = {
 
 // The device location's address in the fields a saved address has, so it can be
 // saved as one (user/addresses)
-export type AddressParts = {
-  street: string;
-  city: string;
-  state: string;
-  zip: string;
-};
+export type AddressParts = AddressPlace;
 
 type LocationState = {
   address: string | null;
@@ -31,32 +27,6 @@ const initialState: LocationState = {
   loading: false,
   error: null,
 };
-
-// Nominatim's reverse lookup names the parts of an address by the kind of place,
-// which differs from country to country: take the first one that's there
-type NominatimAddress = Partial<Record<string, string>>;
-
-function toAddressParts(
-  address: NominatimAddress | undefined,
-  displayName: string | null,
-): AddressParts | null {
-  if (!address) return null;
-
-  const first = (...keys: string[]) =>
-    keys.map((key) => address[key]?.trim()).find((value) => !!value) ?? "";
-  const street =
-    [address.house_number, address.road].filter(Boolean).join(" ") ||
-    first("neighbourhood", "suburb", "quarter", "residential") ||
-    displayName?.split(",")[0]?.trim() ||
-    "";
-
-  return {
-    street,
-    city: first("city", "town", "village", "municipality", "city_district", "county", "state_district"),
-    state: first("state", "region", "state_district"),
-    zip: first("postcode"),
-  };
-}
 
 function getPosition() {
   return new Promise<GeolocationPosition>((resolve, reject) => {
@@ -116,7 +86,7 @@ export const fetchCurrentLocation = createAsyncThunk<
 
     const data = await response.json();
     const address: string | null = data.display_name ?? null;
-    return { address, parts: toAddressParts(data.address, address), coordinates };
+    return { address, parts: fromNominatimAddress(data.address, address), coordinates };
   } catch (err) {
     console.error(err);
     return rejectWithValue({ message: "Unable to get your address.", coordinates });

@@ -1,5 +1,6 @@
 import { useNavigate, useParams } from "react-router";
 import { TrackingMap } from "@/components/features/tracking/TrackingMap";
+import { useTrackingPoints } from "@/components/features/tracking/useTrackingPoints";
 import { TrackingHeader } from "@/components/features/tracking/TrackingHeader";
 import { BookingActions } from "@/components/features/tracking/BookingActions";
 import { BookingDetailsCard } from "@/components/features/tracking/BookingDetailsCard";
@@ -19,7 +20,11 @@ import {
   useCustomerBookingDetails,
   useServiceStatus,
 } from "@/services/queries/bookingQueries";
-import { BookingStatus as Status } from "@/types/booking";
+import {
+  BookingStatus as Status,
+  type Booking,
+  type CustomerBookingDetails,
+} from "@/types/booking";
 import type { Vehicle } from "@/types/vehicle";
 
 export function ServiceTracking() {
@@ -131,8 +136,29 @@ export function ServiceTracking() {
 
         {/* While a valet has the trip, either way (the delivery valet's statuses
             count as the vehicle's return, not the valet stage) */}
-        {(stage === "valet" || staffNeed?.type === "valet") && <TrackingMap />}
+        {(stage === "valet" || staffNeed?.type === "valet") && (
+          <TripMap booking={booking} details={details} />
+        )}
       </div>
     </div>
+  );
+}
+
+// The map's two ends: only looked up while the map is shown
+function TripMap({
+  booking,
+  details,
+}: {
+  booking: Booking;
+  details: CustomerBookingDetails | undefined;
+}) {
+  const { pickup, dealership } = useTrackingPoints(booking, details);
+
+  return (
+    <TrackingMap
+      pickup={pickup}
+      dealership={dealership}
+      dealershipName={details?.dealershipName ?? booking.dealership.name}
+    />
   );
 }

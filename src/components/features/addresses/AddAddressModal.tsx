@@ -1,4 +1,5 @@
-import { Map2, Pin, MapArrowSquare, X } from 'reicon-react';
+import { useRef, useState } from 'react';
+import { Map2, Pin, X } from 'reicon-react';
 import { useForm, useWatch, type UseFormRegisterReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -7,8 +8,14 @@ import { cn } from '@/libs/utils';
 import { addressSchema, type AddressFormData } from '@/schema/address.schema';
 import type { Address, AddressType } from '@/types/address';
 import { useAppSelector } from '@/redux/hooks';
-import { selectAddressById, selectAddresses } from '@/redux/address/addressSlice';
-import { GeocodeError } from '@/services/geocodeApi';
+import {
+  selectAddressById,
+  selectAddresses,
+  selectDefaultAddress,
+} from '@/redux/address/addressSlice';
+import { getDevicePosition, toLatLng, type LatLng } from '@/libs/maps';
+import { GeocodeError, reverseGeocode, type AddressPlace } from '@/services/geocodeApi';
+import { AddressMap } from './AddressMap';
 import {
   useCreateAddress,
   useGeocodeAddress,
@@ -25,6 +32,8 @@ interface AddAddressModalProps {
 }
 
 const addressTypes: AddressType[] = ["home", "work", "other"];
+
+const sameText = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 export function AddAddressModal({
   open,
@@ -88,9 +97,72 @@ function AddressFormModal({
 
   const selectedType = useWatch({ control, name: "type" });
 
+  // The map's pin: where the address is, once known
+  const [pin, setPin] = useState<LatLng | null>(() =>
+    toLatLng(existing?.latitude, existing?.longitude),
+  );
+  // Without a pin the map starts at the customer's default address
+  const defaultAddress = useAppSelector(selectDefaultAddress);
+  const fallbackCenter = toLatLng(defaultAddress?.latitude, defaultAddress?.longitude);
+  // The address the pin filled in, and where the pin was: saved as it is, the
+  // address keeps the pin's exact position instead of being looked up again
+  const [pinned, setPinned] = useState<{ position: LatLng; place: AddressPlace } | null>(null);
+  // Getting the device's location, or the address at the pin
+  const [finding, setFinding] = useState(false);
+  // Only the latest pick fills the form, however the lookups finish
+  const latestPick = useRef(0);
+
+  // A spot picked on the map (tap, drag, or the device's location): the form is
+  // filled with the address there
+  const pickPosition = async (position: LatLng) => {
+    const pick = ++latestPick.current;
+    setPin(position);
+    setFinding(true);
+    try {
+      const place = await reverseGeocode(position.lat, position.lng);
+      if (pick !== latestPick.current) return;
+      (["address", "city", "state", "zip"] as const).forEach((field) =>
+        setValue(field, place[field], { shouldDirty: true, shouldValidate: true }),
+      );
+      setPinned({ position, place });
+    } catch (error) {
+      if (pick !== latestPick.current) return;
+      setPinned(null);
+      toast.error(
+        error instanceof GeocodeError && error.reason === "notFound"
+          ? "We couldn't find an address there. Enter it below."
+          : "We couldn't look up the address there. Enter it below.",
+      );
+    } finally {
+      if (pick === latestPick.current) setFinding(false);
+    }
+  };
+
+  const useCurrentLocation = async () => {
+    setFinding(true);
+    let position: LatLng;
+    try {
+      position = await getDevicePosition();
+    } catch (error) {
+      setFinding(false);
+      toast.error(error instanceof Error ? error.message : "We couldn't get your location.");
+      return;
+    }
+    await pickPosition(position);
+  };
+
   // The API needs the address's latitude and longitude. An edit that leaves the
   // street, city, state and ZIP alone keeps the ones it has.
   const findCoordinates = async (data: AddressFormData) => {
+    // Filled in from the pin and still the same street and city: the pin's position
+    if (
+      pinned &&
+      sameText(data.address, pinned.place.address) &&
+      sameText(data.city, pinned.place.city)
+    ) {
+      return { latitude: pinned.position.lat, longitude: pinned.position.lng };
+    }
+
     const moved =
       !existing ||
       existing.address !== data.address ||
@@ -184,56 +256,15 @@ function AddressFormModal({
             onSubmit={handleSubmit(onSubmit)}
             className="px-5 pb-5 pt-5"
           >
-            {/* Map */}
-            <div className="relative h-[170px] overflow-hidden rounded-xl bg-[#17202f]">
-              {/* Fake map */}
-              <div className="absolute inset-0 opacity-30">
-                <div className="absolute left-[8%] top-[30%] h-px w-[85%] rotate-[-8deg] bg-slate-400" />
-
-                <div className="absolute left-[10%] top-[55%] h-px w-[80%] rotate-[12deg] bg-slate-400" />
-
-                <div className="absolute left-[45%] top-0 h-full w-px bg-slate-400" />
-
-                <div className="absolute left-[60%] top-0 h-full w-px rotate-[18deg] bg-slate-400" />
-
-                <div className="absolute left-[20%] top-[70%] h-px w-[65%] rotate-[-25deg] bg-slate-400" />
-              </div>
-
-              {/* Street labels */}
-              <span className="absolute left-5 top-10 text-[9px] font-medium text-white/80">
-                NE 13th St
-              </span>
-
-              <span className="absolute right-5 top-[42%] text-[9px] font-medium text-white/80">
-                E Sunrise Blvd
-              </span>
-
-              {/* Location pin */}
-              <div className="absolute left-1/2 top-[42%] flex -translate-x-1/2 -translate-y-1/2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50">
-                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white">
-                    <Pin
-                      size={13}
-                      fill="black"
-                      className="text-black"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Current location */}
-              <button
-                type="button"
-                className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white px-3 py-2 text-[10px] font-semibold text-gray-900 shadow-md"
-              >
-                <MapArrowSquare
-                  size={12}
-                  fill="black"
-                />
-
-                Use My Current Location
-              </button>
-            </div>
+            {/* Map: picking a spot fills in the address below */}
+            <AddressMap
+              pin={pin}
+              fallbackCenter={fallbackCenter}
+              onPick={pickPosition}
+              onUseCurrentLocation={useCurrentLocation}
+              busy={finding}
+              disabled={saving}
+            />
 
             {/* Address Details; locked while saving */}
             <fieldset disabled={saving} className={cn("mt-5 transition", saving && "opacity-60")}>
@@ -325,7 +356,8 @@ function AddressFormModal({
             {/* Save */}
             <button
               type="submit"
-              disabled={saving}
+              // Not while the pin's address is still being filled in
+              disabled={saving || finding}
               className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111827] text-xs font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-80"
             >
               {saving && <Spinner className="h-3.5 w-3.5" />}
