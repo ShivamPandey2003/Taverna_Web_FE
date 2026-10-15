@@ -134,9 +134,20 @@ function fromGoogleResult(result: google.maps.GeocoderResult): AddressPlace {
   };
 }
 
-async function reverseWithGoogle(latitude: number, longitude: number) {
+// Google's Geocoder once its script has loaded (the types assume it always has);
+// null before then
+async function googleGeocoder() {
+  const maps =
+    typeof google === "undefined" ? undefined : (google.maps as Partial<typeof google.maps> | undefined);
+  if (!maps?.importLibrary) return null;
   const { Geocoder } = (await google.maps.importLibrary("geocoding")) as google.maps.GeocodingLibrary;
-  const { results } = await new Geocoder().geocode({ location: { lat: latitude, lng: longitude } });
+  return new Geocoder();
+}
+
+async function reverseWithGoogle(latitude: number, longitude: number) {
+  const geocoder = await googleGeocoder();
+  if (!geocoder) return null;
+  const { results } = await geocoder.geocode({ location: { lat: latitude, lng: longitude } });
   return results[0] ? fromGoogleResult(results[0]) : null;
 }
 
@@ -144,16 +155,11 @@ async function reverseWithGoogle(latitude: number, longitude: number) {
 // Geocoding when the map is loaded and the API is enabled for the key;
 // otherwise, or if it fails, OpenStreetMap's. Throws a GeocodeError.
 export async function reverseGeocode(latitude: number, longitude: number): Promise<AddressPlace> {
-  // Only once Google's script has loaded (the types assume it always has)
-  const maps =
-    typeof google === "undefined" ? undefined : (google.maps as Partial<typeof google.maps> | undefined);
-  if (maps?.importLibrary) {
-    try {
-      const place = await reverseWithGoogle(latitude, longitude);
-      if (place) return place;
-    } catch {
-      // Not enabled for the key, or down: fall back to OpenStreetMap
-    }
+  try {
+    const place = await reverseWithGoogle(latitude, longitude);
+    if (place) return place;
+  } catch {
+    // Not enabled for the key, or down: fall back to OpenStreetMap
   }
 
   let place: AddressPlace | null;
@@ -164,4 +170,19 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
   }
   if (!place) throw new GeocodeError("notFound");
   return place;
+}
+
+// Where a one-line address is, for the tracking map: Google's Geocoding first
+// (better with US street addresses), then OpenStreetMap's (geocodeText).
+// Throws a GeocodeError.
+export async function locateText(address: string): Promise<Coordinates> {
+  try {
+    const geocoder = await googleGeocoder();
+    const location = geocoder ? (await geocoder.geocode({ address })).results[0]?.geometry.location : undefined;
+    if (location) return { latitude: location.lat(), longitude: location.lng() };
+  } catch {
+    // Not enabled for the key, or nothing found: try OpenStreetMap
+  }
+
+  return geocodeText(address);
 }

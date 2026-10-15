@@ -131,16 +131,14 @@ function ServiceBubble({ service, open, onOpenChange }: ServiceBubbleProps) {
         }}
         aria-expanded={open}
         aria-label={`${vehicleName(vehicle)}, ${display.label}: ${display.message}. Open tracking`}
-        className="relative flex h-16 w-16 items-center justify-center rounded-full border border-gray-100 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition hover:shadow-[0_8px_30px_rgba(0,0,0,0.2)]"
+        // The border is the status colour (border-current takes the text colour), so a
+        // closed bubble still hints where the service stands
+        className={cn(
+          "relative flex h-16 w-16 items-center justify-center rounded-full border-[3px] border-current bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition hover:shadow-[0_8px_30px_rgba(0,0,0,0.2)]",
+          display.color.text,
+        )}
       >
         <img src={vehicle.image} alt="" className="h-12 w-14 object-contain" />
-        {/* The status colour, so a closed bubble still hints where the service stands */}
-        <span
-          className={cn(
-            "absolute top-1 right-1 h-3 w-3 rounded-full border-2 border-white bg-current",
-            display.color.text,
-          )}
-        />
       </button>
     </div>
   );

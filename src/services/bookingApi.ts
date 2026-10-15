@@ -237,8 +237,9 @@ function toServiceStatus(response: StatusSummaryResponse): ServiceStatus {
     status: statusStages[response.currentStatus] ?? null,
     // The status the booking is actually at. The API's own `label` groups
     // several statuses under one name ("Vehicle Arrived" for ADVISOR_ASSIGNED),
-    // so it isn't used.
+    // so it's kept apart, for the tracking header's title only.
     label: statusName(response.currentStatus),
+    apiLabel: response.label?.trim() || null,
     doneAt: response.doneAt,
     previousStatus: response.previousStatus,
     ...readConfirmation(response),

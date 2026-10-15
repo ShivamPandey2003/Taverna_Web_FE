@@ -76,11 +76,15 @@ export function ServiceTracking() {
       }
     : booking.vehicle;
 
-  const subtitle = details?.scheduled
-    ? `Pickup scheduled for ${details.scheduled}`
-    : booking.scheduledAt
-      ? `Pickup scheduled for ${formatPickupTime(booking.scheduledAt)}`
-      : `Booked ${formatPickupTime(booking.createdAt)}`;
+  // When the booking reached its current status (the status summary's doneAt);
+  // the pickup time until that has loaded
+  const subtitle = live?.doneAt
+    ? live.doneAt
+    : details?.scheduled
+      ? `Pickup scheduled for ${details.scheduled}`
+      : booking.scheduledAt
+        ? `Pickup scheduled for ${formatPickupTime(booking.scheduledAt)}`
+        : `Booked ${formatPickupTime(booking.createdAt)}`;
 
   const status = live?.status ?? booking.status;
   const display = getStatusDisplay(status, live);
@@ -93,7 +97,9 @@ export function ServiceTracking() {
         <TrackingHeader
           vehicle={vehicle}
           dealership={details?.dealershipName ?? booking.dealership.name}
-          title={display.message}
+          // The status summary's label ("Valet On Road"); our own line for the
+          // stage until it has loaded
+          title={live?.apiLabel ?? display.message}
           subtitle={subtitle}
           status={status}
           statusLabel={live?.label ?? status}
@@ -152,13 +158,14 @@ function TripMap({
   booking: Booking;
   details: CustomerBookingDetails | undefined;
 }) {
-  const { pickup, dealership } = useTrackingPoints(booking, details);
+  const { pickup, dealership, pickupMissing } = useTrackingPoints(booking, details);
 
   return (
     <TrackingMap
       pickup={pickup}
       dealership={dealership}
       dealershipName={details?.dealershipName ?? booking.dealership.name}
+      pickupMissing={pickupMissing}
     />
   );
 }

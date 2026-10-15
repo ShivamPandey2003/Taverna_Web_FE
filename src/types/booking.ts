@@ -51,6 +51,9 @@ export interface ServiceStatus {
   status: BookingStatus | null;
   // The current status by name ("Advisor Assigned")
   label: string;
+  // The API's own name for it, which groups several statuses ("Valet On Road"
+  // for VALET_DISPATCHED); the tracking header's title
+  apiLabel: string | null;
   // When it got there, as text ready to show ("Oct 13, 2026, 7:54 AM")
   doneAt: string | null;
   // The status before it, e.g. "VEHICLE_AT_DEALERSHIP_CONFIRMED"
