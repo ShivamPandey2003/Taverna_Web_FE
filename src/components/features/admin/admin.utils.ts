@@ -140,15 +140,12 @@ const tripDone = (booking: AdminBooking, leg: ValetLeg) => {
   return !!progress[TRIP_END[leg]];
 };
 
-// Personal link the staff member opens to post updates for this booking. Its
-// `gear` and `token` search params sign them in, so they skip the email + OTP
-// form. Must match the staff routes in routes/index.tsx and useStaffAuth.
+// The link the staff member opens to post updates for this booking: the page
+// alone, with nothing in it that signs them in (they sign in there with email +
+// OTP). Must match the staff routes in routes/index.tsx.
 export function staffLink(booking: AdminBooking, role: StaffLinkRole) {
-  const auth = booking.staffTokens?.[role];
-  if (!auth) return null;
   const path = role === "advisor" ? `advisor/${booking.id}` : `valet/${role}/${booking.id}`;
-  const search = new URLSearchParams({ gear: auth.gear, token: auth.token });
-  return `${window.location.origin}/${path}?${search}`;
+  return `${window.location.origin}/${path}`;
 }
 
 export const isComplete = (booking: AdminBooking) =>

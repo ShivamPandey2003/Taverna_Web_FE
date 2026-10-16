@@ -152,6 +152,17 @@ export const vehicleApi = {
     return vehicles.filter((vehicle) => vehicle.isActive !== false).map(toVehicle);
   },
 
+  // The vehicle's current mileage, as the customer typed it. Answers with the
+  // mileage saved, formatted like the list's ("45,230 mi").
+  updateMileage: async (vehicleId: string, mileage: number) => {
+    const { currentMileage } = await request<{ currentMileage: number }>(
+      "post",
+      `vehicles/${vehicleId}/mileage`,
+      { currentMileage: mileage },
+    );
+    return formatMiles(Number(currentMileage));
+  },
+
   // One saved vehicle with its past services
   overview: async (vehicleId: string): Promise<VehicleOverview> => {
     const { vehicle, serviceHistory } = await request<{

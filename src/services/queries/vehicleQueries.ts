@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { vehicleApi } from "@/services/vehicleApi";
-import type { Vehicle } from "@/types/vehicle";
+import type { Vehicle, VehicleOverview } from "@/types/vehicle";
 
 export const vehicleKeys = {
   list: ["vehicles"] as const,
@@ -33,6 +33,25 @@ export function useVehicleOverview(vehicleId: string | null) {
 // Decodes a VIN; resolves to the vehicle for the customer to confirm
 export function useVerifyVin() {
   return useMutation({ mutationFn: vehicleApi.verifyVin });
+}
+
+// Saves a vehicle's mileage and puts it in the cached list and overview, so
+// useSyncVehicles copies it into Redux
+export function useUpdateMileage() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ vehicleId, mileage }: { vehicleId: string; mileage: number }) =>
+      vehicleApi.updateMileage(vehicleId, mileage),
+    onSuccess: (miles, { vehicleId }) => {
+      const withMiles = (vehicle: Vehicle) =>
+        vehicle.id === vehicleId ? { ...vehicle, miles } : vehicle;
+      queryClient.setQueryData<Vehicle[]>(vehicleKeys.list, (vehicles) => vehicles?.map(withMiles));
+      queryClient.setQueryData<VehicleOverview>(vehicleKeys.overview(vehicleId), (overview) =>
+        overview && { ...overview, vehicle: withMiles(overview.vehicle) },
+      );
+    },
+  });
 }
 
 // Saves the confirmed vehicle and adds it to the cached list

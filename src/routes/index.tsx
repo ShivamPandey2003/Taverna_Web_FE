@@ -92,8 +92,8 @@ const Router = createBrowserRouter([
   },
   {
     // Valet / advisor pages, opened from the link the admin shares (staffLink in
-    // admin.utils.ts). Their sign-in is separate from the app's: the link's
-    // `gear` and `token` search params, or else an email + OTP form on the page.
+    // admin.utils.ts). Their sign-in is separate from the app's: an email + OTP
+    // form on the page.
     element: <StaffLayout />,
     children: [
       // The signed-in staff member's task list; a task opens its page below

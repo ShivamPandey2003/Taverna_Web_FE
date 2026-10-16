@@ -17,11 +17,8 @@ import {
   journeyTripProgress,
   journeyReached,
   SERVICE_PAID,
-  type StaffAuth,
-  type StaffLinkRole,
   type StaffMember,
   type StaffRole,
-  type StaffType,
   type IntakeMethod,
   type ValetLeg,
   type ValetMilestone,
@@ -156,7 +153,6 @@ function seedBookings(): AdminBooking[] {
       valet: null,
       relationshipManager: null,
       payment: null,
-      staffTokens: mockStaffTokens(seedBookingId(index)),
     };
     if (inQueue) return booking;
 
@@ -206,9 +202,8 @@ function loadDb(): MockDb {
       // Older seeds left paid bookings at "Valet assigned" forever, which kept
       // every valet and advisor on an active booking (so none could be deleted)
       saved.bookings.forEach((booking) => {
-        // Bookings saved before staff links carried a token
-        // Always rebuilt: they were plain strings before the staff sign-in
-        booking.staffTokens = mockStaffTokens(booking.id);
+        // Staff links used to carry sign-in tokens; drop them from older saves
+        delete (booking as { staffTokens?: unknown }).staffTokens;
         // Saved while the status was still spelled "Service complete"
         if ((booking.status as string) === "Service complete") {
           booking.status = BookingStatus.SERVICE_COMPLETE;
@@ -318,22 +313,6 @@ function findBooking(id: string) {
   const booking = db.bookings.find((item) => item.id === id);
   if (!booking) throw new Error("We couldn't find this booking.");
   return booking;
-}
-
-const linkRoleType = (role: StaffLinkRole): StaffType => (role === "advisor" ? "advisor" : "valet");
-
-// Stand-in for the encrypted staff type (the `token` search param); the real API
-// encrypts it so it can't be read or changed in the browser
-const mockStaffTypeToken = (type: StaffType) => `mock-enc-${type}`;
-
-// What goes in each staff link. The real API issues signed tokens; these only have
-// to be the same on every load, so a copied link keeps working.
-function mockStaffTokens(bookingId: string): Record<StaffLinkRole, StaffAuth> {
-  const auth = (role: StaffLinkRole): StaffAuth => ({
-    gear: `mock-${role}-${bookingId.toLowerCase()}`,
-    token: mockStaffTypeToken(linkRoleType(role)),
-  });
-  return { pickup: auth("pickup"), advisor: auth("advisor"), delivery: auth("delivery") };
 }
 
 const roundCents = (value: number) => Math.round(value * 100) / 100;
@@ -730,7 +709,6 @@ export const mockServer = {
       | "valet"
       | "relationshipManager"
       | "payment"
-      | "staffTokens"
     >,
     // The id the real API gave the booking: it has already accepted it, so the
     // copy kept here is never refused
@@ -757,7 +735,6 @@ export const mockServer = {
       valet: null,
       relationshipManager: null,
       payment: null,
-      staffTokens: mockStaffTokens(id),
     };
     db.bookings.unshift(booking);
     persist();
@@ -781,7 +758,7 @@ export const mockServer = {
     requireAdmin();
     const copy = db.bookings.find((item) => item.id === real.id);
     if (!copy) {
-      const booking = { ...real, staffTokens: mockStaffTokens(real.id) };
+      const booking = { ...real };
       db.bookings.unshift(booking);
       persist();
       return booking;

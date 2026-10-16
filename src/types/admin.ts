@@ -56,15 +56,13 @@ export const VALET_LEGS: readonly ValetLeg[] = ["pickup", "delivery"];
 export type StaffLinkRole = ValetLeg | "advisor";
 
 // What the valet / advisor pages sign in with. It has nothing to do with the
-// app's own login (AuthSession): it comes from the link's `gear` and `token`
-// search params, or from the staff email + OTP sign-in.
+// app's own login (AuthSession): it comes from the staff email + OTP sign-in.
 export interface StaffAuth {
   // The auth token
   gear: string;
-  // The staff type: encrypted in a link (only the server can read it), plain
-  // "valet" / "advisor" after an email + OTP sign-in
+  // The staff type: "valet" / "advisor"
   token: string;
-  // Who signed in with email + OTP; a link has neither
+  // Who signed in (missing on a sign-in stored before they were kept)
   email?: string;
   name?: string;
 }
@@ -339,10 +337,6 @@ export interface AdminBooking {
   completedAt?: string | null;
   // Where the booking is on the API's journey; the Vehicle Intake step is drawn from it
   journey?: BookingJourney;
-  // What goes in each staff link's search params (see staffLink in
-  // admin.utils.ts). Only admin responses carry it; it's what signs the valet /
-  // advisor in without the email + OTP form.
-  staffTokens?: Partial<Record<StaffLinkRole, StaffAuth>>;
 }
 
 // A step of a staff page's progress timeline, with when it was done (text ready

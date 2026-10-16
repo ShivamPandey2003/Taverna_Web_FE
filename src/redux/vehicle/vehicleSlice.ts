@@ -16,15 +16,10 @@ const vehicleSlice = createSlice({
   name: "vehicle",
   initialState,
   reducers: {
-    // The list as the server returned it. There's no endpoint for updating
-    // mileage yet, so miles typed in here (editVehicle) are kept until the server
-    // has its own.
+    // The list as the server returned it (mileage included: MilesField saves it
+    // with vehicles/:id/mileage)
     setVehicles: (state, action: PayloadAction<Vehicle[]>) => {
-      const localMiles = new Map(state.vehicleList.map((item) => [item.id, item.miles]));
-      state.vehicleList = action.payload.map((vehicle) => ({
-        ...vehicle,
-        miles: vehicle.miles ?? localMiles.get(vehicle.id) ?? null,
-      }));
+      state.vehicleList = action.payload;
     },
     // A vehicle the server just saved
     addVehicle: (state, action: PayloadAction<Vehicle>) => {
