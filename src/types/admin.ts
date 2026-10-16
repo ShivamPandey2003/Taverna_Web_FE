@@ -108,7 +108,9 @@ export type IntakeMethod = (typeof INTAKE_METHODS)[number];
 // which the admin confirms (`pickupProgress.reached` / `deliveryProgress.delivered`).
 // A trip with a single choice needs no picking: see `defaultLegMethod`.
 export const LEG_METHODS: Record<ServiceId, Record<ValetLeg, readonly IntakeMethod[]>> = {
-  "pickup-delivery": { pickup: ["valet", "towTruck", "selfDrive"], delivery: ["valet", "selfDrive"] },
+  // Self-drive on the way back is switched off for now:
+  // "pickup-delivery": { pickup: ["valet", "towTruck", "selfDrive"], delivery: ["valet", "selfDrive"] },
+  "pickup-delivery": { pickup: ["valet", "towTruck", "selfDrive"], delivery: ["valet"] },
   "loaner-only": { pickup: ["selfDrive"], delivery: ["selfDrive"] },
 };
 
