@@ -38,6 +38,23 @@ const copy: Record<string, StepCopy> = {
   },
 };
 
+// The step a status code asks about. Exact codes first; then by the words in
+// the code, since the API renames its statuses (e.g. a "…_PENDING" or
+// "…_CONFIRMATION" form of the same step). Delivery is checked before pickup:
+// the delivery valet's codes also say VALET.
+const STEP_WORDS: [RegExp, keyof typeof copy][] = [
+  [/INSPECT|ESTIMATE|APPROV|QUOTE|WORK/, "INSPECTION_COMPLETED"],
+  [/DELIVER|RETURN|RECEIPT|RECEIVED|DROP/, "VEHICLE_DELIVERED"],
+  [/HAND|PICKUP|PICKED|COLLECT|VALET/, "VEHICLE_HANDED_OVER_TO_VALET"],
+];
+
+function stepCopy(code: string): StepCopy {
+  if (copy[code]) return copy[code];
+  const upper = code.toUpperCase();
+  const match = STEP_WORDS.find(([words]) => words.test(upper));
+  return match ? copy[match[1]] : fallback;
+}
+
 // Any other step the API asks about
 const fallback: StepCopy = {
   icon: TickCircle,
@@ -53,7 +70,7 @@ const fallback: StepCopy = {
 // some. Give it `key={status.code}` so an answer isn't carried over to the next step.
 export function ConfirmationCard({ status }: { status: ServiceStatus }) {
   const confirmStep = useConfirmStep();
-  const step = copy[status.code] ?? fallback;
+  const step = stepCopy(status.code);
   const Icon = step.icon;
   const title = status.confirmationPrompt?.title ?? step.title;
   const message = status.confirmationPrompt?.message ?? step.message;
