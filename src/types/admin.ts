@@ -108,7 +108,7 @@ export type IntakeMethod = (typeof INTAKE_METHODS)[number];
 // which the admin confirms (`pickupProgress.reached` / `deliveryProgress.delivered`).
 // A trip with a single choice needs no picking: see `defaultLegMethod`.
 export const LEG_METHODS: Record<ServiceId, Record<ValetLeg, readonly IntakeMethod[]>> = {
-  "pickup-delivery": { pickup: ["valet", "towTruck", "selfDrive"], delivery: ["valet"] },
+  "pickup-delivery": { pickup: ["valet", "towTruck", "selfDrive"], delivery: ["valet", "selfDrive"] },
   "loaner-only": { pickup: ["selfDrive"], delivery: ["selfDrive"] },
 };
 
@@ -122,7 +122,8 @@ export function defaultLegMethod(
 ): IntakeMethod | null {
   const options = LEG_METHODS[booking.serviceId][leg];
   if (options.length === 1) return options[0];
-  if (leg !== "pickup") return null;
+  // The way back: a valet, as booked, unless the admin picks the customer collecting it
+  if (leg !== "pickup") return options.includes("valet") ? "valet" : null;
   if (booking.towTruck) return "towTruck";
   if (booking.driveable) return "valet";
   return options.includes("selfDrive") ? "selfDrive" : null;
@@ -220,7 +221,9 @@ export function journeyIntakeMethod(
   const { journey } = booking;
   if (!journey || !LEG_METHODS[booking.serviceId].pickup.includes("towTruck")) return null;
   if (journey.current === "towAssigned") return "towTruck";
-  if (journey.current === "selfDriveAssigned") return "selfDrive";
+  // The handover's self-drive sends the same code: with a pickup valet the
+  // vehicle came in by valet, so it's the way back that's self-drive
+  if (journey.current === "selfDriveAssigned" && !booking.valet) return "selfDrive";
   if (journeyIntakeDone(journey) && !booking.valet) return "towTruck";
   return null;
 }

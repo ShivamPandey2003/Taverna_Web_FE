@@ -130,12 +130,12 @@ const toStaffMember = (member: StaffResponse): StaffMember => ({
   activeBookings: member.activeBookings ?? 0,
 });
 
-// The status booking/admin/update puts a booking at for a way in. A valet has
-// none to send: they're put on the booking by assigning them. SELF_DRIVE_ASSIGNED
-// is a guess, named after TOW_ASSIGNED, until the API's list is known.
-const intakeStatuses: Partial<Record<IntakeMethod, string>> = {
-  towTruck: "TOW_ASSIGNED",
-  selfDrive: "SELF_DRIVE_ASSIGNED",
+// The status booking/admin/update puts a booking at for each way in and back. A
+// valet has none to send: they're put on the booking by assigning them.
+// Self-drive is SELF_DRIVE_ASSIGNED both ways.
+const legStatuses: Record<ValetLeg, Partial<Record<IntakeMethod, string>>> = {
+  pickup: { towTruck: "TOW_ASSIGNED", selfDrive: "SELF_DRIVE_ASSIGNED" },
+  delivery: { selfDrive: "SELF_DRIVE_ASSIGNED" },
 };
 
 const legPaths: Record<ValetLeg, string> = { pickup: "intake", delivery: "handover" };
@@ -409,14 +409,15 @@ export const adminApi = {
   },
 
   // How the vehicle gets to the dealership (pickup) or back to the customer
-  // (delivery). Real API for the intake by tow truck or self-drive:
-  // booking/admin/update puts the booking at TOW_ASSIGNED / SELF_DRIVE_ASSIGNED, and the hook loads its details again (the mock's
-  // copy is told too, since it still remembers the choice). Switching to a valet
+  // (delivery). Real API for a tow truck or self-drive (either way):
+  // booking/admin/update puts the booking at that method's status (legStatuses),
+  // and the hook loads its details again (the mock's copy is told too, since it
+  // still remembers the choice). Switching to a valet
   // calls nothing: the choice is only remembered, the drawer shows the valet step,
   // and assigning the valet there is what tells the API. The other choices are
   // the mock's as well, on a proposed path.
   setLegMethod: async (id: string, leg: ValetLeg, method: IntakeMethod): Promise<void> => {
-    const bookingStatus = leg === "pickup" ? intakeStatuses[method] : undefined;
+    const bookingStatus = legStatuses[leg][method];
     if (!bookingStatus) {
       await callApi(
         () => mockServer.setLegMethod(id, leg, method),

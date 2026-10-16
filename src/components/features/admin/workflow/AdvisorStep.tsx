@@ -10,7 +10,7 @@ import {
   type AdminBooking,
   type Invoice,
 } from "@/types/admin";
-import { formatCurrency, isComplete, staffLink } from "../admin.utils";
+import { formatCurrency, isComplete, legMethod, staffLink } from "../admin.utils";
 import { MilestoneTracker, type Milestone } from "./MilestoneTracker";
 import { ActionButton, AssignmentRow, SectionCard, StepDone } from "./StepParts";
 
@@ -41,6 +41,12 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
   const paidInApp = journey?.current === SERVICE_VERIFYING;
   const ready = reached(SERVICE_READY);
   const stepLabel = (key: string) => journey?.steps.find((step) => step.key === key)?.label;
+  // What comes after: a valet to assign, or (self-drive, as Loaner Only always
+  // is) the customer collecting the vehicle, which the handover step confirms
+  const nextLabel =
+    legMethod(booking, "delivery") === "valet"
+      ? "Next: Assign Delivery Valet"
+      : "Next: Vehicle Handover";
 
   // The API only says when the current step was reached
   const milestones: Milestone[] = SERVICE_JOURNEY.flatMap((key) => {
@@ -148,7 +154,7 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
       {ready && (
         <StepDone
           text={stepLabel(SERVICE_READY) ?? "Ready to dispatch"}
-          actionLabel={isComplete(booking) ? undefined : "Next: Assign Delivery Valet"}
+          actionLabel={isComplete(booking) ? undefined : nextLabel}
           onAction={onDone}
         />
       )}
