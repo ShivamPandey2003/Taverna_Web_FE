@@ -45,7 +45,7 @@ export function TrackingHeader({
 
           <div className="min-w-0">
             <h2 className="text-lg font-bold leading-tight tracking-tight text-gray-900 md:text-2xl">
-              <VehicleTitle vehicle={vehicle} />
+              <VehicleTitle vehicle={vehicle} singleLine />
             </h2>
 
             <div className="mt-3 flex gap-6">

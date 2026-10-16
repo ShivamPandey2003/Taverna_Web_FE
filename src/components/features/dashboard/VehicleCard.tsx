@@ -66,9 +66,10 @@ export function VehicleCard({
 
         <div className="my-5 h-px bg-gray-200" />
 
-        {/* Stats, with the booking button beside them */}
+        {/* Stats, with the booking button beside them. The stats keep their
+            width; a long status is cut short in the button instead */}
         <div className="flex items-end justify-between gap-3">
-          <div className="flex min-w-0 gap-4">
+          <div className="flex shrink-0 gap-4">
             {/* Last 4 of the VIN, like everywhere else; the full VIN is in the tooltip */}
             <VehicleStat
               label="VIN"
@@ -128,12 +129,12 @@ function VehicleStat({
   title?: string;
 }) {
   return (
-    <div className="min-w-0">
+    <div>
       <p className="text-xs text-gray-800 font-medium">{label}</p>
 
       <p
         title={title}
-        className="mt-1 truncate text-sm font-semibold text-gray-900"
+        className="mt-1 whitespace-nowrap text-sm font-semibold text-gray-900"
       >
         {value}
       </p>

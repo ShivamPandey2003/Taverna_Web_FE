@@ -18,8 +18,10 @@ import { staffNeeded } from "@/services/bookingApi";
 import {
   useBookingStaff,
   useCustomerBookingDetails,
+  useMyBookings,
   useServiceStatus,
 } from "@/services/queries/bookingQueries";
+import { useVehicles } from "@/services/queries/vehicleQueries";
 import {
   BookingStatus as Status,
   type Booking,
@@ -44,6 +46,21 @@ export function ServiceTracking() {
   const staffNeed = live ? staffNeeded(live.code) : null;
   const statusCode = live?.code ?? details?.code;
   const { data: staff } = useBookingStaff(booking?.id ?? null, live?.code);
+
+  // After a reload the booking isn't known yet: it's put back from the bookings
+  // list once that and the vehicles have loaded (useSyncActiveBookings). Until
+  // then this is loading, not "no booking". Same queries as the layout's, so
+  // nothing extra is fetched.
+  const { data: list, isPending: listLoading } = useMyBookings();
+  const { data: vehicles, isPending: vehiclesLoading } = useVehicles();
+  const awaitingRestore =
+    !!vehicles?.length &&
+    !!list?.some((item) => item.open && (!bookingId || item.id === bookingId));
+  const restoring = listLoading || vehiclesLoading || awaitingRestore;
+
+  if (!booking && restoring) {
+    return <TrackingSkeleton />;
+  }
 
   if (!booking) {
     return (
@@ -94,6 +111,17 @@ export function ServiceTracking() {
   const display = getStatusDisplay(status, live);
   const stage = getTrackingStage(status);
 
+  // What the page shows under the header, besides the booking details. The
+  // staff card counts once the status has someone, before their details arrive,
+  // so the booking details don't flash up meanwhile.
+  const showStaff = !!staffNeed;
+  const showBill = !!details?.invoice && BILL_STATUSES.includes(statusCode);
+  const showMap = stage === "valet" || staffNeed?.type === "valet";
+  // The booking details: before anyone is assigned, and at any status between
+  // hand-offs that has nothing else to show (e.g. the vehicle has arrived at the
+  // dealership and no advisor has it yet), so the page is never just the header
+  const showDetails = stage === "details" || (!showStaff && !showBill && !showMap);
+
   return (
     <div className="min-h-0 h-full bg-[#f8f9fa] px-6 py-4 lg:px-10 overflow-auto">
       <div className="mx-auto max-w-[1200px] space-y-6">
@@ -113,8 +141,8 @@ export function ServiceTracking() {
         {/* The step waiting for the customer's approval, first thing under the header */}
         {live?.needsConfirmation && <ConfirmationCard key={live.code} status={live} />}
 
-        {/* Before anyone is assigned: what was booked */}
-        {stage === "details" && (
+        {/* What was booked (see showDetails) */}
+        {showDetails && (
           <>
             <BookingDetailsCard booking={booking} details={details} />
             <BookingActions
@@ -126,7 +154,7 @@ export function ServiceTracking() {
         )}
 
         {/* The valet of the current leg, or the advisor, while either is handling it */}
-        {staffNeed && staff && (
+        {showStaff && staffNeed && staff && (
           <StaffContactCard
             member={staff}
             role={
@@ -141,7 +169,7 @@ export function ServiceTracking() {
 
         {/* The bill, until the dealership confirms the payment: Pay Now while
             INVOICE_GENERATED, then paid and waiting while PAYMENT_VERIFICATION_PENDING */}
-        {details?.invoice && BILL_STATUSES.includes(statusCode) && (
+        {showBill && details?.invoice && (
           <InvoiceCard
             bookingId={booking.id}
             invoice={{
@@ -153,7 +181,7 @@ export function ServiceTracking() {
 
         {/* While a valet has the trip, either way (the delivery valet's statuses
             count as the vehicle's return, not the valet stage) */}
-        {(stage === "valet" || staffNeed?.type === "valet") && (
+        {showMap && (
           <TripMap booking={booking} details={details} />
         )}
       </div>
@@ -178,5 +206,32 @@ function TripMap({
       dealershipName={details?.dealershipName ?? booking.dealership.name}
       pickupMissing={pickupMissing}
     />
+  );
+}
+
+// The page's shape while the booking is loaded: the header panel and two cards
+function TrackingSkeleton() {
+  return (
+    <div className="min-h-0 h-full bg-[#f8f9fa] px-6 py-4 lg:px-10 overflow-auto">
+      <div
+        className="mx-auto max-w-[1200px] animate-pulse space-y-6"
+        role="status"
+        aria-label="Loading your booking"
+      >
+        <div className="flex flex-col gap-6 rounded-2xl border border-gray-200 bg-white p-6 md:flex-row md:items-center">
+          <div className="flex flex-1 items-center gap-6">
+            <div className="h-24 w-36 shrink-0 rounded-xl bg-gray-100" />
+            <div className="flex-1 space-y-3">
+              <div className="h-6 w-48 rounded bg-gray-100" />
+              <div className="h-4 w-32 rounded bg-gray-100" />
+            </div>
+          </div>
+          <div className="h-40 rounded-2xl bg-gray-100 md:w-[45%]" />
+        </div>
+
+        <div className="h-28 rounded-2xl border border-gray-200 bg-white" />
+        <div className="h-64 rounded-2xl border border-gray-200 bg-white" />
+      </div>
+    </div>
   );
 }

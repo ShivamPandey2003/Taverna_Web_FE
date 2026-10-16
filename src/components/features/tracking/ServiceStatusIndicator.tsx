@@ -25,9 +25,14 @@ export function ServiceStatusIndicator({ display, size = "lg" }: ServiceStatusIn
 
   return (
     <span
+      title={display.label}
       className={cn(
-        "shrink-0 text-center font-bold leading-tight",
-        size === "lg" ? "w-[84px] text-lg" : "text-sm",
+        "font-bold leading-tight",
+        // The small one sits beside a vehicle's name: it takes at most 40% of the
+        // row and wraps to two lines, so the name and VIN stay readable
+        size === "lg"
+          ? "w-[84px] shrink-0 text-center text-lg"
+          : "line-clamp-2 max-w-[40%] shrink-0 text-right text-sm",
         color,
       )}
     >

@@ -46,19 +46,19 @@ export function ServiceStatusToast() {
   const viewedId = trackingMatch
     ? pickTrackedService(services, trackingMatch.params.bookingId)?.booking.id
     : undefined;
-  const shown = services.filter(
-    (service) => isOpenService(service) && service.booking.id !== viewedId,
-  );
+  const shown = services
+    .filter((service) => isOpenService(service) && service.booking.id !== viewedId)
+    .sort(newestFirst);
 
   if (shown.length === 0) {
     return null;
   }
 
   return (
-    // Newest on the right
+    // Newest first, on the left; a row that doesn't fit wraps upwards
     <div
       ref={rootRef}
-      className="fixed right-4 bottom-4 z-40 flex max-w-[calc(100vw-32px)] animate-toast-in flex-row-reverse flex-wrap-reverse items-center gap-3 sm:right-6"
+      className="fixed right-4 bottom-4 z-40 flex max-w-[calc(100vw-32px)] animate-toast-in flex-wrap-reverse items-center justify-end gap-3 sm:right-6"
     >
       {shown.map((service) => (
         <ServiceBubble
@@ -70,6 +70,20 @@ export function ServiceStatusToast() {
       ))}
     </div>
   );
+}
+
+// Booking ids are numbered in the order they were made ("TD-039" after "TD-018"),
+// which holds for bookings put back from the list too; when an id has no number
+// the booking's own date decides
+const bookingNumber = (id: string) => Number(id.match(/\d+/g)?.pop() ?? NaN);
+
+function newestFirst(a: ActiveService, b: ActiveService) {
+  const numberA = bookingNumber(a.booking.id);
+  const numberB = bookingNumber(b.booking.id);
+  if (!Number.isNaN(numberA) && !Number.isNaN(numberB) && numberA !== numberB) {
+    return numberB - numberA;
+  }
+  return Date.parse(b.booking.createdAt) - Date.parse(a.booking.createdAt);
 }
 
 interface ServiceBubbleProps {
