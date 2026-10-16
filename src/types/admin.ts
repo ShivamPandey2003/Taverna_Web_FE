@@ -113,9 +113,9 @@ export const LEG_METHODS: Record<ServiceId, Record<ValetLeg, readonly IntakeMeth
 };
 
 // How a trip is made until the admin picks something else: the only choice the
-// booked service has, or for the way in what the customer booked (a tow truck when
-// they asked for one, a valet for a vehicle that can be driven). null leaves it to
-// the admin: the vehicle can't be driven and no tow truck was asked for.
+// booked service has, or for the way in what the customer booked: a tow truck when
+// they asked for one, a valet for a vehicle that can be driven, and self-drive for
+// one that can't be driven with no tow truck asked for (as requested).
 export function defaultLegMethod(
   booking: Pick<AdminBooking, "serviceId" | "driveable" | "towTruck">,
   leg: ValetLeg,
@@ -124,7 +124,8 @@ export function defaultLegMethod(
   if (options.length === 1) return options[0];
   if (leg !== "pickup") return null;
   if (booking.towTruck) return "towTruck";
-  return booking.driveable ? "valet" : null;
+  if (booking.driveable) return "valet";
+  return options.includes("selfDrive") ? "selfDrive" : null;
 }
 
 // Updates the advisor shares with the customer while the vehicle is serviced, in
