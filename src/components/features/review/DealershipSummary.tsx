@@ -10,7 +10,7 @@ export function DealershipSummary({ loading = false }: { loading?: boolean }) {
 
   return (
     <BookingSummaryCard
-      title="Closest Dealership"
+      title="Destination Dealership"
       status={{
         valid: !!dealership,
         label: dealership ? "Dealership selected" : "Select a dealership",

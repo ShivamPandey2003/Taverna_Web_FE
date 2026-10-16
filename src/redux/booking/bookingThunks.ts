@@ -6,6 +6,7 @@ import {
   selectBookingVehicle,
 } from "./bookingSlice";
 import { bookingApi } from "@/services/bookingApi";
+import { pendingBookingStorage } from "@/services/pendingBookingStorage";
 
 // Sends the booking in progress to the API, then snapshots it into the tracking slice.
 // Resolves the new booking's id, or null when a vehicle, pickup location or dealership is
@@ -81,6 +82,9 @@ export const confirmBooking =
           status: created.status,
         }),
       );
+      // The landing page's pickup and dealership have been booked: the next
+      // booking starts from scratch
+      pendingBookingStorage.clear();
 
       return created.id;
     } catch {

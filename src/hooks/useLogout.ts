@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAppDispatch } from "@/redux/hooks";
 import { logout } from "@/redux/auth/authSlice";
 import { useLogoutRequest } from "@/services/queries/authQueries";
+import { pendingBookingStorage } from "@/services/pendingBookingStorage";
 
 // Revokes the session on the server, then clears the session, the account's
 // Redux data and any cached API responses
@@ -22,6 +23,8 @@ export function useLogout() {
       onSettled: () => {
         dispatch(logout());
         queryClient.clear();
+        // The landing page's choice belonged to this account's visit
+        pendingBookingStorage.clear();
         navigate("/", { replace: true });
       },
     });

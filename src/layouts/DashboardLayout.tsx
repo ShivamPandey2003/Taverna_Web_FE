@@ -3,6 +3,7 @@ import { Outlet } from "react-router";
 import { Navbar } from "@/components/global/Navbar";
 import { ServiceStatusToast } from "@/components/features/tracking/ServiceStatusToast";
 import { useSyncActiveBookings } from "@/components/features/tracking/serviceStatus";
+import { usePendingBooking } from "@/hooks/usePendingBooking";
 import { useSyncAddresses } from "@/hooks/useSyncAddresses";
 import { useSyncProfile } from "@/hooks/useSyncProfile";
 import { useSyncVehicles } from "@/hooks/useSyncVehicles";
@@ -19,6 +20,8 @@ export function DashboardLayout() {
   useSyncAddresses(!isAdmin);
   // And their profile, which the login only gives part of
   useSyncProfile(!isAdmin);
+  // The pickup and dealership picked on the landing page before signing in
+  usePendingBooking(!isAdmin);
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
