@@ -6,19 +6,9 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useState } from "react";
+import { liveRefetch } from "@/libs/polling";
 import { adminApi, type OfferUploadStep, type StaffInput } from "@/services/adminApi";
-import {
-  HANDOVER_DELIVERED,
-  HANDOVER_JOURNEY,
-  INTAKE_ARRIVED,
-  INTAKE_JOURNEY,
-  journeyReached,
-  SERVICE_JOURNEY,
-  SERVICE_PAID,
-  SERVICE_VERIFYING,
-} from "@/types/admin";
 import type {
-  AdminBooking,
   BookingListParams,
   StaffListParams,
   StaffRole,
@@ -38,16 +28,14 @@ export const adminKeys = {
   offerList: (params: OfferListParams) => ["admin", "offers", "list", params] as const,
 };
 
-// How often the bookings table loads again by itself (only while the tab is open)
-const BOOKING_LIST_REFRESH_MS = 5_000;
-
 export function useAdminBookings(params: BookingListParams) {
   return useQuery({
     queryKey: adminKeys.bookingList(params),
     queryFn: () => adminApi.listBookings(params),
     // Keep the current page on screen while the next one loads
     placeholderData: keepPreviousData,
-    refetchInterval: BOOKING_LIST_REFRESH_MS,
+    // Loads again by itself every 5s
+    refetchInterval: liveRefetch,
   });
 }
 
@@ -62,31 +50,14 @@ export function useRefreshAdminBookings() {
   return { refresh, refreshing };
 }
 
-const JOURNEY_REFRESH_MS = 15_000;
-
-// Someone else is moving the booking on from their own page: a valet (from
-// being assigned until the vehicle is at the other end), or the advisor and then
-// the paying customer (from the advisor being assigned until the bill is paid)
-function othersTurn({ journey }: AdminBooking) {
-  if (!journey) return false;
-  const between = (from: string, to: string) =>
-    journeyReached(journey, from) && !journeyReached(journey, to);
-  return (
-    between(INTAKE_JOURNEY[0], INTAKE_ARRIVED) ||
-    // Once the customer has paid it's the admin's turn to confirm it
-    (between(SERVICE_JOURNEY[0], SERVICE_PAID) && journey.current !== SERVICE_VERIFYING) ||
-    between(HANDOVER_JOURNEY[0], HANDOVER_DELIVERED)
-  );
-}
-
 export function useAdminBooking(id: string | null) {
   return useQuery({
     queryKey: adminKeys.booking(id ?? ""),
     queryFn: () => adminApi.getBooking(id!),
     enabled: !!id,
-    // While it's someone else's turn the booking is loaded again every so often
-    refetchInterval: (query) =>
-      query.state.data && othersTurn(query.state.data) ? JOURNEY_REFRESH_MS : false,
+    // Loads again every 5s while open, so what valets, advisors and customers do
+    // shows in the drawer
+    refetchInterval: liveRefetch,
   });
 }
 

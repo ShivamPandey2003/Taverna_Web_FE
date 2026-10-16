@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { liveRefetch } from "@/libs/polling";
 import { bookingApi, staffNeeded } from "@/services/bookingApi";
 import type { BookingSummary, ConfirmationAnswer, StaffNeed } from "@/types/booking";
 
@@ -11,8 +12,6 @@ export const bookingKeys = {
     ["bookings", "staff", id, need, code] as const,
 };
 
-const STATUS_REFRESH_MS = 15_000;
-
 // Where one booking stands (the real API's status-summary), for the tracking
 // page: polled, so the dealership's progress shows up. The API layer toasts a
 // failure, so it isn't retried.
@@ -21,7 +20,7 @@ export function useServiceStatus(id: string | null) {
     queryKey: bookingKeys.status(id),
     queryFn: () => bookingApi.getStatus(id!),
     enabled: !!id,
-    refetchInterval: STATUS_REFRESH_MS,
+    refetchInterval: liveRefetch,
     retry: false,
   });
 }
@@ -67,8 +66,6 @@ export function useCustomerBookingDetails(id: string | null, code: string | unde
   return query;
 }
 
-const LIST_REFRESH_MS = 30_000;
-
 // All of the customer's bookings with their status (the real API's booking/list):
 // what the status bubbles and the vehicle cards follow, and what puts the tracked
 // bookings back after a reload. Polled, so a service that moves on or finishes
@@ -78,7 +75,7 @@ export function useMyBookings(enabled = true) {
     queryKey: bookingKeys.list,
     queryFn: bookingApi.list,
     enabled,
-    refetchInterval: LIST_REFRESH_MS,
+    refetchInterval: liveRefetch,
     retry: false,
   });
 }

@@ -1,12 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { liveRefetch } from "@/libs/polling";
 import { notificationApi } from "@/services/notificationApi";
 import type { Notification } from "@/types/notification";
 
 export const notificationKeys = {
   list: ["notifications"] as const,
 };
-
-const REFRESH_MS = 30_000;
 
 // The customer's notifications, newest first. Polled, so new ones show up while
 // the app is open. The API layer toasts a failure, so it isn't retried.
@@ -15,7 +14,7 @@ export function useNotifications(enabled = true) {
     queryKey: notificationKeys.list,
     queryFn: () => notificationApi.list(),
     enabled,
-    refetchInterval: REFRESH_MS,
+    refetchInterval: liveRefetch,
     retry: false,
   });
 }

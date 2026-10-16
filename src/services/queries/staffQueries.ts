@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { staffToast } from "@/components/features/staffPortal/shared/staffToast";
 import { errorMessage } from "@/libs/apiError";
+import { liveRefetch } from "@/libs/polling";
 import { staffApi } from "../staffApi";
 import type { InvoiceLine, StaffAuth, StaffType } from "@/types/admin";
 
@@ -38,8 +39,9 @@ export function useStaffVerifyOtp() {
   });
 }
 
-// Staff pages load once: no polling, and no reload on coming back to the tab
-const loadOnce = { refetchOnWindowFocus: false, retry: 1 } as const;
+// Staff pages load again every 5s, so what the customer and the admin do (a
+// confirmation, a reassignment) shows without a reload
+const live = { refetchOnWindowFocus: false, retry: 1, refetchInterval: liveRefetch } as const;
 
 // The task list of the signed-in valet or advisor
 export function useStaffTasks(type: StaffType, auth: StaffAuth) {
@@ -47,7 +49,7 @@ export function useStaffTasks(type: StaffType, auth: StaffAuth) {
     queryKey: staffKeys.tasks(type, auth),
     queryFn: () => staffApi.listTasks(type, auth),
     enabled: !!auth.gear && !!auth.token,
-    ...loadOnce,
+    ...live,
   });
 }
 
@@ -57,7 +59,7 @@ export function useValetTrip(link: StaffLinkParams) {
     queryKey: staffKeys.valetTrip(link),
     queryFn: () => staffApi.getValetTrip(link, link.id),
     enabled: !!link.id && !!link.gear && !!link.token,
-    ...loadOnce,
+    ...live,
   });
 }
 
@@ -67,7 +69,7 @@ export function useAdvisorService(link: StaffLinkParams) {
     queryKey: staffKeys.advisorService(link),
     queryFn: () => staffApi.getAdvisorService(link, link.id),
     enabled: !!link.id && !!link.gear && !!link.token,
-    ...loadOnce,
+    ...live,
   });
 }
 
