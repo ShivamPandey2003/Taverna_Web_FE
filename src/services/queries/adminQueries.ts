@@ -1,5 +1,6 @@
 import {
   keepPreviousData,
+  useIsFetching,
   useMutation,
   useQuery,
   useQueryClient,
@@ -14,6 +15,7 @@ import {
   journeyReached,
   SERVICE_JOURNEY,
   SERVICE_PAID,
+  SERVICE_VERIFYING,
 } from "@/types/admin";
 import type {
   AdminBooking,
@@ -36,13 +38,28 @@ export const adminKeys = {
   offerList: (params: OfferListParams) => ["admin", "offers", "list", params] as const,
 };
 
+// How often the bookings table loads again by itself (only while the tab is open)
+const BOOKING_LIST_REFRESH_MS = 5_000;
+
 export function useAdminBookings(params: BookingListParams) {
   return useQuery({
     queryKey: adminKeys.bookingList(params),
     queryFn: () => adminApi.listBookings(params),
     // Keep the current page on screen while the next one loads
     placeholderData: keepPreviousData,
+    refetchInterval: BOOKING_LIST_REFRESH_MS,
   });
+}
+
+// The toolbar's refresh button: the list and the booking open in the drawer.
+// `refreshing` is true while any of them is loading, the 5s poll included.
+export function useRefreshAdminBookings() {
+  const queryClient = useQueryClient();
+  const refreshing = useIsFetching({ queryKey: adminKeys.bookings }) > 0;
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: adminKeys.bookings });
+
+  return { refresh, refreshing };
 }
 
 const JOURNEY_REFRESH_MS = 15_000;
@@ -56,7 +73,8 @@ function othersTurn({ journey }: AdminBooking) {
     journeyReached(journey, from) && !journeyReached(journey, to);
   return (
     between(INTAKE_JOURNEY[0], INTAKE_ARRIVED) ||
-    between(SERVICE_JOURNEY[0], SERVICE_PAID) ||
+    // Once the customer has paid it's the admin's turn to confirm it
+    (between(SERVICE_JOURNEY[0], SERVICE_PAID) && journey.current !== SERVICE_VERIFYING) ||
     between(HANDOVER_JOURNEY[0], HANDOVER_DELIVERED)
   );
 }

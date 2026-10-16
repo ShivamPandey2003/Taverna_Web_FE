@@ -6,6 +6,7 @@ import {
   SERVICE_JOURNEY,
   SERVICE_PAID,
   SERVICE_READY,
+  SERVICE_VERIFYING,
   type AdminBooking,
   type Invoice,
 } from "@/types/admin";
@@ -23,7 +24,7 @@ interface AdvisorStepProps {
 // confirmed → ready to dispatch. It's drawn from the API's journey
 // (`booking.journey`): the advisor posts their steps and the bill from their own
 // page, so the admin only watches those, and then makes the last two: confirming
-// the payment (unless the customer paid in the app) and marking the vehicle ready
+// the payment (also when the customer paid in the app) and marking the vehicle ready
 // to dispatch. The delivery valet stays locked until the last one.
 export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
   const assignAdvisor = useAssignRelationshipManager();
@@ -34,6 +35,10 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
   const { journey, invoice } = booking;
   const reached = (key: string) => !!journey && journeyReached(journey, key);
   const paid = reached(SERVICE_PAID);
+  // The bill is out and not confirmed paid: the admin can confirm the payment.
+  // Paid in the app first moves it on to "verification pending", not past it.
+  const awaitingPayment = reached(SERVICE_INVOICED) && !paid;
+  const paidInApp = journey?.current === SERVICE_VERIFYING;
   const ready = reached(SERVICE_READY);
   const stepLabel = (key: string) => journey?.steps.find((step) => step.key === key)?.label;
 
@@ -95,7 +100,12 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
         </SectionCard>
       )}
 
-      {invoice && <BillSummary invoice={invoice} paid={paid} />}
+      {invoice && (
+        <BillSummary
+          invoice={invoice}
+          state={paid ? "paid" : paidInApp ? "verifying" : "awaiting"}
+        />
+      )}
 
       {!advisor && (
         <p className="rounded-xl bg-gray-50 p-4 text-center text-sm text-gray-500">
@@ -103,10 +113,12 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
         </p>
       )}
 
-      {advisor && journey?.current === SERVICE_INVOICED && (
+      {advisor && awaitingPayment && (
         <>
           <p className="text-xs text-gray-500">
-            The customer can pay from their tracking page. Confirm here if they paid another way.
+            {paidInApp
+              ? "The customer has paid from their tracking page. Check the payment came through, then confirm it."
+              : "The customer can pay from their tracking page. Confirm here if they paid another way."}
           </p>
           <ActionButton
             pending={confirm.isPending}
@@ -145,19 +157,21 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
 }
 
 // The bill as the customer sees it
-function BillSummary({ invoice, paid }: { invoice: Invoice; paid: boolean }) {
+const BILL_STATES = {
+  paid: { label: "Paid", className: "bg-gray-100 text-gray-900" },
+  verifying: { label: "Paid · Verification pending", className: "bg-orange-50 text-status-pending" },
+  awaiting: { label: "Awaiting payment", className: "bg-orange-50 text-status-pending" },
+};
+
+function BillSummary({ invoice, state }: { invoice: Invoice; state: keyof typeof BILL_STATES }) {
   return (
     <SectionCard>
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="text-sm font-bold text-gray-900">Bill</h3>
         <span
-          className={
-            paid
-              ? "rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-900"
-              : "rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-status-pending"
-          }
+          className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${BILL_STATES[state].className}`}
         >
-          {paid ? "Paid" : "Awaiting payment"}
+          {BILL_STATES[state].label}
         </span>
       </div>
 

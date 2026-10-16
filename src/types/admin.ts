@@ -110,7 +110,7 @@ export type IntakeMethod = (typeof INTAKE_METHODS)[number];
 // which the admin confirms (`pickupProgress.reached` / `deliveryProgress.delivered`).
 // A trip with a single choice needs no picking: see `defaultLegMethod`.
 export const LEG_METHODS: Record<ServiceId, Record<ValetLeg, readonly IntakeMethod[]>> = {
-  "pickup-delivery": { pickup: ["valet", "towTruck"], delivery: ["valet"] },
+  "pickup-delivery": { pickup: ["valet", "towTruck", "selfDrive"], delivery: ["valet"] },
   "loaner-only": { pickup: ["selfDrive"], delivery: ["selfDrive"] },
 };
 
@@ -221,6 +221,7 @@ export function journeyIntakeMethod(
   const { journey } = booking;
   if (!journey || !LEG_METHODS[booking.serviceId].pickup.includes("towTruck")) return null;
   if (journey.current === "towAssigned") return "towTruck";
+  if (journey.current === "selfDriveAssigned") return "selfDrive";
   if (journeyIntakeDone(journey) && !booking.valet) return "towTruck";
   return null;
 }
@@ -261,6 +262,9 @@ export const SERVICE_JOURNEY = [
 // The advisor's last step (the bill), then the admin's two that end the service
 export const SERVICE_INVOICED = "invoiceGenerated";
 export const SERVICE_PAID = "paymentConfirmed";
+// Between the two: the customer paid in the app and the admin hasn't confirmed it
+// yet (PAYMENT_VERIFICATION_PENDING). Not on the tracker, as the steps around it are.
+export const SERVICE_VERIFYING = "paymentVerificationPending";
 export const SERVICE_READY = "readyForDispatch";
 
 const SERVICE_JOURNEY_STEPS: Record<AdvisorMilestone, string> = {

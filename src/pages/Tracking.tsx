@@ -27,6 +27,9 @@ import {
 } from "@/types/booking";
 import type { Vehicle } from "@/types/vehicle";
 
+// The statuses the bill shows at
+const BILL_STATUSES: (string | undefined)[] = ["INVOICE_GENERATED", "PAYMENT_VERIFICATION_PENDING"];
+
 export function ServiceTracking() {
   const navigate = useNavigate();
   // The booking in the URL; without one, the newest that's still running
@@ -39,6 +42,7 @@ export function ServiceTracking() {
   const { data: details } = useCustomerBookingDetails(booking?.id ?? null, live?.code);
   // The valet or advisor, only at a status that has one to show
   const staffNeed = live ? staffNeeded(live.code) : null;
+  const statusCode = live?.code ?? details?.code;
   const { data: staff } = useBookingStaff(booking?.id ?? null, live?.code);
 
   if (!booking) {
@@ -135,9 +139,16 @@ export function ServiceTracking() {
           />
         )}
 
-        {/* The bill, only until it's paid (the status moves past INVOICE_GENERATED) */}
-        {details?.invoice && (live?.code ?? details.code) === "INVOICE_GENERATED" && (
-          <InvoiceCard bookingId={booking.id} invoice={details.invoice} />
+        {/* The bill, until the dealership confirms the payment: Pay Now while
+            INVOICE_GENERATED, then paid and waiting while PAYMENT_VERIFICATION_PENDING */}
+        {details?.invoice && BILL_STATUSES.includes(statusCode) && (
+          <InvoiceCard
+            bookingId={booking.id}
+            invoice={{
+              ...details.invoice,
+              paid: details.invoice.paid || statusCode === "PAYMENT_VERIFICATION_PENDING",
+            }}
+          />
         )}
 
         {/* While a valet has the trip, either way (the delivery valet's statuses

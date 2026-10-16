@@ -152,8 +152,8 @@ export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
 
   return (
     <div className="space-y-4">
-      {/* One slim row: label on the left, the choices as a segmented control */}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      {/* One slim row: the label, then the choices beside it as a segmented control */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
           {text.pickerLabel}
         </p>

@@ -1,5 +1,6 @@
 import { BookingsTable } from "@/components/features/admin/BookingsTable";
 import { BookingsToolbar } from "@/components/features/admin/BookingsToolbar";
+import { RefreshBookingsButton } from "@/components/features/admin/RefreshBookingsButton";
 import { BookingDetailsModal } from "@/components/features/admin/details/BookingDetailsModal";
 import { BookingWorkflowDrawer } from "@/components/features/admin/workflow/BookingWorkflowDrawer";
 
@@ -11,7 +12,7 @@ export function AdminBookings() {
       {/* Doesn't scroll: pages show 10 rows, and only the table scrolls on very short screens */}
       <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col gap-3 px-6 py-4 lg:px-10">
         {/* Page header */}
-        <header className="flex flex-wrap items-baseline gap-x-3">
+        <header className="flex flex-wrap items-center justify-between gap-x-3">
           <h1 className="text-xl font-bold tracking-tight text-gray-900">
             Bookings
           </h1>
@@ -19,6 +20,8 @@ export function AdminBookings() {
           {/* <p className="text-sm text-gray-500">
             Open a booking to see its details, or manage it to confirm it, assign valets and an advisor, and complete it.
           </p> */}
+
+          <RefreshBookingsButton />
         </header>
 
         <BookingsToolbar />
