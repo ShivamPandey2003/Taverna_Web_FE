@@ -56,29 +56,38 @@ function toDealership(dealership: DealershipResponse): Dealership {
   };
 }
 
-async function fetchDealerships(near?: Coordinates) {
+// `dealerships/list` needs the Bearer token; `dealerships/public-list` doesn't,
+// for the landing page's visitors who aren't logged in. Same params and answer.
+async function fetchDealerships(near?: Coordinates, path = "dealerships/list") {
   const query = near
     ? toQueryString({ latitude: near.latitude, longitude: near.longitude })
     : "";
   const { dealerships } = await request<{ dealerships: DealershipResponse[] }>(
     "get",
-    `dealerships/list${query}`,
+    `${path}${query}`,
   );
   return dealerships;
+}
+
+// Active ones, closest to `near` first when it's given
+function activeDealerships(dealerships: DealershipResponse[], near?: Coordinates) {
+  const active = dealerships.filter((dealership) => dealership.isActive !== false);
+  if (near) {
+    active.sort((a, b) => distance(near, a) - distance(near, b));
+  }
+  return active.map(toDealership);
 }
 
 export const dealershipApi = {
   // Every active dealership. With the customer's coordinates the API answers
   // for that location, and the result is ordered closest first.
-  list: async (near?: Coordinates): Promise<Dealership[]> => {
-    const active = (await fetchDealerships(near)).filter(
-      (dealership) => dealership.isActive !== false,
-    );
-    if (near) {
-      active.sort((a, b) => distance(near, a) - distance(near, b));
-    }
-    return active.map(toDealership);
-  },
+  list: async (near?: Coordinates): Promise<Dealership[]> =>
+    activeDealerships(await fetchDealerships(near), near),
+
+  // The same without logging in (dealerships/public-list): only the landing page
+  // ("/") uses it
+  listPublic: async (near?: Coordinates): Promise<Dealership[]> =>
+    activeDealerships(await fetchDealerships(near, "dealerships/public-list"), near),
 
   // Everything the API lists, for the admin page (inactive ones included)
   listAll: async (): Promise<Dealership[]> => (await fetchDealerships()).map(toDealership),

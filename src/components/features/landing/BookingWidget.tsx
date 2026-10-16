@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectIsAuthenticated, setAuthMode } from "@/redux/auth/authSlice";
 import { openAuthModal } from "@/redux/modals/homeModal/homeModalSlice";
-import { useNearbyDealerships } from "@/services/queries/dealershipQueries";
+import { usePublicNearbyDealerships } from "@/services/queries/dealershipQueries";
 import { PickupSearch, type PickedPlace } from "./PickupSearch";
 
 export function BookingWidget() {
@@ -35,8 +35,9 @@ export function BookingWidget() {
     picked?.coordinates ??
     (hasPickup && device ? { latitude: device.latitude, longitude: device.longitude } : null);
 
-  // The dealership closest to the pickup (the list comes back closest first)
-  const { data: nearby, isLoading: findingDealership, isError } = useNearbyDealerships(pickup);
+  // The dealership closest to the pickup (the list comes back closest first).
+  // The public list: visitors here usually aren't logged in.
+  const { data: nearby, isLoading: findingDealership, isError } = usePublicNearbyDealerships(pickup);
   const closest = nearby?.[0];
   const finding = (!picked && loading) || findingDealership;
 

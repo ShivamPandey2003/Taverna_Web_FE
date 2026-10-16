@@ -13,6 +13,8 @@ export const dealershipKeys = {
   all: ["dealerships", "all"] as const,
   near: ({ latitude, longitude }: Coordinates) =>
     ["dealerships", "near", latitude, longitude] as const,
+  publicNear: ({ latitude, longitude }: Coordinates) =>
+    ["dealerships", "public", latitude, longitude] as const,
   admin: ["dealerships", "admin"] as const,
 };
 
@@ -32,6 +34,17 @@ export function useNearbyDealerships(coordinates: Coordinates | null) {
   return useQuery({
     queryKey: dealershipKeys.near(coordinates ?? { latitude: 0, longitude: 0 }),
     queryFn: () => dealershipApi.list(coordinates as Coordinates),
+    enabled: Boolean(coordinates),
+    retry: false,
+  });
+}
+
+// The same for the landing page ("/"), whose visitors may not be logged in: the
+// public list, which needs no token. Use it nowhere else.
+export function usePublicNearbyDealerships(coordinates: Coordinates | null) {
+  return useQuery({
+    queryKey: dealershipKeys.publicNear(coordinates ?? { latitude: 0, longitude: 0 }),
+    queryFn: () => dealershipApi.listPublic(coordinates as Coordinates),
     enabled: Boolean(coordinates),
     retry: false,
   });
