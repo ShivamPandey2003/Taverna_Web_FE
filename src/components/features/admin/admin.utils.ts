@@ -23,7 +23,11 @@ export const serviceLabels: Record<ServiceId, string> = {
   "loaner-only": "Loaner Only",
 };
 
-export const bookingStatuses = Object.values(BookingStatus);
+// The bookings table's status filter. Service Complete is left out (by request):
+// finished bookings aren't filtered for.
+export const bookingStatuses = Object.values(BookingStatus).filter(
+  (status) => status !== BookingStatus.SERVICE_COMPLETE,
+);
 
 export function formatDateTime(value: string | null) {
   if (!value) return "—";
