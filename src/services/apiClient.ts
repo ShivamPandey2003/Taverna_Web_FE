@@ -33,7 +33,7 @@ export async function callApi<T>(
   }
 }
 
-type Method = "get" | "post" | "put" | "delete";
+type Method = "get" | "post" | "put" | "delete" | "patch";
 
 // The backend wraps payloads as { code, message, response }
 export async function request<T>(method: Method, url: string, data?: unknown): Promise<T> {

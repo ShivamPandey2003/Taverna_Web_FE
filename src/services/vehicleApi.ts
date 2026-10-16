@@ -156,7 +156,7 @@ export const vehicleApi = {
   // mileage saved, formatted like the list's ("45,230 mi").
   updateMileage: async (vehicleId: string, mileage: number) => {
     const { currentMileage } = await request<{ currentMileage: number }>(
-      "post",
+      "patch",
       `vehicles/${vehicleId}/mileage`,
       { currentMileage: mileage },
     );

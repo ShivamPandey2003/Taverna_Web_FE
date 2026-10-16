@@ -17,7 +17,7 @@ const apiUrl: string | undefined =
 // in dev, requests go to this origin under the same path.
 const platform_url = import.meta.env.DEV && apiUrl ? new URL(apiUrl).pathname : apiUrl;
 
-type ApiMethod = "get" | "post" | "put" | "delete";
+type ApiMethod = "get" | "post" | "put" | "delete" | "patch";
 
 const apiClient = axios.create({
   baseURL: platform_url,
