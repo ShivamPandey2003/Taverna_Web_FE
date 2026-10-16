@@ -38,6 +38,10 @@ function distance(from: Coordinates, to: Coordinates) {
   return 2 * Math.asin(Math.sqrt(a));
 }
 
+// The same in miles (the Earth's radius is 3,958.8 mi), to show next to a dealership
+export const distanceMiles = (from: Coordinates, to: Coordinates) =>
+  distance(from, to) * 3958.8;
+
 function toDealership(dealership: DealershipResponse): Dealership {
   return {
     id: dealership.dealershipId,

@@ -5,6 +5,7 @@ import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectIsAuthenticated, setAuthMode } from "@/redux/auth/authSlice";
 import { openAuthModal } from "@/redux/modals/homeModal/homeModalSlice";
 import { usePublicNearbyDealerships } from "@/services/queries/dealershipQueries";
+import { DealershipPicker } from "./DealershipPicker";
 import { PickupSearch, type PickedPlace } from "./PickupSearch";
 
 export function BookingWidget() {
@@ -14,6 +15,8 @@ export function BookingWidget() {
   const { address, coordinates: device, loading, error, getLocation } = useLocation();
   // A place the visitor searched for instead of where the device is
   const [picked, setPicked] = useState<PickedPlace | null>(null);
+  // A dealership the visitor chose over the closest one
+  const [chosenDealershipId, setChosenDealershipId] = useState<string | null>(null);
 
   useEffect(() => {
     getLocation();
@@ -39,6 +42,9 @@ export function BookingWidget() {
   // The public list: visitors here usually aren't logged in.
   const { data: nearby, isLoading: findingDealership, isError } = usePublicNearbyDealerships(pickup);
   const closest = nearby?.[0];
+  // The chosen one while it's still in the list (a new pickup can change it),
+  // else the closest
+  const dealership = nearby?.find((item) => item.id === chosenDealershipId) ?? closest;
   const finding = (!picked && loading) || findingDealership;
 
   // The delivery row shows while the location is being found too, as the pickup
@@ -74,7 +80,7 @@ export function BookingWidget() {
           />
         </div>
 
-        {/* Delivery: the dealership closest to the pickup address */}
+        {/* Delivery: the dealership closest to the pickup address, or the one chosen */}
         {showDelivery && (
           <div className="relative flex items-center gap-3 rounded-lg border border-gray-300 px-4 py-3">
             {/* The line's other half, up from this marker's centre */}
@@ -82,28 +88,27 @@ export function BookingWidget() {
 
             <div className="relative h-6 w-6 shrink-0 rounded-sm bg-black" />
 
-            {/* Same as the pickup row, with the badge beside the dealership's name */}
-            <div className="min-w-0 flex-1 text-sm sm:flex sm:items-center sm:gap-1">
-              <span className="block shrink-0">Deliver to</span>
+            {!finding && dealership && nearby ? (
+              // The closest by default; a dropdown to pick another
+              <DealershipPicker
+                dealerships={nearby}
+                selected={dealership}
+                pickup={pickup}
+                onSelect={(item) => setChosenDealershipId(item.id)}
+              />
+            ) : (
+              <div className="min-w-0 flex-1 text-sm sm:flex sm:items-center sm:gap-1">
+                <span className="block shrink-0">Deliver to</span>
 
-              <div className="flex min-w-0 items-center gap-2 sm:flex-1 sm:gap-3">
                 <strong className="line-clamp-2 min-w-0 break-words sm:line-clamp-1 sm:flex-1">
                   {finding
                     ? "Finding closest dealership..."
-                    : closest
-                      ? closest.name
-                      : isError
-                        ? "We couldn't load the dealerships"
-                        : "No dealership near this address"}
+                    : isError
+                      ? "We couldn't load the dealerships"
+                      : "No dealership near this address"}
                 </strong>
-
-                {!finding && closest && (
-                  <span className="shrink-0 rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-primary">
-                    Closest
-                  </span>
-                )}
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>
