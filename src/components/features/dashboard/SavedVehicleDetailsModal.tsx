@@ -11,7 +11,12 @@ import {
 } from "@/redux/modals/dashboardModal/dashboardModalSlice";
 import { VehicleTitle } from "@/components/features/dashboard/VehicleTitle";
 import { useVehicleOverview } from "@/services/queries/vehicleQueries";
-import { maskedVin } from "@/libs/utils";
+import { cn, maskedVin } from "@/libs/utils";
+import {
+  statusIcons,
+  trackingPath,
+  useVehicleService,
+} from "@/components/features/tracking/serviceStatus";
 
 interface SavedVehicleDetailsModalProps {
   onViewHistory?: () => void;
@@ -28,18 +33,32 @@ export function SavedVehicleDetailsModal({
     selectVehicleById(state, viewVehicleId)
   );
   const { data: overview, isLoading } = useVehicleOverview(savedVehicle?.id ?? null);
+  // A vehicle with a running service can't be booked again until it's complete
+  // (as on its card): the modal then offers that service's tracking instead
+  const service = useVehicleService(savedVehicle?.vin);
 
   if (!savedVehicle) {
     return null;
   }
 
   // The list's copy shows straight away; the overview replaces it once loaded.
-  // Mileage the customer typed in is only in Redux, so keep it when the API has none.
+  // The list's mileage stands in while the overview has none.
   const vehicle: Vehicle = overview
     ? { ...overview.vehicle, miles: overview.vehicle.miles ?? savedVehicle.miles }
     : savedVehicle;
 
   const onClose = () => dispatch(closeVehicleDetails());
+
+  const onTrackService = () => {
+    if (!service) return;
+    dispatch(closeVehicleDetails());
+    navigate(trackingPath(service.booking.id));
+  };
+
+  const StatusIcon = service ? statusIcons[service.status] : null;
+  const statusLabel = service?.display.etaMinutes
+    ? `Arriving in ${service.display.etaMinutes} mins`
+    : service?.display.label;
 
   const onBookService = () => {
     dispatch(setSelectedVehicle(vehicle.id));
@@ -99,14 +118,31 @@ export function SavedVehicleDetailsModal({
           {/* Divider */}
           <div className="my-5 h-px bg-gray-200" />
 
-          {/* Book service */}
-          <button
-            type="button"
-            onClick={onBookService}
-            className="h-12 w-full rounded-xl bg-[#111827] text-sm font-semibold text-white transition hover:bg-black"
-          >
-            Book a New Service
-          </button>
+          {service ? (
+            // Its running service, as the vehicle's card shows it: the status in
+            // its colour, opening the tracking page
+            <button
+              type="button"
+              onClick={onTrackService}
+              aria-label={`${statusLabel}: ${service.display.message}. Open tracking`}
+              title={service.display.message}
+              className={cn(
+                "flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition hover:brightness-95",
+                service.display.color.soft,
+              )}
+            >
+              {StatusIcon && <StatusIcon size={18} className="shrink-0" />}
+              <span className="truncate">{statusLabel}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onBookService}
+              className="h-12 w-full rounded-xl bg-[#111827] text-sm font-semibold text-white transition hover:bg-black"
+            >
+              Book a New Service
+            </button>
+          )}
 
           {/* Remove Vehicle */}
           {/* <button

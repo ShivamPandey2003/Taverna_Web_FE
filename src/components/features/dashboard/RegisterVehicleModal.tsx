@@ -12,6 +12,7 @@ import {
   showVerifiedVehicle,
 } from '@/redux/modals/dashboardModal/dashboardModalSlice';
 import { useVerifyVin } from '@/services/queries/vehicleQueries';
+import { cn } from '@/libs/utils';
 
 const registerVehicleSchema = z.object({
   vin: z
@@ -229,12 +230,21 @@ function RegisterVehicleForm() {
                       id="email"
                       {...register("email")}
                       type="email"
+                      // The account's own email: it can't be changed (readOnly,
+                      // not disabled, so it's still part of the form's values)
+                      readOnly
+                      tabIndex={-1}
                       placeholder="Alex@gmail.com"
-                      className={inputClass(
-                        !!errors.email
+                      className={cn(
+                        inputClass(!!errors.email),
+                        "cursor-not-allowed bg-gray-50 text-gray-500 focus:border-gray-200 focus:ring-0",
                       )}
                     />
                   </div>
+
+                  <p className="mt-1.5 text-xs text-gray-500">
+                    Your account email can't be changed.
+                  </p>
 
                   {errors.email && (
                     <p className="mt-1.5 text-xs text-red-500">
