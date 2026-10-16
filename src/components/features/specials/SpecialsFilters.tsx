@@ -20,53 +20,48 @@ function useOwnedModels() {
   return [...models.values()];
 }
 
+// A model's value in the vehicle dropdown; "" is every offer
+const modelKey = ({ brandName, model }: { brandName: string; model: string }) =>
+  brandName || model ? `${brandName}|${model}`.toLowerCase() : "";
+
+const selectClass =
+  "h-10 min-w-0 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-gray-400";
+
 // Narrows the offers to a model the customer owns (an offer's VIN is a dealer
-// vehicle, so it's matched by make and model) and to one kind of deal
+// vehicle, so it's matched by make and model) and to one kind of deal. Both are
+// dropdowns, so any number of vehicles fits on one line.
 export function SpecialsFilters() {
   const dispatch = useAppDispatch();
   const params = useAppSelector(selectSpecialsParams);
   const models = useOwnedModels();
 
-  const chip = (active: boolean) =>
-    cn(
-      "h-9 shrink-0 rounded-full border px-4 text-sm font-medium transition",
-      active
-        ? "border-black bg-black text-white"
-        : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50",
+  const selectVehicle = (key: string) =>
+    dispatch(
+      setSpecialsVehicle(
+        models.find((item) => modelKey(item) === key) ?? { brandName: "", model: "" },
+      ),
     );
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto">
-        <button
-          type="button"
-          onClick={() => dispatch(setSpecialsVehicle({ brandName: "", model: "" }))}
-          className={chip(!params.brandName && !params.model)}
-        >
-          All Offers
-        </button>
-
-        {models.map((item) => {
-          const active =
-            params.brandName.toLowerCase() === item.brandName.toLowerCase() &&
-            params.model.toLowerCase() === item.model.toLowerCase();
-          return (
-            <button
-              key={`${item.brandName}-${item.model}`}
-              type="button"
-              onClick={() => dispatch(setSpecialsVehicle(item))}
-              className={chip(active)}
-            >
-              For your {brandName(item.brandName)} {item.model}
-            </button>
-          );
-        })}
-      </div>
+      <select
+        value={modelKey(params)}
+        onChange={(event) => selectVehicle(event.target.value)}
+        className={cn(selectClass, "w-full sm:w-72")}
+        aria-label="Filter by vehicle"
+      >
+        <option value="">All Offers</option>
+        {models.map((item) => (
+          <option key={modelKey(item)} value={modelKey(item)}>
+            For your {brandName(item.brandName)} {item.model}
+          </option>
+        ))}
+      </select>
 
       <select
         value={params.offerType}
         onChange={(event) => dispatch(setSpecialsOfferType(event.target.value))}
-        className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-gray-400"
+        className={cn(selectClass, "w-full sm:w-56")}
         aria-label="Filter by offer type"
       >
         <option value="all">All Offer Types</option>

@@ -17,13 +17,15 @@ export function Specials() {
       )}
     >
       <div ref={contentRef} className="mx-auto">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-          Offers Picked for You & Your Vehicle
-        </h1>
+        {/* The title on the left and the filters on the right, on one line; on
+            a narrow screen the filters drop below the title */}
+        <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+            Offers Picked for You & Your Vehicle
+          </h1>
 
-        <div className="mt-6">
           <SpecialsFilters />
-        </div>
+        </header>
 
         <div className="mt-6">
           <SpecialsList />

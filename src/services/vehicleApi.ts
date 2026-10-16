@@ -61,19 +61,16 @@ function toVehicle(vehicle: VehicleResponse): Vehicle {
 // A row of serviceHistory in vehicles/:id/overview. The API has only returned an
 // empty list so far, so these field names are a guess: tighten them (and
 // toServiceRecord) once a real row is seen.
+// One past service in vehicles/:id/overview's `serviceHistory`
 interface ServiceHistoryResponse {
-  id?: string;
-  bookingId?: string;
-  date?: string;
-  serviceDate?: string;
-  completedAt?: string;
-  createdAt?: string;
-  dealership?: string | { name?: string };
-  dealershipName?: string;
-  mileage?: number | null;
-  currentMileage?: number | null;
-  amount?: number | string | null;
-  total?: number | string | null;
+  bmsId: string;
+  serviceDate: string;
+  dealershipName: string;
+  serviceDescription: string | null;
+  invoiceTotal: number | null;
+  currency: string | null;
+  invoiceItems: { description: string; amount: string }[] | null;
+  // Not seen yet: only finished services have been listed
   status?: string;
 }
 
@@ -85,23 +82,28 @@ function formatDate(value?: string) {
     : date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function formatAmount(value?: number | string | null) {
+function formatAmount(value: number | string | null, currency: string | null) {
   const amount = Number(value);
-  return value == null || value === "" || Number.isNaN(amount)
-    ? "—"
-    : amount.toLocaleString("en-US", { style: "currency", currency: "USD" });
+  if (value == null || value === "" || Number.isNaN(amount)) return "—";
+  try {
+    return amount.toLocaleString("en-US", { style: "currency", currency: currency || "USD" });
+  } catch {
+    // A currency code the browser doesn't know
+    return `${amount.toFixed(2)} ${currency}`;
+  }
 }
 
 function toServiceRecord(row: ServiceHistoryResponse, index: number): VehicleServiceRecord {
-  const dealership =
-    typeof row.dealership === "string" ? row.dealership : row.dealership?.name;
+  // What was done: the booking's description, else its bill's lines
+  const items = (row.invoiceItems ?? []).map((item) => item.description).filter(Boolean);
 
   return {
-    id: row.id ?? row.bookingId ?? String(index),
-    date: formatDate(row.date ?? row.serviceDate ?? row.completedAt ?? row.createdAt),
-    dealership: dealership ?? row.dealershipName ?? "—",
-    mileage: formatMiles(row.mileage ?? row.currentMileage ?? null) ?? "—",
-    amount: formatAmount(row.amount ?? row.total),
+    id: row.bmsId || String(index),
+    bookingId: row.bmsId,
+    date: formatDate(row.serviceDate),
+    dealership: row.dealershipName || "—",
+    description: row.serviceDescription?.trim() || items.join(", ") || "—",
+    amount: formatAmount(row.invoiceTotal, row.currency),
     status: row.status?.toLowerCase().startsWith("cancel") ? "CANCELLED" : "COMPLETED",
   };
 }

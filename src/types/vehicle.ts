@@ -23,12 +23,14 @@ export interface VerifiedVehicle extends Omit<Vehicle, "id"> {
 // One past service of a vehicle, as the details modal shows it
 export interface VehicleServiceRecord {
   id: string;
+  // The booking it was, e.g. "TD-017"
+  bookingId: string;
   // e.g. "Oct 7, 2026"
   date: string;
   dealership: string;
-  // e.g. "45,230 mi"
-  mileage: string;
-  // e.g. "$120.00"
+  // What was done, e.g. "Oil Change"
+  description: string;
+  // The bill's total, e.g. "$45.00"
   amount: string;
   status: "COMPLETED" | "CANCELLED";
 }
