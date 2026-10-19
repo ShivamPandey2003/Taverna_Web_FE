@@ -21,11 +21,8 @@ export function ScheduleSummary() {
 
   return (
     <BookingSummaryCard
+      // Optional, so no check or warning sign; a passed time is flagged in red below
       title="Scheduled Pickup"
-      status={{
-        valid: !passed,
-        label: passed ? "Scheduled pickup time has passed" : "Scheduled pickup time selected",
-      }}
       onChange={() => dispatch(openReviewModal("schedule"))}
       onClear={() => dispatch(setScheduledAt(null))}
     >

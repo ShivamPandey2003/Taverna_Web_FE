@@ -1,7 +1,6 @@
 // import { MessageText2 } from 'reicon-react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { selectBooking, setConcern } from '@/redux/booking/bookingSlice';
-import { BookingFieldStatus } from './BookingSummaryCard';
 
 export function ConcernInput() {
   const dispatch = useAppDispatch();
@@ -19,10 +18,6 @@ export function ConcernInput() {
           Describe Your Concern{" "}
           <span className="font-normal text-gray-500">(Optional)</span>
         </label>
-        <BookingFieldStatus
-          valid
-          label={value.trim() ? "Concern provided" : "Optional: no concern provided"}
-        />
       </div>
 
       <div className="relative mt-4 flex flex-1 flex-col">
