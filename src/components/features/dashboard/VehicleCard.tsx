@@ -1,4 +1,4 @@
-import { Calendar, InfoCircle } from "reicon-react";
+import { Calendar, History } from "reicon-react";
 import { brandName, cn, maskedVin } from "@/libs/utils";
 import { statusIcons, type ActiveService } from "@/components/features/tracking/serviceStatus";
 import type { Vehicle } from "@/types/vehicle";
@@ -45,7 +45,7 @@ export function VehicleCard({
       {/* Information */}
       <div className="p-5">
         {/* Year and brand on the first line, model on the second, all one style;
-            the info icon sits on the right edge */}
+            the history icon (details and service history) sits on the right edge */}
         <div className="flex items-start justify-between gap-3">
           <h2 className="min-w-0 text-xl font-bold leading-tight text-gray-900">
             <VehicleTitle vehicle={vehicle} />
@@ -56,10 +56,10 @@ export function VehicleCard({
               type="button"
               onClick={onSelect}
               aria-label={`Details for ${brandName(vehicle.brand)} ${vehicle.model}`}
-              title="Vehicle details"
+              title="Vehicle details and service history"
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
             >
-              <InfoCircle size={18} />
+              <History size={18} />
             </button>
           )}
         </div>
