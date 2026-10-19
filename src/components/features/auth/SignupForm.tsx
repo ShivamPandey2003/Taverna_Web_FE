@@ -5,6 +5,7 @@ import {
   signupSchema,
   type SignupFormData,
 } from "@/schema/auth.schema";
+import { formatUsPhone, US_PHONE_PREFIX } from "@/libs/phone";
 
 import { AuthInput } from "./AuthInput";
 
@@ -31,6 +32,8 @@ export function SignupForm({
     },
   });
 
+  const phoneField = register("phone");
+
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
@@ -56,9 +59,15 @@ export function SignupForm({
       <AuthInput
         label="Phone number"
         type="tel"
-        placeholder="9545550100"
-        autoComplete="tel"
-        {...register("phone")}
+        inputMode="numeric"
+        leadingText={US_PHONE_PREFIX}
+        placeholder="(234) 567 8910"
+        autoComplete="tel-national"
+        {...phoneField}
+        onChange={(event) => {
+          event.target.value = formatUsPhone(event.target.value);
+          return phoneField.onChange(event);
+        }}
         error={errors.phone?.message}
       />
 

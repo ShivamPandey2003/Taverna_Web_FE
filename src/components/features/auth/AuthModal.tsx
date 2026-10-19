@@ -5,6 +5,7 @@ import { LoginForm } from "./LoginForm";
 import { SignupForm } from "./SignupForm";
 import { OtpForm } from "./OtpForm";
 import HeroImage from '@/assets/background.webp'
+import { toApiPhone } from "@/libs/phone";
 
 import type {
   LoginFormData,
@@ -67,7 +68,7 @@ export function AuthModal() {
       await signup.mutateAsync({
         fullname: data.fullname,
         email: data.email,
-        phone_number: data.phone,
+        phone_number: toApiPhone(data.phone),
         notification_preferences: data.notification_preferences,
         privacy_policy: data.privacy_policy,
       });
