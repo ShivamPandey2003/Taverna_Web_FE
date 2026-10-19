@@ -15,6 +15,9 @@ import { SelectDealershipModal } from "@/components/features/review/SelectDealer
 import { DriveableStatus } from "@/components/features/review/DriveableStatus";
 import { ScheduleSummary } from "@/components/features/review/ScheduleSummary";
 import { ServiceTabs } from "@/components/features/review/ServiceTabs";
+import { UserSummary } from "@/components/features/review/UserSummary";
+import { hasUserDetails } from "@/components/features/review/review.utils";
+import { selectAccountUser } from "@/redux/account/accountSlice";
 import { SelectVehicleModal } from "@/components/features/booking/SelectVehicleModal";
 import { AddAddressModal } from "@/components/features/addresses/AddAddressModal";
 import { ServiceInProgressNotice } from "@/components/features/booking/ServiceInProgressNotice";
@@ -53,6 +56,7 @@ export function PickupDelivery() {
   const vehicle = useAppSelector(selectBookingVehicle);
   const address = useAppSelector(selectBookingAddress);
   const dealership = useAppSelector(selectBookingDealership);
+  const user = useAppSelector(selectAccountUser);
   const activeModal = useAppSelector(selectReviewModal);
   // Selects the dealership closest to the customer when none is chosen yet
   const { loading: findingDealership } = useClosestDealership();
@@ -64,8 +68,22 @@ export function PickupDelivery() {
   const vehicleService = useVehicleService(vehicle?.vin);
   const serviceInProgress = !!vehicleService && !booking;
   const canBook = !!vehicle && hasPickup && !!dealership && !serviceInProgress;
+  const loanerOnly = service.id === "loaner-only";
   // Loaner Only customers drive in themselves, so there's no pickup to schedule
-  const canSchedule = service.id !== "loaner-only";
+  const canSchedule = !loanerOnly;
+  // The first card (vehicle, my details, address, dealership) still missing
+  // something; highlighted so the customer knows what to fill first. Driveable
+  // always has an answer and the concern is optional, so neither is ever next.
+  // The dealership isn't next while the closest one is still being found.
+  const nextStep = !vehicle
+    ? "vehicle"
+    : !hasUserDetails(user)
+      ? "user"
+      : !hasPickup
+        ? "address"
+        : !dealership && !findingDealership
+          ? "dealership"
+          : null;
   const scheduled = canSchedule && !!scheduledAt;
 
   const closeModal = () => dispatch(closeReviewModal());
@@ -159,20 +177,31 @@ export function PickupDelivery() {
           </div>
         )}
 
-        {/* Vehicle, pickup address and driveable (with towing) on the left; dealership,
-            scheduled pickup and the concern on the right. Loaner Only customers drive
-            in themselves, so there's no driveable question, tow or pickup time. */}
+        {/* Two columns, each card its own height: vehicle, address, driveable (with
+            towing) and the scheduled pickup on the left; my details, dealership and
+            the concern on the right, read across in pairs (vehicle / my details,
+            address / dealership, driveable / concern). The first card still missing
+            something is highlighted. Loaner Only customers drive in themselves, so
+            there's no driveable question, tow or pickup time. */}
         <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
           <div className="space-y-5">
-            <VehicleSummary />
-            <AddressSummary />
-            {service.id !== "loaner-only" && <DriveableStatus />}
+            <VehicleSummary highlight={nextStep === "vehicle"} />
+            <AddressSummary highlight={nextStep === "address"} />
+            {!loanerOnly && (
+              <>
+                <DriveableStatus />
+                <ScheduleSummary />
+              </>
+            )}
           </div>
 
           {/* The concern box stretches so both columns end level */}
           <div className="flex flex-col gap-5">
-            <DealershipSummary loading={findingDealership} />
-            {service.id !== "loaner-only" && <ScheduleSummary />}
+            <UserSummary highlight={nextStep === "user"} />
+            <DealershipSummary
+              highlight={nextStep === "dealership"}
+              loading={findingDealership}
+            />
             <ConcernInput />
           </div>
         </div>

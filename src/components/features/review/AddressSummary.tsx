@@ -1,3 +1,4 @@
+import type { StepProps } from "./BookingSummaryCard";
 import { Pin } from "reicon-react";
 import { BookingSummaryCard } from "./BookingSummaryCard";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -7,7 +8,7 @@ import {
 } from "@/redux/booking/bookingSlice";
 import { openReviewModal } from "@/redux/modals/reviewModal/reviewModalSlice";
 
-export function AddressSummary() {
+export function AddressSummary({ highlight }: StepProps) {
   const dispatch = useAppDispatch();
   const { pickupLocation } = useAppSelector(selectBooking);
   const address = useAppSelector(selectBookingAddress);
@@ -51,6 +52,7 @@ export function AddressSummary() {
 
   return (
     <BookingSummaryCard
+      highlight={highlight}
       title="My Address"
       status={{
         valid: !!address || pickupLocation?.type === "current",

@@ -1,15 +1,20 @@
+import type { StepProps } from "./BookingSummaryCard";
 import { BookingSummaryCard } from "./BookingSummaryCard";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectBookingDealership } from "@/redux/booking/bookingSlice";
 import { openReviewModal } from "@/redux/modals/reviewModal/reviewModalSlice";
 
 // `loading` is true while the review page is still finding the closest dealership
-export function DealershipSummary({ loading = false }: { loading?: boolean }) {
+export function DealershipSummary({
+  loading = false,
+  highlight,
+}: StepProps & { loading?: boolean }) {
   const dispatch = useAppDispatch();
   const dealership = useAppSelector(selectBookingDealership);
 
   return (
     <BookingSummaryCard
+      highlight={highlight}
       title="Destination Dealership"
       status={{
         valid: !!dealership,
