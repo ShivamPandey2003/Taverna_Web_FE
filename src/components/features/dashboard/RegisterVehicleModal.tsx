@@ -197,12 +197,21 @@ function RegisterVehicleForm() {
                       id="phone"
                       {...register("phone")}
                       type="tel"
+                      // The account's own phone, edited on the Account page
+                      // (readOnly, not disabled, so it's still part of the form's values)
+                      readOnly
+                      tabIndex={-1}
                       placeholder="(918) 123-4567"
-                      className={inputClass(
-                        !!errors.phone
+                      className={cn(
+                        inputClass(!!errors.phone),
+                        "cursor-not-allowed bg-gray-50 text-gray-500 focus:border-gray-200 focus:ring-0",
                       )}
                     />
                   </div>
+
+                  <p className="mt-1.5 text-xs text-gray-500">
+                    Change your phone number on the Account page.
+                  </p>
 
                   {errors.phone && (
                     <p className="mt-1.5 text-xs text-red-500">
