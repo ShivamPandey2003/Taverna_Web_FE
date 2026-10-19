@@ -6,6 +6,7 @@ import {
   X,
 } from "reicon-react";
 import type { Address, AddressType } from "@/types/address";
+import { SearchLocationRow, type SearchedPlace } from "./SearchLocationRow";
 import { useLocation } from "@/hooks/useLocation";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectAddresses } from "@/redux/address/addressSlice";
@@ -63,8 +64,9 @@ function SelectLocationContent({
   } = useLocation();
   const createAddress = useCreateAddress();
 
+  // "search": a place picked in the search box, saved as an address on confirm
   const [selectedType, setSelectedType] = useState<
-    "current" | "saved"
+    "current" | "search" | "saved"
   >(
     pickupLocation?.type ?? "saved"
   );
@@ -75,6 +77,8 @@ function SelectLocationContent({
         addresses[0]?.id ??
         null
     );
+
+  const [searched, setSearched] = useState<SearchedPlace | null>(null);
 
   const selectedAddress = addresses.find(
     (address) =>
@@ -98,15 +102,17 @@ function SelectLocationContent({
     onClose();
   };
 
-  // The current location is saved as an address first (user/addresses): a
-  // booking needs a saved address. One already saved with the same street and
-  // ZIP is picked instead, so confirming again doesn't save it twice.
-  const confirmCurrentLocation = () => {
-    if (!currentAddress || !currentParts) return;
-
+  // The current location or a searched place is saved as an address first
+  // (user/addresses): a booking needs a saved address. One already saved with
+  // the same street and ZIP is picked instead, so confirming again doesn't save
+  // it twice.
+  const saveAndPick = (
+    parts: { address: string; city: string; state: string; zip: string },
+    position: { latitude: number; longitude: number } | null,
+  ) => {
     const saved = addresses.find(
       (address) =>
-        sameText(address.address, currentParts.address) && sameText(address.zip, currentParts.zip),
+        sameText(address.address, parts.address) && sameText(address.zip, parts.zip),
     );
     if (saved) {
       pickSaved(saved.id);
@@ -116,13 +122,13 @@ function SelectLocationContent({
     createAddress.mutate(
       {
         type: "other",
-        address: currentParts.address,
+        address: parts.address,
         apartment: "",
-        city: currentParts.city,
-        state: currentParts.state,
-        zip: currentParts.zip,
-        latitude: coordinates?.latitude ?? null,
-        longitude: coordinates?.longitude ?? null,
+        city: parts.city,
+        state: parts.state,
+        zip: parts.zip,
+        latitude: position?.latitude ?? null,
+        longitude: position?.longitude ?? null,
         // The customer's first address becomes their default
         isDefault: addresses.length === 0,
       },
@@ -133,7 +139,12 @@ function SelectLocationContent({
 
   const handleConfirm = () => {
     if (selectedType === "current") {
-      confirmCurrentLocation();
+      if (currentAddress && currentParts) saveAndPick(currentParts, coordinates ?? null);
+      return;
+    }
+
+    if (selectedType === "search") {
+      if (searched) saveAndPick(searched.place, searched.coordinates);
       return;
     }
 
@@ -147,7 +158,8 @@ function SelectLocationContent({
   const saving = createAddress.isPending;
 
   return (
-    <div className="absolute inset-0 z-50">
+    // Over the window, not inside the page: the page behind never scrolls
+    <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40"
@@ -155,16 +167,17 @@ function SelectLocationContent({
       />
 
       {/* Modal wrapper */}
-      <div className="relative flex min-h-full items-center justify-center overflow-y-auto p-6">
-        {/* Modal */}
+      <div className="pointer-events-none relative flex h-full items-center justify-center p-4 sm:p-6">
+        {/* Modal: at most the window's height; only the saved addresses scroll,
+            the options above and the buttons below stay in view */}
         <div
-          className="relative w-full max-w-[520px] rounded-2xl bg-white p-6 shadow-2xl"
+          className="pointer-events-auto relative flex max-h-full w-full max-w-[520px] flex-col rounded-2xl bg-white p-5 shadow-2xl"
           onClick={(event) =>
             event.stopPropagation()
           }
         >
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex shrink-0 items-center justify-between">
             <h2 className="text-xl font-bold tracking-tight text-[#111827]">
               Select a Location
             </h2>
@@ -180,7 +193,7 @@ function SelectLocationContent({
           </div>
 
           {/* Location options */}
-          <div className="mt-5 space-y-3">
+          <div className="mt-4 shrink-0 space-y-2.5">
             {/* Current location */}
             <button
               type="button"
@@ -214,6 +227,21 @@ function SelectLocationContent({
               />
             </button>
 
+            {/* Search: type an address and pick one of the suggestions */}
+            <SearchLocationRow
+              selected={selectedType === "search"}
+              picked={searched}
+              near={coordinates ?? (bookingAddress?.latitude != null && bookingAddress.longitude != null
+                ? { latitude: bookingAddress.latitude, longitude: bookingAddress.longitude }
+                : null)}
+              onSelect={() => setSelectedType("search")}
+              onPick={(place) => {
+                setSelectedType("search");
+                setSearched(place);
+              }}
+              disabled={saving}
+            />
+
             {/* Add Address */}
             <button
               type="button"
@@ -231,12 +259,13 @@ function SelectLocationContent({
           </div>
 
           {/* Saved addresses */}
-          <section className="mt-6">
-            <h3 className="text-sm font-bold text-gray-900">
+          <section className="mt-4 flex min-h-0 flex-1 flex-col">
+            <h3 className="shrink-0 text-sm font-bold text-gray-900">
               Saved Addresses
             </h3>
 
-            <div className="mt-3 space-y-3 min-h-0 h-[40vh] overflow-auto">
+            {/* At least two rows tall; grows with the screen up to the list's length */}
+            <div className="-mx-1 mt-2.5 min-h-[150px] flex-1 space-y-2.5 overflow-y-auto px-1 py-0.5">
               {addresses.length === 0 &&
                 (loadingAddresses ? (
                   // First load: placeholders the shape of the address rows
@@ -292,10 +321,10 @@ function SelectLocationContent({
           </section>
 
           {/* Divider */}
-          <div className="my-5 h-px bg-gray-200" />
+          <div className="my-4 h-px shrink-0 bg-gray-200" />
 
           {/* Actions */}
-          <div className="flex justify-end gap-3">
+          <div className="flex shrink-0 justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
@@ -310,7 +339,9 @@ function SelectLocationContent({
                 saving ||
                 (selectedType === "saved"
                   ? !selectedAddress
-                  : !currentAddress || !currentParts)
+                  : selectedType === "search"
+                    ? !searched
+                    : !currentAddress || !currentParts)
               }
               onClick={handleConfirm}
               className="flex h-10 items-center gap-2 rounded-lg bg-[#111827] px-5 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-40"
@@ -369,11 +400,11 @@ function SavedAddressCard({
           />
         </div>
 
-        <p className="mt-1 text-sm font-bold text-gray-900">
+        <p className="mt-0.5 text-sm font-bold text-gray-900">
           {address.address}
         </p>
 
-        <p className="mt-0.5 text-sm text-gray-500">
+        <p className="text-sm text-gray-500">
           {address.city}, {address.state}{" "}
           {address.zip}
         </p>
