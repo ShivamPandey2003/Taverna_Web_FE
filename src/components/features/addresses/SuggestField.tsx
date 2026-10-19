@@ -109,7 +109,7 @@ export function SuggestField<T extends FieldSuggestion>({
 
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block text-[10px] font-semibold text-gray-600">
+      <label htmlFor={id} className="mb-1 block text-[10px] font-semibold text-gray-600">
         {label}
       </label>
 

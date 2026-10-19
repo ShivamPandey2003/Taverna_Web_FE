@@ -334,7 +334,7 @@ function AddressFormModal({
             className="flex min-h-0 flex-1 flex-col"
           >
             {/* Scrolls on a short screen */}
-            <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-1 pt-5">
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-1 pt-4">
             {/* Map: picking a spot fills in the address below */}
             <AddressMap
               pin={pin}
@@ -346,13 +346,13 @@ function AddressFormModal({
             />
 
             {/* Address Details; locked while saving */}
-            <fieldset disabled={saving} className={cn("mt-5 transition", saving && "opacity-60")}>
+            <fieldset disabled={saving} className={cn("mt-4 transition", saving && "opacity-60")}>
               <h3 className="text-xs font-bold text-gray-900">
                 Address Details
               </h3>
 
               {/* Type */}
-              <div className="mt-4 flex gap-2">
+              <div className="mt-3 flex gap-2">
                 {addressTypes.map((type) => (
                   <button
                     key={type}
@@ -370,7 +370,7 @@ function AddressFormModal({
                 ))}
               </div>
 
-              <div className="mt-4 space-y-3">
+              <div className="mt-3 space-y-2.5">
 
                 {/* Street: suggests addresses; a pick fills in the rest */}
                 <SuggestField
@@ -416,7 +416,7 @@ function AddressFormModal({
                 />
 
                 {/* State: the US states, from a list; ZIP: suggests postal codes */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   <SuggestField
                     label="State"
                     id="state"
@@ -458,7 +458,7 @@ function AddressFormModal({
             </div>
 
             {/* Save; always in view */}
-            <div className="shrink-0 px-5 pb-5 pt-4">
+            <div className="shrink-0 px-5 pb-5 pt-3">
             <button
               type="submit"
               // Not while the pin's address is still being filled in
@@ -503,7 +503,7 @@ function AddressField({
     <div>
       <label
         htmlFor={id}
-        className="mb-1.5 block text-[10px] font-semibold text-gray-600"
+        className="mb-1 block text-[10px] font-semibold text-gray-600"
       >
         {label}
       </label>
