@@ -1,4 +1,4 @@
-import { vehicleName, maskedVin } from "@/libs/utils";
+import { vehicleName } from "@/libs/utils";
 import { X } from "reicon-react";
 import { toast } from "sonner";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -65,55 +65,32 @@ export function VehicleDetailsModal() {
             </button>
           </div>
 
-          {/* Vehicle image */}
-          <div className="relative mt-5 h-[205px] overflow-hidden rounded-xl bg-white">
-            <img
-              src={vehicle.image}
-              alt={`${vehicle.brand} ${vehicle.model}`}
-              className="h-full w-full object-contain"
-            />
-
-            {/* Gradient */}
-            <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent" />
-
-            {/* Vehicle name */}
-            <h3 className="absolute bottom-4 left-4 right-4 text-lg font-bold leading-tight text-white">
-              <VehicleTitle vehicle={vehicle} />
-            </h3>
-          </div>
-
-          {/* Vehicle information */}
-          <div className="mt-5 rounded-xl border border-gray-200 bg-gray-50/70 p-4">
-            {/* VIN */}
-            <div>
-              <p className="text-xs text-gray-500">
-                VIN
-              </p>
-
-              <p className="mt-1 text-sm font-bold tracking-wide text-gray-900" title={vehicle.vin}>
-                {maskedVin(vehicle.vin)}
-              </p>
+          {/* Laid out like the dashboard's VehicleCard: the photo on its own,
+              then the name, then the stats (the full VIN here, since it's
+              being checked; miles only when the lookup found them) */}
+          <div className="mt-5 overflow-hidden rounded-2xl bg-white">
+            <div className="flex h-[180px] items-center justify-center overflow-hidden">
+              <img
+                src={vehicle.image}
+                alt={`${vehicle.brand} ${vehicle.model}`}
+                className="h-full w-full object-contain"
+              />
             </div>
 
-            {/* Divider */}
-            <div className="my-3 h-px bg-gray-200" />
+            <div className="py-5">
+              <h3 className="text-xl font-bold leading-tight text-gray-900">
+                <VehicleTitle vehicle={vehicle} />
+              </h3>
 
-            {/* Stats */}
-            <div className="grid grid-cols-3">
-              <VehicleStat
-                label="Year"
-                value={vehicle.year}
-              />
+              <div className="my-5 h-px bg-gray-200" />
 
-              <VehicleStat
-                label="Miles"
-                value={vehicle.miles || "—"}
-              />
+              <div className="flex flex-wrap gap-x-6 gap-y-3">
+                <VehicleStat label="VIN" value={vehicle.vin} />
 
-              {/* <VehicleStat
-                label="Color"
-                value={vehicle.color}
-              /> */}
+                {vehicle.miles && (
+                  <VehicleStat label="Miles" value={vehicle.miles} />
+                )}
+              </div>
             </div>
           </div>
 
@@ -153,12 +130,10 @@ function VehicleStat({
   value: string | number;
 }) {
   return (
-    <div className="border-r border-gray-200 px-3 first:pl-0 last:border-r-0">
-      <p className="text-xs text-gray-500">
-        {label}
-      </p>
+    <div>
+      <p className="text-xs font-medium text-gray-800">{label}</p>
 
-      <p className="mt-1 text-sm font-bold text-gray-900">
+      <p className="mt-1 break-all text-sm font-semibold tracking-wide text-gray-900">
         {value}
       </p>
     </div>
