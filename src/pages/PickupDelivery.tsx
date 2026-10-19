@@ -14,6 +14,7 @@ import { SchedulePickupModal } from "@/components/features/review/SchedulePickup
 import { SelectDealershipModal } from "@/components/features/review/SelectDealershipModal";
 import { DriveableStatus } from "@/components/features/review/DriveableStatus";
 import { ScheduleSummary } from "@/components/features/review/ScheduleSummary";
+import { ServiceTabs } from "@/components/features/review/ServiceTabs";
 import { SelectVehicleModal } from "@/components/features/booking/SelectVehicleModal";
 import { AddAddressModal } from "@/components/features/addresses/AddAddressModal";
 import { ServiceInProgressNotice } from "@/components/features/booking/ServiceInProgressNotice";
@@ -120,9 +121,9 @@ export function PickupDelivery() {
             </button>
 
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-                {service.title}
-              </h1>
+              {/* The page title, and the switch between the services */}
+              <h1 className="sr-only">{service.title}</h1>
+              <ServiceTabs disabled={booking} />
 
               {/* <p className="mt-0.5 text-sm text-gray-500">{serviceSubtitle[service.id]}</p> */}
             </div>
