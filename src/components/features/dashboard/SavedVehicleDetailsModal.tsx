@@ -1,11 +1,11 @@
 import { useRef, useState } from "react";
-import { ArrowLeft, X } from "reicon-react";
+import { ArrowLeft, Calendar, X } from "reicon-react";
 import { useNavigate } from "react-router";
 // import { toast } from "sonner";
 import type { Vehicle, VehicleServiceRecord } from "@/types/vehicle";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectVehicleById } from "@/redux/vehicle/vehicleSlice";
-import { setSelectedVehicle } from "@/redux/booking/bookingSlice";
+import { setSelectedService, setSelectedVehicle } from "@/redux/booking/bookingSlice";
 import {
   closeVehicleDetails,
   selectDashboardModal,
@@ -68,10 +68,13 @@ export function SavedVehicleDetailsModal() {
     ? `Arriving in ${service.display.etaMinutes} mins`
     : service?.display.label;
 
-  const onBookService = () => {
+  // As the card's Book Pickup: skips the service list, straight to review with
+  // Pickup & Delivery
+  const onBookPickup = () => {
     dispatch(setSelectedVehicle(vehicle.id));
+    dispatch(setSelectedService("pickup-delivery"));
     dispatch(closeVehicleDetails());
-    navigate("/dashboard/book-service");
+    navigate("/dashboard/book-service/review");
   };
 
   // const onRemoveVehicle = () => {
@@ -172,10 +175,11 @@ export function SavedVehicleDetailsModal() {
           ) : (
             <button
               type="button"
-              onClick={onBookService}
-              className="h-12 w-full rounded-xl bg-[#111827] text-sm font-semibold text-white transition hover:bg-black"
+              onClick={onBookPickup}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#111827] text-sm font-semibold text-white transition hover:bg-black"
             >
-              Book a New Service
+              <Calendar size={16} />
+              <p className="pt-1">Book Pickup</p>
             </button>
           )}
           </div>
