@@ -14,8 +14,16 @@ import {
   selectDefaultAddress,
 } from '@/redux/address/addressSlice';
 import { getDevicePosition, toLatLng, type LatLng } from '@/libs/maps';
-import { GeocodeError, reverseGeocode, type AddressPlace } from '@/services/geocodeApi';
+import {
+  GeocodeError,
+  reverseGeocode,
+  type AddressPlace,
+  type Coordinates,
+} from '@/services/geocodeApi';
+import { placeDetails, suggestPlaces, type PlaceSuggestion } from '@/services/placesApi';
+import { searchUsStates } from '@/libs/usStates';
 import { AddressMap } from './AddressMap';
+import { SuggestField } from './SuggestField';
 import {
   useCreateAddress,
   useGeocodeAddress,
@@ -96,6 +104,11 @@ function AddressFormModal({
   });
 
   const selectedType = useWatch({ control, name: "type" });
+  // What's typed in the fields that suggest as you type
+  const [streetValue, cityValue, stateValue, zipValue] = useWatch({
+    control,
+    name: ["address", "city", "state", "zip"],
+  });
 
   // The map's pin: where the address is, once known
   const [pin, setPin] = useState<LatLng | null>(() =>
@@ -136,6 +149,67 @@ function AddressFormModal({
     } finally {
       if (pick === latestPick.current) setFinding(false);
     }
+  };
+
+  // Suggestions near the pin, else near the default address
+  const near: Coordinates | null = pin
+    ? { latitude: pin.lat, longitude: pin.lng }
+    : fallbackCenter
+      ? { latitude: fallbackCenter.lat, longitude: fallbackCenter.lng }
+      : null;
+
+  // Puts a picked suggestion's parts in the form. Empty parts are skipped;
+  // `onlyEmpty` leaves fields the customer already filled alone.
+  const fill = (parts: Partial<AddressPlace>, onlyEmpty = false) => {
+    const current: AddressPlace = { address: streetValue, city: cityValue, state: stateValue, zip: zipValue };
+    (Object.entries(parts) as [keyof AddressPlace, string | undefined][]).forEach(([field, value]) => {
+      if (!value || (onlyEmpty && current[field].trim())) return;
+      setValue(field, value, { shouldDirty: true, shouldValidate: true });
+    });
+  };
+
+  // A suggestion's details (where it is, its city, state, ZIP); null when they
+  // couldn't be fetched (already toasted) or a later pick has taken over
+  const pickSuggestion = async (suggestion: PlaceSuggestion) => {
+    const pick = ++latestPick.current;
+    setFinding(true);
+    try {
+      const details = await placeDetails(suggestion);
+      return pick === latestPick.current ? details : null;
+    } catch {
+      if (pick === latestPick.current) {
+        toast.error("We couldn't get the details of that place. Pick another or type it in.");
+      }
+      return null;
+    } finally {
+      if (pick === latestPick.current) setFinding(false);
+    }
+  };
+
+  // A street picked: the whole address is filled in and the pin moves there
+  const pickStreet = async (suggestion: PlaceSuggestion) => {
+    const details = await pickSuggestion(suggestion);
+    if (!details) return;
+    const place = { ...details.place, address: details.place.address || suggestion.main };
+    fill(place);
+    const position = { lat: details.coordinates.latitude, lng: details.coordinates.longitude };
+    setPin(position);
+    setPinned({ position, place });
+  };
+
+  // A city picked: its state comes with it
+  const pickCity = async (suggestion: PlaceSuggestion) => {
+    const details = await pickSuggestion(suggestion);
+    if (!details) return;
+    fill({ city: details.place.city || suggestion.main, state: details.place.state });
+  };
+
+  // A ZIP picked: its city and state fill in the fields still empty
+  const pickZip = async (suggestion: PlaceSuggestion) => {
+    const details = await pickSuggestion(suggestion);
+    if (!details) return;
+    fill({ zip: details.place.zip || suggestion.main });
+    fill({ city: details.place.city, state: details.place.state }, true);
   };
 
   const useCurrentLocation = async () => {
@@ -231,7 +305,8 @@ function AddressFormModal({
       <div className="relative flex min-h-full items-center justify-center p-6">
         {/* Modal */}
         <div
-          className="relative w-full max-w-[405px] overflow-hidden rounded-2xl bg-white shadow-2xl"
+          // Not overflow-hidden: the fields' suggestion lists may reach past its bottom
+          className="relative w-full max-w-[405px] rounded-2xl bg-white shadow-2xl"
           onClick={(event) => event.stopPropagation()}
         >
           {/* Header */}
@@ -293,14 +368,17 @@ function AddressFormModal({
 
               <div className="mt-4 space-y-3">
 
-                {/* Street */}
-                <AddressField
+                {/* Street: suggests addresses; a pick fills in the rest */}
+                <SuggestField
                   label="Street Address"
                   id="address"
                   placeholder="1234 Main St"
                   icon={<Pin size={14} />}
                   registration={register("address")}
+                  value={streetValue}
                   error={errors.address?.message}
+                  suggest={(text, signal) => suggestPlaces(text, near, signal, "address")}
+                  onPick={pickStreet}
                 />
 
                 {/* Apartment */}
@@ -320,34 +398,53 @@ function AddressFormModal({
                   error={errors.apartment?.message}
                 />
 
-                {/* City */}
-                <AddressField
+                {/* City: suggests cities (with their state) */}
+                <SuggestField
                   label="City"
                   id="city"
                   placeholder="Fort Lauderdale"
                   icon={<Pin size={14} />}
                   registration={register("city")}
+                  value={cityValue}
                   error={errors.city?.message}
+                  suggest={(text, signal) => suggestPlaces(text, near, signal, "city")}
+                  onPick={pickCity}
                 />
 
-                {/* State + ZIP */}
+                {/* State: the US states, from a list; ZIP: suggests postal codes */}
                 <div className="grid grid-cols-2 gap-3">
-                  <AddressField
+                  <SuggestField
                     label="State"
                     id="state"
                     placeholder="FL"
                     icon={<Map2 size={14} />}
                     registration={register("state")}
+                    value={stateValue}
                     error={errors.state?.message}
+                    suggest={async (text) =>
+                      searchUsStates(text).map((state) => ({
+                        id: state.code,
+                        main: state.code,
+                        secondary: state.name,
+                      }))
+                    }
+                    onPick={(state) =>
+                      setValue("state", state.id, { shouldDirty: true, shouldValidate: true })
+                    }
+                    minLetters={1}
+                    debounceMs={0}
                   />
 
-                  <AddressField
+                  <SuggestField
                     label="ZIP Code"
                     id="zip"
                     placeholder="33301"
                     icon={<Map2 size={14} />}
                     registration={register("zip")}
+                    value={zipValue}
                     error={errors.zip?.message}
+                    suggest={(text, signal) => suggestPlaces(text, near, signal, "postalCode")}
+                    onPick={pickZip}
                   />
                 </div>
               </div>
