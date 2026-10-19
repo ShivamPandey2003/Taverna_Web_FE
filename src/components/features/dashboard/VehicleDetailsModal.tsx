@@ -79,7 +79,7 @@ export function VehicleDetailsModal() {
 
             <div className="py-5">
               <h3 className="text-xl font-bold leading-tight text-gray-900">
-                <VehicleTitle vehicle={vehicle} />
+                <VehicleTitle vehicle={vehicle} singleLine />
               </h3>
 
               <div className="my-5 h-px bg-gray-200" />

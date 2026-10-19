@@ -135,11 +135,10 @@ export function SavedVehicleDetailsModal() {
           ) : (
           // Its full height (it scrolls with the modal on a short screen)
           <div className="shrink-0">
-          {/* Vehicle image */}
+          {/* Vehicle image, name, VIN and miles */}
           <VehicleHero vehicle={vehicle} />
 
-          {/* Vehicle information */}
-          <VehicleInformation vehicle={vehicle} />
+          <div className="mt-4 h-px bg-gray-200" />
 
           {/* Service history */}
           <ServiceHistorySection
@@ -245,64 +244,36 @@ interface VehicleHeroProps {
   vehicle: Vehicle;
 }
 
+// Laid out like the dashboard's VehicleCard (and the Add Vehicle modal): the
+// photo on its own, then the name (year, make, model), then the VIN and miles
 function VehicleHero({ vehicle }: VehicleHeroProps) {
   return (
-    <div className="relative mt-4 h-[150px] overflow-hidden rounded-xl bg-white">
-      <img
-        src={vehicle.image}
-        alt={`${vehicle.year} ${vehicle.brand} ${vehicle.model}`}
-        className="h-full w-full object-contain"
-      />
-
-      {/* Bottom gradient */}
-      <div className="absolute inset-x-0 bottom-0 h-[85px] bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-
-      {/* Vehicle name */}
-      <h3 className="absolute bottom-4 left-4 right-4 text-lg font-bold leading-tight text-white">
-        <VehicleTitle vehicle={vehicle} />
-      </h3>
-    </div>
-  );
-}
-
-interface VehicleInformationProps {
-  vehicle: Vehicle;
-}
-
-function VehicleInformation({
-  vehicle,
-}: VehicleInformationProps) {
-  return (
-    <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50/70 p-4">
-      {/* VIN */}
-      <div>
-        <p className="text-xs text-gray-500">
-          VIN
-        </p>
-
-        <p className="mt-1 text-sm font-bold tracking-wide text-gray-900" title={vehicle.vin}>
-          {maskedVin(vehicle.vin)}
-        </p>
+    <div className="mt-4">
+      <div className="flex h-[150px] items-center justify-center overflow-hidden">
+        <img
+          src={vehicle.image}
+          alt={`${vehicle.year} ${vehicle.brand} ${vehicle.model}`}
+          className="h-full w-full object-contain"
+        />
       </div>
 
-      <div className="my-3 h-px bg-gray-200" />
+      <div className="pt-5">
+        <h3 className="text-xl font-bold leading-tight text-gray-900">
+          <VehicleTitle vehicle={vehicle} singleLine />
+        </h3>
 
-      {/* Vehicle stats */}
-      <div className="grid grid-cols-3">
-        <VehicleStat
-          label="YEAR"
-          value={vehicle.year}
-        />
+        <div className="my-4 h-px bg-gray-200" />
 
-        <VehicleStat
-          label="MILES"
-          value={vehicle.miles || "—"}
-        />
+        {/* As on the card: last 4 of the VIN (full VIN in the tooltip), miles beside it */}
+        <div className="flex gap-12">
+          <VehicleStat
+            label="VIN"
+            value={maskedVin(vehicle.vin)}
+            title={vehicle.vin}
+          />
 
-        {/* <VehicleStat
-          label="MODEL"
-          value={vehicle.color}
-        /> */}
+          <VehicleStat label="Miles" value={vehicle.miles || "—"} />
+        </div>
       </div>
     </div>
   );
@@ -311,17 +282,20 @@ function VehicleInformation({
 function VehicleStat({
   label,
   value,
+  title,
 }: {
   label: string;
   value: string | number;
+  title?: string;
 }) {
   return (
-    <div className="border-r border-gray-200 px-3 first:pl-0 last:border-r-0">
-      <p className="text-[11px] font-medium text-gray-500">
-        {label}
-      </p>
+    <div>
+      <p className="text-xs font-medium text-gray-800">{label}</p>
 
-      <p className="mt-1 text-sm font-bold text-gray-900">
+      <p
+        title={title}
+        className="mt-1 whitespace-nowrap text-sm font-semibold tracking-wide text-gray-900"
+      >
         {value}
       </p>
     </div>
