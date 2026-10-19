@@ -18,6 +18,8 @@ import { ServiceTabs } from "@/components/features/review/ServiceTabs";
 import { UserSummary } from "@/components/features/review/UserSummary";
 import { hasUserDetails } from "@/components/features/review/review.utils";
 import { selectAccountUser } from "@/redux/account/accountSlice";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { formatPickupTime, vehicleName } from "@/libs/utils";
 import { SelectVehicleModal } from "@/components/features/booking/SelectVehicleModal";
 import { AddAddressModal } from "@/components/features/addresses/AddAddressModal";
 import { ServiceInProgressNotice } from "@/components/features/booking/ServiceInProgressNotice";
@@ -45,6 +47,11 @@ import {
 //   "pickup-delivery": "We pickup & deliver",
 //   "loaner-only": "Drive in and swap vehicles",
 // };
+
+// Checked when the customer books, not while the page renders
+function hasPassed(time: string) {
+  return new Date(time).getTime() <= Date.now();
+}
 
 export function PickupDelivery() {
   const navigate = useNavigate();
@@ -104,12 +111,22 @@ export function PickupDelivery() {
       return;
     }
 
-    if (scheduled &&new Date(scheduledAt!).getTime() <= Date.now()) {
+    if (scheduled && hasPassed(scheduledAt!)) {
       toast.error("Your scheduled pickup time has passed. Pick a new time.");
       dispatch(openReviewModal("schedule"));
       return;
     }
 
+    // A booking for later is placed only once the customer confirms it in the modal
+    if (scheduled) {
+      dispatch(openReviewModal("confirmBooking"));
+      return;
+    }
+
+    await placeBooking();
+  };
+
+  const placeBooking = async () => {
     setBooking(true);
     const bookingId = await dispatch(confirmBooking());
 
@@ -117,6 +134,7 @@ export function PickupDelivery() {
     if (bookingId) {
       // So the list of open bookings has the new one before its next poll
       queryClient.invalidateQueries({ queryKey: bookingKeys.list });
+      closeModal();
       navigate(trackingPath(bookingId), { replace: true });
     } else {
       setBooking(false);
@@ -237,6 +255,48 @@ export function PickupDelivery() {
         open={activeModal === "dealership"}
         onClose={closeModal}
       />
+      {/* Only for a booking scheduled for later; stays open (locked) while it's placed */}
+      {scheduled && activeModal === "confirmBooking" && (
+        <ConfirmModal
+          title="Confirm Your Booking"
+          tone="primary"
+          confirmLabel="Confirm Booking"
+          cancelLabel="Go Back"
+          pendingLabel="Booking..."
+          pending={booking}
+          onConfirm={() => {
+            // The time may have passed while the modal stood open
+            if (hasPassed(scheduledAt!)) {
+              toast.error("Your scheduled pickup time has passed. Pick a new time.");
+              dispatch(openReviewModal("schedule"));
+              return;
+            }
+            void placeBooking();
+          }}
+          onClose={() => !booking && closeModal()}
+        >
+          <p>
+            Your valet will pick up your{" "}
+            <span className="font-semibold text-gray-900">
+              {vehicle ? vehicleName(vehicle) : "vehicle"}
+            </span>{" "}
+            on{" "}
+            <span className="font-semibold text-gray-900">{formatPickupTime(scheduledAt!)}</span>
+            {address && (
+              <>
+                {" "}from <span className="font-semibold text-gray-900">{address.address}</span>
+              </>
+            )}
+            {dealership && (
+              <>
+                {" "}and take it to{" "}
+                <span className="font-semibold text-gray-900">{dealership.name}</span>
+              </>
+            )}
+            .
+          </p>
+        </ConfirmModal>
+      )}
     </main>
   );
 }

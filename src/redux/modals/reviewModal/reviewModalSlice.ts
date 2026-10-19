@@ -10,7 +10,9 @@ export type ReviewModal =
   | "dealership"
   | "schedule"
   // Confirmation before the tow truck is taken off a vehicle that can't be driven
-  | "removeTow";
+  | "removeTow"
+  // Confirmation before a booking scheduled for later is placed (Book Now has none)
+  | "confirmBooking";
 
 type ReviewModalState = {
   activeModal: ReviewModal | null;
