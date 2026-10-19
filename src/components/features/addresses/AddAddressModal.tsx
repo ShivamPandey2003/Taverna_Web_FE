@@ -294,7 +294,9 @@ function AddressFormModal({
   };
 
   return (
-    <div className="absolute inset-0 z-50">
+    // Over the window, not inside the page: on a short screen the backdrop still
+    // covers everything and the page behind never scrolls
+    <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40"
@@ -302,15 +304,15 @@ function AddressFormModal({
       />
 
       {/* Modal wrapper */}
-      <div className="relative flex min-h-full items-center justify-center p-6">
-        {/* Modal */}
+      <div className="pointer-events-none relative flex h-full items-center justify-center p-4 sm:p-6">
+        {/* Modal: at most the window's height; the map and fields scroll inside
+            it while the header and Save button stay put */}
         <div
-          // Not overflow-hidden: the fields' suggestion lists may reach past its bottom
-          className="relative w-full max-w-[405px] rounded-2xl bg-white shadow-2xl"
+          className="pointer-events-auto relative flex max-h-full w-full max-w-[405px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
           onClick={(event) => event.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 pt-5">
+          <div className="flex shrink-0 items-center justify-between px-5 pt-5">
             <h2 className="text-base font-bold text-gray-900">
               {existing ? "Edit Address" : "Add Address"}
             </h2>
@@ -329,8 +331,10 @@ function AddressFormModal({
           {/* Content */}
           <form
             onSubmit={handleSubmit(onSubmit)}
-            className="px-5 pb-5 pt-5"
+            className="flex min-h-0 flex-1 flex-col"
           >
+            {/* Scrolls on a short screen */}
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-1 pt-5">
             {/* Map: picking a spot fills in the address below */}
             <AddressMap
               pin={pin}
@@ -433,6 +437,7 @@ function AddressFormModal({
                     }
                     minLetters={1}
                     debounceMs={0}
+                    placement="above"
                   />
 
                   <SuggestField
@@ -445,17 +450,20 @@ function AddressFormModal({
                     error={errors.zip?.message}
                     suggest={(text, signal) => suggestPlaces(text, near, signal, "postalCode")}
                     onPick={pickZip}
+                    placement="above"
                   />
                 </div>
               </div>
             </fieldset>
+            </div>
 
-            {/* Save */}
+            {/* Save; always in view */}
+            <div className="shrink-0 px-5 pb-5 pt-4">
             <button
               type="submit"
               // Not while the pin's address is still being filled in
               disabled={saving || finding}
-              className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111827] text-xs font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-80"
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111827] text-xs font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-80"
             >
               {saving && <Spinner className="h-3.5 w-3.5" />}
               {locating
@@ -466,6 +474,7 @@ function AddressFormModal({
                     ? "Update Address"
                     : "Save Address"}
             </button>
+            </div>
           </form>
         </div>
       </div>

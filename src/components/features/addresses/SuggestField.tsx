@@ -23,6 +23,9 @@ interface SuggestFieldProps<T extends FieldSuggestion> {
   // Fewer letters than this aren't searched
   minLetters?: number;
   debounceMs?: number;
+  // "above" for fields near the bottom of a scrolling form, where a list
+  // opening downwards would be cut off
+  placement?: "below" | "above";
 }
 
 // An address form field that suggests as the customer types, like the landing
@@ -40,6 +43,7 @@ export function SuggestField<T extends FieldSuggestion>({
   onPick,
   minLetters = 3,
   debounceMs = 300,
+  placement = "below",
 }: SuggestFieldProps<T>) {
   const [focused, setFocused] = useState(false);
   // Typed in since it was focused or last picked
@@ -145,7 +149,10 @@ export function SuggestField<T extends FieldSuggestion>({
             role="listbox"
             // A click mustn't blur the field before it lands
             onMouseDown={(event) => event.preventDefault()}
-            className="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+            className={cn(
+              "absolute left-0 right-0 z-30 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg",
+              placement === "above" ? "bottom-full mb-1" : "top-full mt-1",
+            )}
           >
             {items.map((item, index) => (
               <li
