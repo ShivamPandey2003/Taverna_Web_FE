@@ -21,7 +21,7 @@ export function Specials() {
             a narrow screen the filters drop below the title */}
         <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-            Offers Picked for You & Your Vehicle
+            Offers Picked for You
           </h1>
 
           <SpecialsFilters />

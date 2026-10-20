@@ -2,10 +2,9 @@ import { request, toQueryString } from "./apiClient";
 import type { Paginated } from "@/types/admin";
 import type { CustomerOfferParams, Offer } from "@/types/offer";
 
-// An offer as offers/list (admin) and offers (customer) send it. The customer
-// list has only been seen empty, so its rows are taken to be the same.
-export interface OfferResponse {
-  vehicleOfferId: string;
+// The offered vehicle. offers/list (admin) sends these on the offer itself;
+// offers (customer) nests them under `vehicle`.
+interface OfferVehicleResponse {
   vin: string;
   stockNumber: string;
   condition: string;
@@ -13,6 +12,12 @@ export interface OfferResponse {
   brandName: string;
   model: string;
   trim: string;
+}
+
+// An offer as offers/list (admin) and offers (customer) send it
+export interface OfferResponse extends Partial<OfferVehicleResponse> {
+  vehicleOfferId: string;
+  vehicle?: OfferVehicleResponse | null;
   offerType: string;
   lender: string;
   payment: number;
@@ -24,7 +29,8 @@ export interface OfferResponse {
   totalRebate: number;
   description: string | null;
   disclaimer: string | null;
-  vehicleName: string | null;
+  // offers/list only
+  vehicleName?: string | null;
 }
 
 export interface OfferPagination {
@@ -35,18 +41,19 @@ export interface OfferPagination {
 }
 
 export function toOffer(offer: OfferResponse): Offer {
+  const vehicle: Partial<OfferVehicleResponse> = offer.vehicle ?? offer;
   return {
     id: offer.vehicleOfferId,
-    vin: offer.vin,
-    stockNumber: offer.stockNumber,
-    brand: offer.brandName,
-    year: offer.year,
-    model: offer.model,
-    trim: offer.trim,
+    vin: vehicle.vin ?? "",
+    stockNumber: vehicle.stockNumber ?? "",
+    brand: vehicle.brandName ?? "",
+    year: Number(vehicle.year) || 0,
+    model: vehicle.model ?? "",
+    trim: vehicle.trim ?? "",
     vehicleName:
       offer.vehicleName ||
-      [offer.year, offer.brandName, offer.model, offer.trim].filter(Boolean).join(" "),
-    condition: offer.condition,
+      [vehicle.year, vehicle.brandName, vehicle.model, vehicle.trim].filter(Boolean).join(" "),
+    condition: vehicle.condition ?? "",
     offerType: offer.offerType,
     payment: Number(offer.payment) || 0,
     paymentNoTax: Number(offer.paymentNoTax) || 0,

@@ -1,28 +1,28 @@
 import { OFFER_TYPES } from "@/components/features/offers/offer.utils";
-import { brandName, cn } from "@/libs/utils";
+import { cn } from "@/libs/utils";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   selectSpecialsParams,
   setSpecialsOfferType,
-  setSpecialsVehicle,
+  // setSpecialsVehicle,
 } from "@/redux/specials/specialsSlice";
-import { selectVehicles } from "@/redux/vehicle/vehicleSlice";
+// import { selectVehicles } from "@/redux/vehicle/vehicleSlice";
 
 // The models the customer owns, once each ("RAM 1500")
-function useOwnedModels() {
-  const vehicles = useAppSelector(selectVehicles);
-  const models = new Map<string, { brandName: string; model: string }>();
-  vehicles.forEach((vehicle) => {
-    if (!vehicle.brand || !vehicle.model) return;
-    const key = `${vehicle.brand} ${vehicle.model}`.toLowerCase();
-    if (!models.has(key)) models.set(key, { brandName: vehicle.brand, model: vehicle.model });
-  });
-  return [...models.values()];
-}
+// function useOwnedModels() {
+//   const vehicles = useAppSelector(selectVehicles);
+//   const models = new Map<string, { brandName: string; model: string }>();
+//   vehicles.forEach((vehicle) => {
+//     if (!vehicle.brand || !vehicle.model) return;
+//     const key = `${vehicle.brand} ${vehicle.model}`.toLowerCase();
+//     if (!models.has(key)) models.set(key, { brandName: vehicle.brand, model: vehicle.model });
+//   });
+//   return [...models.values()];
+// }
 
 // A model's value in the vehicle dropdown; "" is every offer
-const modelKey = ({ brandName, model }: { brandName: string; model: string }) =>
-  brandName || model ? `${brandName}|${model}`.toLowerCase() : "";
+// const modelKey = ({ brandName, model }: { brandName: string; model: string }) =>
+//   brandName || model ? `${brandName}|${model}`.toLowerCase() : "";
 
 const selectClass =
   "h-10 min-w-0 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-gray-400";
@@ -33,18 +33,18 @@ const selectClass =
 export function SpecialsFilters() {
   const dispatch = useAppDispatch();
   const params = useAppSelector(selectSpecialsParams);
-  const models = useOwnedModels();
+  // const models = useOwnedModels();
 
-  const selectVehicle = (key: string) =>
-    dispatch(
-      setSpecialsVehicle(
-        models.find((item) => modelKey(item) === key) ?? { brandName: "", model: "" },
-      ),
-    );
+  // const selectVehicle = (key: string) =>
+  //   dispatch(
+  //     setSpecialsVehicle(
+  //       models.find((item) => modelKey(item) === key) ?? { brandName: "", model: "" },
+  //     ),
+  //   );
 
   return (
     <div className="flex flex-wrap items-center gap-3">
-      <select
+      {/* <select
         value={modelKey(params)}
         onChange={(event) => selectVehicle(event.target.value)}
         className={cn(selectClass, "w-full sm:w-72")}
@@ -56,7 +56,7 @@ export function SpecialsFilters() {
             For your {brandName(item.brandName)} {item.model}
           </option>
         ))}
-      </select>
+      </select> */}
 
       <select
         value={params.offerType}
