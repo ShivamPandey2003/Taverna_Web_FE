@@ -31,6 +31,8 @@ export interface OfferResponse extends Partial<OfferVehicleResponse> {
   disclaimer: string | null;
   // offers/list only
   vehicleName?: string | null;
+  // "2026-08-31"
+  expiresAt?: string | null;
 }
 
 export interface OfferPagination {
@@ -65,6 +67,7 @@ export function toOffer(offer: OfferResponse): Offer {
     lender: offer.lender,
     description: offer.description ?? "",
     disclaimer: offer.disclaimer ?? "",
+    expiresAt: offer.expiresAt || null,
   };
 }
 

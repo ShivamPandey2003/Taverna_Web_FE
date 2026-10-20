@@ -1,5 +1,7 @@
-import { ArrowRight } from "reicon-react";
+import { ArrowRight, Calendar } from "reicon-react";
 import { formatCurrency } from "@/components/features/admin/admin.utils";
+import { offerExpiry } from "@/components/features/offers/offer.utils";
+import { cn } from "@/libs/utils";
 import type { Offer } from "@/types/offer";
 
 interface SpecialOfferCardProps {
@@ -14,6 +16,7 @@ export function SpecialOfferCard({ offer, onViewOffer }: SpecialOfferCardProps) 
     offer.term ? `${offer.term} months` : null,
     `${offer.apr}% APR`,
   ].filter(Boolean);
+  const expiry = offerExpiry(offer.expiresAt);
 
   return (
     <article className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
@@ -57,6 +60,18 @@ export function SpecialOfferCard({ offer, onViewOffer }: SpecialOfferCardProps) 
           <dd className="font-semibold text-gray-900">{formatCurrency(offer.totalRebate)}</dd>
         </div>
       </dl>
+
+      {expiry && (
+        <p
+          className={cn(
+            "mt-4 flex items-center gap-1.5 text-xs font-medium",
+            expiry.expired ? "text-red-600" : "text-gray-500",
+          )}
+        >
+          <Calendar size={14} strokeWidth={1.8} />
+          {expiry.expired ? "Expired" : "Offer ends"} {expiry.label}
+        </p>
+      )}
 
       <div className="mt-auto pt-6">
         <button

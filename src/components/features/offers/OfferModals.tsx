@@ -9,6 +9,8 @@ import {
 } from "@/redux/modals/offersModal/offersModalSlice";
 import { formatCurrency } from "@/components/features/admin/admin.utils";
 import type { Offer } from "@/types/offer";
+import { cn } from "@/libs/utils";
+import { offerExpiry } from "./offer.utils";
 import { OfferUpload } from "./OfferUpload";
 
 // Bulk upload: pick a CSV, check it, upload it. Closes once the upload goes through.
@@ -70,7 +72,8 @@ export function OfferDetailsModal() {
 // Every field of an offer, with its description and disclaimer. Also the
 // customer's Specials page details.
 export function OfferDetails({ offer }: { offer: Offer }) {
-  const rows: { label: string; value: string }[] = [
+  const expiry = offerExpiry(offer.expiresAt);
+  const rows: { label: string; value: string; className?: string }[] = [
     { label: "Condition", value: offer.condition },
     { label: "Offer type", value: offer.offerType },
     { label: "Payment", value: `${formatCurrency(offer.payment)} / month` },
@@ -81,6 +84,11 @@ export function OfferDetails({ offer }: { offer: Offer }) {
     { label: "Due at signing", value: formatCurrency(offer.dueAtSigning) },
     { label: "Total rebate", value: formatCurrency(offer.totalRebate) },
     { label: "Lender", value: offer.lender },
+    {
+      label: expiry?.expired ? "Expired" : "Offer ends",
+      value: expiry?.label ?? "",
+      className: expiry?.expired ? "text-red-600" : undefined,
+    },
   ];
 
   return (
@@ -89,7 +97,9 @@ export function OfferDetails({ offer }: { offer: Offer }) {
         {rows.map((row) => (
           <div key={row.label} className="min-w-0">
             <dt className="text-xs font-medium text-gray-500">{row.label}</dt>
-            <dd className="mt-0.5 break-words text-sm font-semibold text-gray-900">
+            <dd
+              className={cn("mt-0.5 break-words text-sm font-semibold text-gray-900", row.className)}
+            >
               {row.value || "—"}
             </dd>
           </div>

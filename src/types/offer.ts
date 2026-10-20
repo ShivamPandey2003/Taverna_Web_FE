@@ -27,11 +27,13 @@ export interface Offer {
   lender: string;
   description: string;
   disclaimer: string;
+  // Last day of the offer, "2026-08-31"; null when the API doesn't send it
+  expiresAt: string | null;
 }
 
-// What the admin can change on an offer (offers/update): everything but its id
-// and the name the API builds from year, brand, model and trim
-export type OfferInput = Omit<Offer, "id" | "vehicleName">;
+// What the admin can change on an offer (offers/update): everything but its id,
+// the name the API builds from year, brand, model and trim, and the end date
+export type OfferInput = Omit<Offer, "id" | "vehicleName" | "expiresAt">;
 
 // What the customer's offers (GET offers) are asked for: a model they own
 // (both empty for every offer) and a kind of deal ("all" for any)
