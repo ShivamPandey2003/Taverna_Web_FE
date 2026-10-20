@@ -4,6 +4,7 @@ import { Navbar } from "@/components/global/Navbar";
 import { ServiceStatusToast } from "@/components/features/tracking/ServiceStatusToast";
 import { useSyncActiveBookings } from "@/components/features/tracking/serviceStatus";
 import { usePendingBooking } from "@/hooks/usePendingBooking";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useSyncAddresses } from "@/hooks/useSyncAddresses";
 import { useSyncProfile } from "@/hooks/useSyncProfile";
 import { useSyncVehicles } from "@/hooks/useSyncVehicles";
@@ -22,6 +23,8 @@ export function DashboardLayout() {
   useSyncProfile(!isAdmin);
   // The pickup and dealership picked on the landing page before signing in
   usePendingBooking(!isAdmin);
+  // Push notifications in this browser, and pushes arriving while it's open
+  usePushNotifications(!isAdmin);
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">

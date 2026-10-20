@@ -1,5 +1,13 @@
+import { useEffect, useState } from "react";
 import { Envelope, MessageText, NotificationBing } from "reicon-react";
 import { toast } from "sonner";
+import { pushApi } from "@/services/pushApi";
+import {
+  disablePush,
+  enablePush,
+  pushDeviceState,
+  type PushDeviceState,
+} from "@/services/pushDevice";
 import { Spinner } from "@/components/ui/Spinner";
 import { Switch } from "@/components/ui/Switch";
 import {
@@ -41,14 +49,17 @@ export function NotificationSettings() {
     useNotificationPreferences();
   const updatePreferences = useUpdateNotificationPreferences();
   const saving = updatePreferences.isPending;
+  const push = usePushDevice();
 
   const handleToggle = (key: keyof NotificationPreferences, enabled: boolean) => {
     if (!preferences) return;
-    const label = channels.find((channel) => channel.key === key)?.label;
+    const label = key === "pushEnabled" ? "Push" : channels.find((channel) => channel.key === key)?.label;
     updatePreferences.mutate(
       { ...preferences, [key]: enabled },
       { onSuccess: () => toast.success(`${label} notifications ${enabled ? "on" : "off"}`) },
     );
+    // The preference covers every device; this browser is set up (or let go) beside it
+    if (key === "pushEnabled") void (enabled ? push.enable() : push.disable());
   };
 
   return (
@@ -98,13 +109,14 @@ export function NotificationSettings() {
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-gray-900">{label}</p>
                 <p className="mt-0.5 text-xs text-gray-500">{description}</p>
+                {key === "pushEnabled" && preferences.pushEnabled && <PushDeviceStatus push={push} />}
               </div>
 
               <Switch
                 checked={preferences[key]}
                 onChange={(enabled) => handleToggle(key, enabled)}
                 // One save at a time, so each sends the latest of all three
-                disabled={saving}
+                disabled={saving || push.busy}
                 label={`${label} notifications`}
               />
             </li>
@@ -112,6 +124,77 @@ export function NotificationSettings() {
         </ul>
       )}
     </div>
+  );
+}
+
+// Push in this browser: its state, and the actions it allows
+function usePushDevice() {
+  const [state, setState] = useState<PushDeviceState | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    pushDeviceState().then(setState);
+  }, []);
+
+  const run = async (action: () => Promise<PushDeviceState | void>) => {
+    setBusy(true);
+    try {
+      const next = await action();
+      setState(next ?? (await pushDeviceState()));
+    } catch {
+      // Toasted where it failed
+      setState(await pushDeviceState());
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return {
+    state,
+    busy,
+    enable: () => run(enablePush),
+    disable: () => run(disablePush),
+    sendTest: () =>
+      run(async () => {
+        await pushApi.sendTest();
+        toast.success("Test notification sent");
+      }),
+  };
+}
+
+const pushStateText: Record<PushDeviceState, string> = {
+  on: "On in this browser.",
+  off: "Not on in this browser yet.",
+  blocked: "Blocked by this browser. Allow notifications for this site in its settings.",
+  unavailable: "This browser can't receive push notifications.",
+};
+
+function PushDeviceStatus({ push }: { push: ReturnType<typeof usePushDevice> }) {
+  if (!push.state) return null;
+  const action =
+    push.state === "on"
+      ? { label: "Send Test", onClick: push.sendTest }
+      : push.state === "off"
+        ? { label: "Turn On Here", onClick: push.enable }
+        : null;
+
+  return (
+    <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+      <span className={push.state === "on" ? "text-green-700" : "text-amber-700"}>
+        {pushStateText[push.state]}
+      </span>
+      {action && (
+        <button
+          type="button"
+          onClick={action.onClick}
+          disabled={push.busy}
+          className="inline-flex items-center gap-1.5 font-semibold text-gray-900 underline underline-offset-4 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {push.busy && <Spinner className="h-3 w-3" />}
+          {action.label}
+        </button>
+      )}
+    </p>
   );
 }
 

@@ -30,10 +30,11 @@ export function useUpdateProfile() {
 }
 
 // How the customer wants to hear about their bookings (email, SMS, push)
-export function useNotificationPreferences() {
+export function useNotificationPreferences(enabled = true) {
   return useQuery({
     queryKey: profileKeys.notificationPreferences,
     queryFn: profileApi.getNotificationPreferences,
+    enabled,
     retry: false,
   });
 }
