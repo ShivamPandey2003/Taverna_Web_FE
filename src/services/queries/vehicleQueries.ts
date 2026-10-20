@@ -7,6 +7,12 @@ export const vehicleKeys = {
   overview: (vehicleId: string) => ["vehicles", vehicleId, "overview"] as const,
 };
 
+// How long the vehicle list counts as fresh. It only changes through this app's
+// own calls (save, mileage), which update the cache, so pages that open later
+// (Home, Tracking) reuse it instead of loading it again. A vehicle added on
+// another device shows after this long, or on a reload.
+const VEHICLES_STALE_MS = 5 * 60_000;
+
 // The customer's saved vehicles. useSyncVehicles copies the result into Redux,
 // which is where components and the booking selectors read vehicles from.
 export function useVehicles(enabled = true) {
@@ -14,6 +20,7 @@ export function useVehicles(enabled = true) {
     queryKey: vehicleKeys.list,
     queryFn: vehicleApi.list,
     enabled,
+    staleTime: VEHICLES_STALE_MS,
     // The API layer toasts every failure, so retrying would repeat the toast
     retry: false,
   });

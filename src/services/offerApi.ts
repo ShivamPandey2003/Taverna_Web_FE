@@ -105,4 +105,8 @@ export const offerApi = {
     );
     return toOfferPage(offers ?? [], pagination);
   },
+
+  // Real API: the customer has seen the specials, so the profile's
+  // hasNewSpecials goes back to 0. No body; the answer isn't read.
+  markSeen: () => request<unknown>("post", "offers/mark-seen"),
 };

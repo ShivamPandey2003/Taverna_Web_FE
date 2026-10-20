@@ -7,6 +7,8 @@ interface ProfileResponse {
   lastName: string | null;
   email: string;
   phone: string | null;
+  // 1 or 0
+  hasNewSpecials?: number | boolean | null;
   // Has its own endpoint (user/notification-preferences), which the app uses
   notificationPreferences?: {
     smsEnabled: boolean;
@@ -21,6 +23,7 @@ function toProfile(profile: ProfileResponse): Profile {
     lastName: profile.lastName ?? "",
     email: profile.email,
     phone: profile.phone ?? "",
+    hasNewSpecials: Number(profile.hasNewSpecials) === 1,
   };
 }
 

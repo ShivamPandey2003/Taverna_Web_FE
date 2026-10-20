@@ -6,11 +6,14 @@ export interface NavItem {
   icon: typeof HomeSmile;
 }
 
+// Gets a dot in the Navbar while there are new specials
+export const SPECIALS_PATH = "/dashboard/specials";
+
 // Customers: shown in the Navbar
 export const customerNavigation: NavItem[] = [
   { label: "Home", path: "/dashboard", icon: HomeSmile },
   { label: "Book Service", path: "/dashboard/book-service", icon: Calendar },
-  { label: "Specials", path: "/dashboard/specials", icon: Tag },
+  { label: "Specials", path: SPECIALS_PATH, icon: Tag },
   { label: "Account", path: "/dashboard/account", icon: UserCircle },
 ];
 

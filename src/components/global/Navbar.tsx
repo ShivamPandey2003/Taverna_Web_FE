@@ -5,11 +5,21 @@ import { useAppSelector } from "@/redux/hooks";
 import { selectIsAdmin, selectIsAuthenticated } from "@/redux/auth/authSlice";
 import { NotificationDropdown } from "./Notification/NotificationDropdown";
 import { ProfileDropdown } from "./ProfileDropdown";
-import { adminNavigation, customerNavigation, exactPaths, type NavItem } from "./navigation";
+import { useProfile } from "@/services/queries/profileQueries";
+import {
+  adminNavigation,
+  customerNavigation,
+  exactPaths,
+  SPECIALS_PATH,
+  type NavItem,
+} from "./navigation";
 
 export function Navbar() {
   const isAdmin = useAppSelector(selectIsAdmin);
   const isAuthenticated = useAppSelector(selectIsAuthenticated);
+  // Customers: a dot on Specials while there are offers they haven't seen
+  const { data: profile } = useProfile(isAuthenticated && !isAdmin);
+  const dotPaths = !isAdmin && profile?.hasNewSpecials ? [SPECIALS_PATH] : [];
 
   return (
     <header className="h-[60px] border-b border-gray-200 bg-white">
@@ -18,7 +28,7 @@ export function Navbar() {
         <Logo />
 
         {/* Page links for the logged-in role (there is no sidebar) */}
-        <NavLinks items={isAdmin ? adminNavigation : customerNavigation} />
+        <NavLinks items={isAdmin ? adminNavigation : customerNavigation} dotPaths={dotPaths} />
 
         {/* Right side */}
         <div className="flex items-center gap-5">
@@ -35,8 +45,9 @@ export function Navbar() {
   );
 }
 
-// Icons only on small screens, icon + label from md up
-function NavLinks({ items }: { items: NavItem[] }) {
+// Icons only on small screens, icon + label from md up. `dotPaths` get a green
+// dot over their icon.
+function NavLinks({ items, dotPaths }: { items: NavItem[]; dotPaths: string[] }) {
   return (
     <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto md:justify-center">
       {items.map(({ label, path, icon: Icon }) => (
@@ -52,7 +63,15 @@ function NavLinks({ items }: { items: NavItem[] }) {
             )
           }
         >
-          <Icon size={18} strokeWidth={2} />
+          <span className="relative">
+            <Icon size={18} strokeWidth={2} />
+            {dotPaths.includes(path) && (
+              <span
+                className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-white"
+                aria-label="New"
+              />
+            )}
+          </span>
           <span className="hidden md:inline">{label}</span>
         </NavLink>
       ))}

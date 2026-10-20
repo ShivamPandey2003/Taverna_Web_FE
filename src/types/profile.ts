@@ -4,6 +4,9 @@ export interface Profile {
   lastName: string;
   email: string;
   phone: string;
+  // Offers came in since the customer last opened Specials (the navbar's dot);
+  // offers/mark-seen clears it
+  hasNewSpecials: boolean;
 }
 
 // What can be changed; the email can't

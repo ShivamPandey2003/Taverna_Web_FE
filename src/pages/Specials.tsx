@@ -1,3 +1,6 @@
+import { useEffect, useRef } from "react";
+import { useMarkSpecialsSeen } from "@/services/queries/offerQueries";
+import { useProfile } from "@/services/queries/profileQueries";
 import { SpecialsFilters } from "@/components/features/specials/SpecialsFilters";
 import { SpecialsList } from "@/components/features/specials/SpecialsList";
 import { useOverflowing } from "@/hooks/useOverflowing";
@@ -6,6 +9,18 @@ import { cn } from "@/libs/utils";
 export function Specials() {
   // Room for the status bubbles under the pagination, only once the page scrolls
   const { containerRef, contentRef, overflowing } = useOverflowing<HTMLElement, HTMLDivElement>();
+
+  // A visit while there are new specials marks them seen, which clears the
+  // navbar's dot. Once a visit at most, so a failed call isn't repeated.
+  const { data: profile } = useProfile();
+  const hasNewSpecials = profile?.hasNewSpecials === true;
+  const { mutate: markSeen } = useMarkSpecialsSeen();
+  const marked = useRef(false);
+  useEffect(() => {
+    if (!hasNewSpecials || marked.current) return;
+    marked.current = true;
+    markSeen();
+  }, [hasNewSpecials, markSeen]);
 
   return (
     // Scrolls inside the layout (which clips its content)

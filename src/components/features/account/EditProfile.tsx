@@ -22,6 +22,7 @@ export function EditProfile() {
     lastName: rest.join(" "),
     email: user.email,
     phone: user.phone,
+    hasNewSpecials: false,
   };
 
   return (
