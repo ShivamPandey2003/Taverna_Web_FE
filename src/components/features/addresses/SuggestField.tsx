@@ -26,6 +26,10 @@ interface SuggestFieldProps<T extends FieldSuggestion> {
   // "above" for fields near the bottom of a scrolling form, where a list
   // opening downwards would be cut off
   placement?: "below" | "above";
+  // Locked: shows its value, can't be typed in and suggests nothing
+  readOnly?: boolean;
+  // A grey line under the field (an error takes its place)
+  hint?: string;
 }
 
 // An address form field that suggests as the customer types, like the landing
@@ -44,6 +48,8 @@ export function SuggestField<T extends FieldSuggestion>({
   minLetters = 3,
   debounceMs = 300,
   placement = "below",
+  readOnly = false,
+  hint,
 }: SuggestFieldProps<T>) {
   const [focused, setFocused] = useState(false);
   // Typed in since it was focused or last picked
@@ -53,7 +59,7 @@ export function SuggestField<T extends FieldSuggestion>({
   const [highlighted, setHighlighted] = useState(0);
 
   const query = value.trim();
-  const searchable = focused && typed && query.length >= minLetters;
+  const searchable = !readOnly && focused && typed && query.length >= minLetters;
   const answered = searchable && results?.query === query;
   const items = answered ? results.items : [];
   const open = searchable;
@@ -125,6 +131,7 @@ export function SuggestField<T extends FieldSuggestion>({
           aria-autocomplete="list"
           // The browser's own suggestions would cover ours
           autoComplete="off"
+          readOnly={readOnly}
           placeholder={placeholder}
           onChange={(event) => {
             setTyped(true);
@@ -140,6 +147,7 @@ export function SuggestField<T extends FieldSuggestion>({
           className={cn(
             "h-9 w-full rounded-lg border bg-gray-50 pl-9 pr-3 text-xs text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-400 focus:bg-white focus:ring-2 focus:ring-gray-100",
             error ? "border-red-400" : "border-gray-200",
+            readOnly && lockedFieldClass,
           )}
         />
 
@@ -179,7 +187,15 @@ export function SuggestField<T extends FieldSuggestion>({
         )}
       </div>
 
-      {error && <p className="mt-1 text-[10px] text-red-500">{error}</p>}
+      {error ? (
+        <p className="mt-1 text-[10px] text-red-500">{error}</p>
+      ) : (
+        hint && <p className="mt-1 text-[10px] text-gray-500">{hint}</p>
+      )}
     </div>
   );
 }
+
+// A field filled from the picked address, which can't be typed in
+export const lockedFieldClass =
+  "cursor-default bg-gray-100 text-gray-700 focus:border-gray-200 focus:bg-gray-100 focus:ring-0";

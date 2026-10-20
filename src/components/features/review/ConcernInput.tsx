@@ -1,26 +1,28 @@
 // import { MessageText2 } from 'reicon-react';
 import { useAppDispatch, useAppSelector } from '@/redux/hooks';
 import { selectBooking, setConcern } from '@/redux/booking/bookingSlice';
+import { StepNumber } from './BookingSummaryCard';
 
-export function ConcernInput() {
+export function ConcernInput({ step }: { step?: number }) {
   const dispatch = useAppDispatch();
   const { concern: value } = useAppSelector(selectBooking);
 
   const onChange = (concern: string) => dispatch(setConcern(concern));
 
   return (
-    <section className="flex flex-1 flex-col rounded-2xl border border-gray-200 bg-white p-5">
+    <section className="rounded-2xl border border-gray-200 bg-white p-5">
       <div className="flex items-center gap-2">
         <label
           htmlFor="service-concern"
           className="block text-sm font-bold text-gray-900"
         >
+          {step !== undefined && <StepNumber step={step} />}
           Describe Your Concern{" "}
           <span className="font-normal text-gray-500">(Optional)</span>
         </label>
       </div>
 
-      <div className="relative mt-4 flex flex-1 flex-col">
+      <div className="relative mt-4">
         {/* Message icon hidden for now; restore it with pl-11 on the textarea */}
         {/* <MessageText2
           size={19}
@@ -33,9 +35,10 @@ export function ConcernInput() {
           onChange={(event) =>
             onChange(event.target.value)
           }
-          rows={4}
+          // Two lines while empty; grows with what's typed, then scrolls
+          rows={2}
           placeholder="E.g. Engine makes a rattling noise when accelerating, brake pads feel worn, check engine light is on..."
-          className="min-h-[96px] w-full flex-1 resize-none rounded-lg border border-gray-200 bg-white py-3 pl-4 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+          className="field-sizing-content min-h-[66px] max-h-60 w-full resize-none rounded-lg border border-gray-200 bg-white py-3 pl-4 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
         />
       </div>
     </section>

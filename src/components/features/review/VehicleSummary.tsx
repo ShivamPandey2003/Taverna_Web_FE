@@ -9,12 +9,13 @@ import { VehicleTitle } from "@/components/features/dashboard/VehicleTitle";
 import { maskedVin } from "@/libs/utils";
 import { MilesField } from "./MilesField";
 
-export function VehicleSummary({ highlight }: StepProps) {
+export function VehicleSummary({ highlight, step }: StepProps) {
   const dispatch = useAppDispatch();
   const vehicle = useAppSelector(selectBookingVehicle);
 
   return (
     <BookingSummaryCard
+      step={step}
       highlight={highlight}
       title="My Vehicle"
       status={{ valid: !!vehicle, label: vehicle ? "Vehicle selected" : "Select a vehicle" }}

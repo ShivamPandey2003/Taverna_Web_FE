@@ -8,7 +8,7 @@ import {
 } from "@/redux/booking/bookingSlice";
 import { openReviewModal } from "@/redux/modals/reviewModal/reviewModalSlice";
 
-export function AddressSummary({ highlight }: StepProps) {
+export function AddressSummary({ highlight, step }: StepProps) {
   const dispatch = useAppDispatch();
   const { pickupLocation } = useAppSelector(selectBooking);
   const address = useAppSelector(selectBookingAddress);
@@ -52,6 +52,7 @@ export function AddressSummary({ highlight }: StepProps) {
 
   return (
     <BookingSummaryCard
+      step={step}
       highlight={highlight}
       title="My Address"
       status={{

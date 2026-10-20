@@ -19,9 +19,8 @@ export const confirmBooking =
     const address = selectBookingAddress(state);
     const dealership = selectBookingDealership(state);
     const location = state.booking.pickupLocation;
-    // Loaner Only has no pickup to schedule
-    const scheduledAt =
-      state.booking.selectedServiceId === "loaner-only" ? null : state.booking.scheduledAt;
+    // The pickup time, or for Loaner Only the drop-off time; null books for now
+    const scheduledAt = state.booking.scheduledAt;
 
     const pickup =
       location?.type === "current"

@@ -8,12 +8,14 @@ import { openReviewModal } from "@/redux/modals/reviewModal/reviewModalSlice";
 export function DealershipSummary({
   loading = false,
   highlight,
+  step,
 }: StepProps & { loading?: boolean }) {
   const dispatch = useAppDispatch();
   const dealership = useAppSelector(selectBookingDealership);
 
   return (
     <BookingSummaryCard
+      step={step}
       highlight={highlight}
       title="Destination Dealership"
       status={{

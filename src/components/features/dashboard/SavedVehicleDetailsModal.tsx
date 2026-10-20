@@ -19,6 +19,12 @@ import {
   useVehicleService,
 } from "@/components/features/tracking/serviceStatus";
 
+// The Vehicle Details view (photo, VIN / miles, last service, Book Pickup) is
+// switched off for now: the card's history icon opens the Service History
+// straight away. Set to true to bring the details back, with "View all" and the
+// back arrow between the two.
+const SHOW_DETAILS = false;
+
 // Details of a vehicle already in the user's list. "View all" swaps the details
 // for the vehicle's whole service history, in the same modal.
 export function SavedVehicleDetailsModal() {
@@ -50,7 +56,7 @@ export function SavedVehicleDetailsModal() {
     : savedVehicle;
 
   const history = overview?.serviceHistory ?? [];
-  const showingHistory = historyFor === savedVehicle.id;
+  const showingHistory = !SHOW_DETAILS || historyFor === savedVehicle.id;
 
   const onClose = () => {
     setHistoryFor(null);
@@ -108,7 +114,7 @@ export function SavedVehicleDetailsModal() {
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between">
             <div className="flex items-center gap-2">
-              {showingHistory && (
+              {SHOW_DETAILS && showingHistory && (
                 <button
                   type="button"
                   onClick={() => setHistoryFor(null)}
@@ -134,7 +140,7 @@ export function SavedVehicleDetailsModal() {
           </div>
 
           {showingHistory ? (
-            <FullServiceHistory vehicle={vehicle} history={history} />
+            <FullServiceHistory vehicle={vehicle} history={history} loading={isLoading} />
           ) : (
           // Its full height (it scrolls with the modal on a short screen)
           <div className="shrink-0">
@@ -204,9 +210,11 @@ export function SavedVehicleDetailsModal() {
 function FullServiceHistory({
   vehicle,
   history,
+  loading,
 }: {
   vehicle: Vehicle;
   history: VehicleServiceRecord[];
+  loading: boolean;
 }) {
   return (
     // Fills the modal: the vehicle and the count stay put, the list scrolls
@@ -230,16 +238,27 @@ function FullServiceHistory({
 
       <div className="my-4 h-px shrink-0 bg-gray-200" />
 
-      <p className="shrink-0 text-xs font-semibold uppercase tracking-wide text-gray-500">
-        {history.length} {history.length === 1 ? "service" : "services"}
-      </p>
+      {history.length === 0 ? (
+        // It can open before the history has loaded, and a vehicle may have none
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <p className="text-sm text-gray-500">
+            {loading ? "Loading service history..." : "No service history available."}
+          </p>
+        </div>
+      ) : (
+        <>
+          <p className="shrink-0 text-xs font-semibold uppercase tracking-wide text-gray-500">
+            {history.length} {history.length === 1 ? "service" : "services"}
+          </p>
 
-      {/* The right padding keeps the cards clear of the scrollbar */}
-      <div className="-mr-2 mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto pr-2">
-        {history.map((record) => (
-          <ServiceHistoryCard key={record.id} service={record} />
-        ))}
-      </div>
+          {/* The right padding keeps the cards clear of the scrollbar */}
+          <div className="-mr-2 mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto pr-2">
+            {history.map((record) => (
+              <ServiceHistoryCard key={record.id} service={record} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -268,7 +287,7 @@ function VehicleHero({ vehicle }: VehicleHeroProps) {
 
         <div className="my-4 h-px bg-gray-200" />
 
-        {/* As on the card: last 4 of the VIN (full VIN in the tooltip), miles beside it */}
+        {/* As on the card: last 6 of the VIN (full VIN in the tooltip), miles beside it */}
         <div className="flex gap-12">
           <VehicleStat
             label="VIN"

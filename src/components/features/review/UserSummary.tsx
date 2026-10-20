@@ -7,7 +7,7 @@ import { selectAccountUser, setActiveSection } from "@/redux/account/accountSlic
 import { hasUserDetails } from "./review.utils";
 
 // The customer's name, email and phone, edited on the Account page
-export function UserSummary({ highlight }: StepProps) {
+export function UserSummary({ highlight, step }: StepProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const user = useAppSelector(selectAccountUser);
@@ -21,6 +21,7 @@ export function UserSummary({ highlight }: StepProps) {
 
   return (
     <BookingSummaryCard
+      step={step}
       title="My Details"
       highlight={highlight}
       status={{
@@ -28,6 +29,8 @@ export function UserSummary({ highlight }: StepProps) {
         label: complete ? "Contact details complete" : "Add your name and phone number",
       }}
       onChange={onChange}
+      // Opens the Account page to edit the profile
+      changeLabel="Update"
     >
       <div className="flex items-center gap-5">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-50">

@@ -21,9 +21,8 @@ import {
   type Coordinates,
 } from '@/services/geocodeApi';
 import { placeDetails, suggestPlaces, type PlaceSuggestion } from '@/services/placesApi';
-import { searchUsStates } from '@/libs/usStates';
 import { AddressMap } from './AddressMap';
-import { SuggestField } from './SuggestField';
+import { lockedFieldClass, SuggestField } from './SuggestField';
 import {
   useCreateAddress,
   useGeocodeAddress,
@@ -90,6 +89,7 @@ function AddressFormModal({
     control,
     setValue,
     setError,
+    clearErrors,
     formState: { errors },
   } = useForm<AddressFormData>({
     resolver: zodResolver(addressSchema),
@@ -104,11 +104,27 @@ function AddressFormModal({
   });
 
   const selectedType = useWatch({ control, name: "type" });
-  // What's typed in the fields that suggest as you type
-  const [streetValue, cityValue, stateValue, zipValue] = useWatch({
+  const [streetValue, apartmentValue, cityValue, stateValue, zipValue] = useWatch({
     control,
-    name: ["address", "city", "state", "zip"],
+    name: ["address", "apartment", "city", "state", "zip"],
   });
+
+  // The address only comes from a pick (a street suggestion, a spot on the map or
+  // the device's location), never from typing. Once picked, the street, city,
+  // state, ZIP and map are locked until Clear; the apartment stays editable. An
+  // address being edited starts picked.
+  const [picked, setPicked] = useState(() => !!existing);
+  const missing = (
+    [
+      ["street", streetValue],
+      ["city", cityValue],
+      ["state", stateValue],
+      ["ZIP code", zipValue],
+    ] as const
+  )
+    .filter(([, value]) => !value.trim())
+    .map(([name]) => name);
+  const complete = picked && missing.length === 0;
 
   // The map's pin: where the address is, once known
   const [pin, setPin] = useState<LatLng | null>(() =>
@@ -134,17 +150,17 @@ function AddressFormModal({
     try {
       const place = await reverseGeocode(position.lat, position.lng);
       if (pick !== latestPick.current) return;
-      (["address", "city", "state", "zip"] as const).forEach((field) =>
-        setValue(field, place[field], { shouldDirty: true, shouldValidate: true }),
-      );
+      fillPlace(place);
       setPinned({ position, place });
+      setPicked(true);
     } catch (error) {
       if (pick !== latestPick.current) return;
+      setPin(null);
       setPinned(null);
       toast.error(
         error instanceof GeocodeError && error.reason === "notFound"
-          ? "We couldn't find an address there. Enter it below."
-          : "We couldn't look up the address there. Enter it below.",
+          ? "We couldn't find an address there. Tap another spot or search below."
+          : "We couldn't look up the address there. Tap another spot or search below.",
       );
     } finally {
       if (pick === latestPick.current) setFinding(false);
@@ -158,15 +174,29 @@ function AddressFormModal({
       ? { latitude: fallbackCenter.lat, longitude: fallbackCenter.lng }
       : null;
 
-  // Puts a picked suggestion's parts in the form. Empty parts are skipped;
-  // `onlyEmpty` leaves fields the customer already filled alone.
-  const fill = (parts: Partial<AddressPlace>, onlyEmpty = false) => {
-    const current: AddressPlace = { address: streetValue, city: cityValue, state: stateValue, zip: zipValue };
-    (Object.entries(parts) as [keyof AddressPlace, string | undefined][]).forEach(([field, value]) => {
-      if (!value || (onlyEmpty && current[field].trim())) return;
-      setValue(field, value, { shouldDirty: true, shouldValidate: true });
-    });
+  // Puts a picked address in the form: street, city, state and ZIP, each
+  // replaced (a part the place doesn't have is left empty)
+  const fillPlace = (place: AddressPlace) => {
+    (["address", "city", "state", "zip"] as const).forEach((field) =>
+      setValue(field, place[field] ?? "", { shouldDirty: true, shouldValidate: true }),
+    );
   };
+
+  // Empties the whole form and the map, so another address can be picked
+  const clearAddress = () => {
+    // A lookup still running mustn't fill the form afterwards
+    latestPick.current++;
+    setFinding(false);
+    (["address", "apartment", "city", "state", "zip"] as const).forEach((field) =>
+      setValue(field, "", { shouldDirty: true }),
+    );
+    clearErrors();
+    setPin(null);
+    setPinned(null);
+    setPicked(false);
+  };
+  const hasSomething =
+    !!pin || [streetValue, apartmentValue, cityValue, stateValue, zipValue].some((value) => value.trim());
 
   // A suggestion's details (where it is, its city, state, ZIP); null when they
   // couldn't be fetched (already toasted) or a later pick has taken over
@@ -178,7 +208,7 @@ function AddressFormModal({
       return pick === latestPick.current ? details : null;
     } catch {
       if (pick === latestPick.current) {
-        toast.error("We couldn't get the details of that place. Pick another or type it in.");
+        toast.error("We couldn't get the details of that place. Pick another one.");
       }
       return null;
     } finally {
@@ -191,25 +221,11 @@ function AddressFormModal({
     const details = await pickSuggestion(suggestion);
     if (!details) return;
     const place = { ...details.place, address: details.place.address || suggestion.main };
-    fill(place);
+    fillPlace(place);
     const position = { lat: details.coordinates.latitude, lng: details.coordinates.longitude };
     setPin(position);
     setPinned({ position, place });
-  };
-
-  // A city picked: its state comes with it
-  const pickCity = async (suggestion: PlaceSuggestion) => {
-    const details = await pickSuggestion(suggestion);
-    if (!details) return;
-    fill({ city: details.place.city || suggestion.main, state: details.place.state });
-  };
-
-  // A ZIP picked: its city and state fill in the fields still empty
-  const pickZip = async (suggestion: PlaceSuggestion) => {
-    const details = await pickSuggestion(suggestion);
-    if (!details) return;
-    fill({ zip: details.place.zip || suggestion.main });
-    fill({ city: details.place.city, state: details.place.state }, true);
+    setPicked(true);
   };
 
   const useCurrentLocation = async () => {
@@ -343,6 +359,7 @@ function AddressFormModal({
               onUseCurrentLocation={useCurrentLocation}
               busy={finding}
               disabled={saving}
+              readOnly={picked}
             />
 
             {/* Address Details; locked while saving */}
@@ -372,17 +389,24 @@ function AddressFormModal({
 
               <div className="mt-3 space-y-2.5">
 
-                {/* Street: suggests addresses; a pick fills in the rest */}
+                {/* Street: searches addresses; only a pick fills the form */}
                 <SuggestField
                   label="Street Address"
                   id="address"
-                  placeholder="1234 Main St"
+                  placeholder={picked ? "1234 Main St" : "Search for your address"}
                   icon={<Pin size={14} />}
                   registration={register("address")}
                   value={streetValue}
-                  error={errors.address?.message}
+                  error={
+                    errors.address?.message ??
+                    (picked && missing.length > 0
+                      ? `This address has no ${missing.join(", ")}. Clear it and pick a more exact one.`
+                      : undefined)
+                  }
+                  hint={picked ? undefined : "Type, then pick your address from the list."}
                   suggest={(text, signal) => suggestPlaces(text, near, signal, "address")}
                   onPick={pickStreet}
+                  readOnly={picked}
                 />
 
                 {/* Apartment */}
@@ -402,68 +426,55 @@ function AddressFormModal({
                   error={errors.apartment?.message}
                 />
 
-                {/* City: suggests cities (with their state) */}
-                <SuggestField
+                {/* City, state and ZIP: filled from the picked address, never typed */}
+                <AddressField
                   label="City"
                   id="city"
                   placeholder="Fort Lauderdale"
                   icon={<Pin size={14} />}
                   registration={register("city")}
-                  value={cityValue}
-                  error={errors.city?.message}
-                  suggest={(text, signal) => suggestPlaces(text, near, signal, "city")}
-                  onPick={pickCity}
+                  readOnly
                 />
 
-                {/* State: the US states, from a list; ZIP: suggests postal codes */}
                 <div className="grid grid-cols-2 gap-2.5">
-                  <SuggestField
+                  <AddressField
                     label="State"
                     id="state"
                     placeholder="FL"
                     icon={<Map2 size={14} />}
                     registration={register("state")}
-                    value={stateValue}
-                    error={errors.state?.message}
-                    suggest={async (text) =>
-                      searchUsStates(text).map((state) => ({
-                        id: state.code,
-                        main: state.code,
-                        secondary: state.name,
-                      }))
-                    }
-                    onPick={(state) =>
-                      setValue("state", state.id, { shouldDirty: true, shouldValidate: true })
-                    }
-                    minLetters={1}
-                    debounceMs={0}
-                    placement="above"
+                    readOnly
                   />
 
-                  <SuggestField
+                  <AddressField
                     label="ZIP Code"
                     id="zip"
                     placeholder="33301"
                     icon={<Map2 size={14} />}
                     registration={register("zip")}
-                    value={zipValue}
-                    error={errors.zip?.message}
-                    suggest={(text, signal) => suggestPlaces(text, near, signal, "postalCode")}
-                    onPick={pickZip}
-                    placement="above"
+                    readOnly
                   />
                 </div>
               </div>
             </fieldset>
             </div>
 
-            {/* Save; always in view */}
-            <div className="shrink-0 px-5 pb-5 pt-3">
+            {/* Clear (40%) and Save (60%); always in view */}
+            <div className="flex shrink-0 gap-2.5 px-5 pb-5 pt-3">
+            <button
+              type="button"
+              onClick={clearAddress}
+              disabled={saving || !hasSomething}
+              className="h-11 basis-2/5 rounded-lg border border-gray-900 bg-white text-xs font-semibold text-gray-900 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Clear
+            </button>
+
             <button
               type="submit"
-              // Not while the pin's address is still being filled in
-              disabled={saving || finding}
-              className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#111827] text-xs font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-80"
+              // Only a picked, complete address; not while it's still being filled in
+              disabled={saving || finding || !complete}
+              className="flex h-11 basis-3/5 items-center justify-center gap-2 rounded-lg bg-[#111827] text-xs font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-40"
             >
               {saving && <Spinner className="h-3.5 w-3.5" />}
               {locating
@@ -489,6 +500,8 @@ interface AddressFieldProps {
   icon: React.ReactNode;
   registration: UseFormRegisterReturn;
   error?: string;
+  // Filled from the picked address, can't be typed in
+  readOnly?: boolean;
 }
 
 function AddressField({
@@ -498,6 +511,7 @@ function AddressField({
   icon,
   registration,
   error,
+  readOnly = false,
 }: AddressFieldProps) {
   return (
     <div>
@@ -517,9 +531,12 @@ function AddressField({
           id={id}
           {...registration}
           placeholder={placeholder}
+          readOnly={readOnly}
+          tabIndex={readOnly ? -1 : undefined}
           className={cn(
             "h-9 w-full rounded-lg border bg-gray-50 pl-9 pr-3 text-xs text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-400 focus:bg-white focus:ring-2 focus:ring-gray-100",
-            error ? "border-red-400" : "border-gray-200"
+            error ? "border-red-400" : "border-gray-200",
+            readOnly && lockedFieldClass,
           )}
         />
       </div>

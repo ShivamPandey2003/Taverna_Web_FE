@@ -7,9 +7,9 @@ import {
 } from "@/redux/modals/reviewModal/reviewModalSlice";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { TowTruckNotice } from "./TowTruckNotice";
-import { BookingFieldStatus } from "./BookingSummaryCard";
+import { BookingFieldStatus, StepNumber } from "./BookingSummaryCard";
 
-export function DriveableStatus() {
+export function DriveableStatus({ step }: { step?: number }) {
   const dispatch = useAppDispatch();
   const { driveable: value, towTruck } = useAppSelector(selectBooking);
   const confirmingRemoval = useAppSelector(selectReviewModal) === "removeTow";
@@ -20,7 +20,10 @@ export function DriveableStatus() {
     <div className="w-full rounded-2xl border border-gray-200 bg-white p-5">
       {/* Label */}
       <div className="flex items-center gap-2">
-        <p className="text-sm font-bold text-gray-900">Driveable Status</p>
+        <p className="text-sm font-bold text-gray-900">
+          {step !== undefined && <StepNumber step={step} />}
+          Driveable Status
+        </p>
         <BookingFieldStatus
           valid={typeof value === "boolean"}
           label={typeof value === "boolean" ? "Driveability confirmed" : "Choose driveability"}

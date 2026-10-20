@@ -2,7 +2,7 @@ import { VehicleTitle } from "@/components/features/dashboard/VehicleTitle";
 import { cn, maskedVin } from "@/libs/utils";
 import type { BookingStatus } from "@/types/booking";
 import type { Vehicle } from "@/types/vehicle";
-import { statusIcons } from "./serviceStatus";
+// import { statusIcons } from "./serviceStatus";
 
 interface TrackingHeaderProps {
   vehicle: Vehicle;
@@ -25,11 +25,12 @@ export function TrackingHeader({
   dealership,
   title,
   subtitle,
-  status,
-  statusLabel,
+  // The status pill is commented out below; restore these with it
+  // status,
+  // statusLabel,
   gradient,
 }: TrackingHeaderProps) {
-  const Icon = statusIcons[status];
+  // const Icon = statusIcons[status];
   return (
     <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
       <div className="flex flex-col md:flex-row md:items-stretch">
@@ -74,10 +75,11 @@ export function TrackingHeader({
             {subtitle}
           </p>
 
+          {/* The status's name with its icon; hidden for now
           <div className="mt-4 flex items-center gap-2 rounded-full bg-white/20 px-5 py-2 text-sm font-semibold backdrop-blur-sm">
             <Icon size={16} strokeWidth={2} className="shrink-0" />
             {statusLabel}
-          </div>
+          </div> */}
         </div>
       </div>
     </section>

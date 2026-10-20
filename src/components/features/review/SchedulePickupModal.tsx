@@ -2,7 +2,7 @@ import { useState } from "react";
 import { AngleLeft, AngleRight, Calendar, X } from "reicon-react";
 import { cn, formatPickupTime } from "@/libs/utils";
 import { useAppSelector } from "@/redux/hooks";
-import { selectBooking } from "@/redux/booking/bookingSlice";
+import { selectBooking, selectBookingService } from "@/redux/booking/bookingSlice";
 
 interface SchedulePickupModalProps {
   open: boolean;
@@ -44,6 +44,9 @@ function SchedulePickupContent({
   onConfirm,
 }: Omit<SchedulePickupModalProps, "open">) {
   const { scheduledAt } = useAppSelector(selectBooking);
+  // Loaner Only: the customer drops the vehicle off, so it's a drop-off time
+  const loanerOnly = useAppSelector(selectBookingService).id === "loaner-only";
+  const visit = loanerOnly ? "Drop-off" : "Pickup";
 
   const [now] = useState(() => new Date());
   const days = getDays(now);
@@ -111,7 +114,7 @@ function SchedulePickupContent({
           {/* Header */}
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold tracking-tight text-gray-900">
-              Schedule Your Pickup
+              Schedule Your {visit}
             </h2>
 
             <button
@@ -242,7 +245,7 @@ function SchedulePickupContent({
             <p className="text-sm text-gray-700">
               {selected ? (
                 <>
-                  Pickup on{" "}
+                  {visit} on{" "}
                   <span className="font-bold text-gray-900">{formatPickupTime(selected)}</span>
                 </>
               ) : (
@@ -288,7 +291,7 @@ function SchedulePickupContent({
   );
 }
 
-const NO_TIMES_LEFT = "No pickup times left on this day";
+const NO_TIMES_LEFT = "No times left on this day";
 
 interface Hint {
   text: string;
@@ -340,7 +343,7 @@ function unavailableReason(slot: Date, now: Date) {
   if (isBookable(slot, now)) return null;
   if (slot.getTime() <= now.getTime()) return "This time has already passed";
   if (slot.getTime() < now.getTime() + MIN_LEAD_MINUTES * 60_000)
-    return "Too soon: pickups need at least 1 hour's notice so a valet can reach you";
+    return "Too soon: book at least 1 hour ahead";
   return "This time is outside the booking window";
 }
 

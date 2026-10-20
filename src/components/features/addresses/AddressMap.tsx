@@ -16,6 +16,8 @@ interface AddressMapProps {
   // Getting the device's location or the address at the pin
   busy: boolean;
   disabled: boolean;
+  // An address has been picked: the map only shows it until the form is cleared
+  readOnly?: boolean;
 }
 
 // The Add / Edit Address map: shows where the address is, and picking a spot
@@ -27,9 +29,10 @@ export function AddressMap({
   onUseCurrentLocation,
   busy,
   disabled,
+  readOnly = false,
 }: AddressMapProps) {
   const available = useMapsAvailable();
-  const locked = disabled || busy;
+  const locked = disabled || busy || readOnly;
 
   return (
     <div className="relative h-[170px] overflow-hidden rounded-xl bg-gray-100">
@@ -65,7 +68,7 @@ export function AddressMap({
           <PanTo position={pin} />
         </Map>
       ) : (
-        <MapPlaceholder message="The map isn't available right now. Enter the address below." />
+        <MapPlaceholder message="The map isn't available right now. Search for the address below." />
       )}
 
       {/* What to do; hidden once there's a pin to drag */}
@@ -75,6 +78,7 @@ export function AddressMap({
         </span>
       )}
 
+      {!readOnly && (
       <button
         type="button"
         onClick={onUseCurrentLocation}
@@ -84,6 +88,7 @@ export function AddressMap({
         {busy ? <Spinner className="h-3 w-3" /> : <MapArrowSquare size={12} fill="black" />}
         {busy ? "Finding Address..." : "Use My Current Location"}
       </button>
+      )}
     </div>
   );
 }
