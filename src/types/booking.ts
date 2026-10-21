@@ -49,7 +49,8 @@ export interface ServiceStatus {
   // The stage it belongs to, for the colour and icon; null for a code the app
   // doesn't know
   status: BookingStatus | null;
-  // The current status by name ("Advisor Assigned")
+  // The current status by name: the API's label ("Vehicle Arrived"), or the
+  // code spelled out when it sends none
   label: string;
   // The API's own name for it, which groups several statuses ("Valet On Road"
   // for VALET_DISPATCHED); the tracking header's title
@@ -124,7 +125,7 @@ export interface BookingSummary {
   // "Oct 13, 2026, 9:00 AM"
   scheduled: string;
   // The API's status code, its stage (null for a code the app doesn't know) and
-  // its name ("Advisor Assigned")
+  // its name, the API's statusLabel ("Vehicle Arrived")
   code: string;
   status: BookingStatus | null;
   label: string;

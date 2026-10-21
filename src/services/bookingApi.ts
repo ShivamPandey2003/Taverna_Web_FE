@@ -237,10 +237,8 @@ function toServiceStatus(response: StatusSummaryResponse): ServiceStatus {
     id: response.bmsId,
     code: response.currentStatus,
     status: statusStages[response.currentStatus] ?? null,
-    // The status the booking is actually at. The API's own `label` groups
-    // several statuses under one name ("Vehicle Arrived" for ADVISOR_ASSIGNED),
-    // so it's kept apart, for the tracking header's title only.
-    label: statusName(response.currentStatus),
+    // The API's own label ("Vehicle Arrived"); the code spelled out without one
+    label: response.label?.trim() || statusName(response.currentStatus),
     apiLabel: response.label?.trim() || null,
     doneAt: response.doneAt,
     previousStatus: response.previousStatus,
@@ -341,7 +339,7 @@ export const bookingApi = {
       scheduled: booking.scheduled,
       code: booking.bookingStatus,
       status: statusStages[booking.bookingStatus] ?? null,
-      label: statusName(booking.bookingStatus),
+      label: booking.statusLabel?.trim() || statusName(booking.bookingStatus),
       open: isOpenStatus(booking.bookingStatus),
     }));
   },
