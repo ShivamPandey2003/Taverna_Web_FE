@@ -94,8 +94,7 @@ function AdvisorService({
         {/* Once the invoice is out the advisor's part is over */}
         {invoice && !hasAction && (
           <StateScreen tone="success" icon={<CheckCircle size={32} />} title="All Done on Your Side">
-            The invoice is with {customer}. The Taverna team confirms the payment and sends the
-            vehicle back.
+            The invoice will be sent to {customer}, and the Taverna team will handle it from there.
           </StateScreen>
         )}
 
