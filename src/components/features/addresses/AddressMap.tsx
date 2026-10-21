@@ -1,6 +1,6 @@
 import { AdvancedMarker, Map } from "@vis.gl/react-google-maps";
 import { MapArrowSquare, Pin } from "reicon-react";
-import { MapMarkerIcon, MapPlaceholder, PanTo } from "@/components/ui/MapParts";
+import { MapErrorBoundary, MapMarkerIcon, MapPlaceholder, PanTo } from "@/components/ui/MapParts";
 import { useMapsAvailable } from "@/hooks/useMapsAvailable";
 import { Spinner } from "@/components/ui/Spinner";
 import { DEFAULT_CENTER, GOOGLE_MAP_ID, type LatLng } from "@/libs/maps";
@@ -37,6 +37,7 @@ export function AddressMap({
   return (
     <div className="relative h-[170px] overflow-hidden rounded-xl bg-gray-100">
       {available ? (
+        <MapErrorBoundary message="The map isn't available right now. Search for the address below.">
         <Map
           mapId={GOOGLE_MAP_ID}
           defaultCenter={pin ?? fallbackCenter ?? DEFAULT_CENTER}
@@ -67,6 +68,7 @@ export function AddressMap({
           )}
           <PanTo position={pin} />
         </Map>
+        </MapErrorBoundary>
       ) : (
         <MapPlaceholder message="The map isn't available right now. Search for the address below." />
       )}

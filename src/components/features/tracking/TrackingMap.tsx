@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AdvancedMarker, Map, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { Building, HomeSmile } from "reicon-react";
-import { FitPoints, MapMarkerIcon, MapPlaceholder } from "@/components/ui/MapParts";
+import { FitPoints, MapErrorBoundary, MapMarkerIcon, MapPlaceholder } from "@/components/ui/MapParts";
 import { useMapsAvailable } from "@/hooks/useMapsAvailable";
 import { DEFAULT_CENTER, GOOGLE_MAP_ID, type LatLng } from "@/libs/maps";
 
@@ -39,6 +39,7 @@ export function TrackingMap({ pickup, dealership, dealershipName, pickupMissing 
         ) : points.length === 0 ? (
           <MapPlaceholder message="Finding your pickup address and the dealership..." />
         ) : (
+          <MapErrorBoundary>
           <Map
             mapId={GOOGLE_MAP_ID}
             defaultCenter={points[0] ?? DEFAULT_CENTER}
@@ -68,6 +69,7 @@ export function TrackingMap({ pickup, dealership, dealershipName, pickupMissing 
             {bothEnds && <TripRoute from={pickup} to={dealership} onSummary={setSummary} />}
             <FitPoints points={points} padding={64} />
           </Map>
+          </MapErrorBoundary>
         )}
 
         {/* Distance and drive time, over the map's top-left corner */}
@@ -121,43 +123,90 @@ function TripRoute({
     let lines: google.maps.Polyline[] = [];
 
     const drawStraight = () => {
-      lines = [dashedLine(map, origin, destination)];
+      try {
+        lines = [dashedLine(map, origin, destination)];
+      } catch {
+        // Nothing drawn; the distance card still shows
+      }
       onSummary({ miles: straightMiles(origin, destination), minutes: null, byRoad: false });
     };
 
-    routes.Route.computeRoutes({
-      origin,
-      destination,
-      travelMode: "DRIVING",
-      fields: ["path", "distanceMeters", "durationMillis"],
-    })
-      .then(({ routes: found }) => {
-        if (cancelled) return;
-        const route = found?.[0];
-        if (!route?.path?.length || route.distanceMeters == null) {
-          drawStraight();
-          return;
-        }
-
-        lines = [
-          new google.maps.Polyline({
-            map,
-            path: route.path.map((point) => ({ lat: point.lat, lng: point.lng })),
-            strokeColor: "#111827",
-            strokeOpacity: 0.85,
-            strokeWeight: 5,
-          }),
-        ];
-        onSummary({
-          miles: route.distanceMeters / METERS_PER_MILE,
-          minutes: route.durationMillis ? Math.round(route.durationMillis / 60000) : null,
-          byRoad: true,
-        });
-      })
-      .catch(() => {
-        // Usually the Routes API not being enabled for the key
-        if (!cancelled) drawStraight();
+    const drawRoute = (path: LatLng[], meters: number, millis: number | null) => {
+      lines = [
+        new google.maps.Polyline({
+          map,
+          path,
+          strokeColor: "#111827",
+          strokeOpacity: 0.85,
+          strokeWeight: 5,
+        }),
+      ];
+      onSummary({
+        miles: meters / METERS_PER_MILE,
+        minutes: millis ? Math.round(millis / 60000) : null,
+        byRoad: true,
       });
+    };
+
+    // Google's Routes API (needs "Routes API" enabled for the key)
+    const viaRoutesApi = async () => {
+      if (typeof routes.Route?.computeRoutes !== "function") return null;
+      const { routes: found } = await routes.Route.computeRoutes({
+        origin,
+        destination,
+        travelMode: "DRIVING",
+        fields: ["path", "distanceMeters", "durationMillis"],
+      });
+      const route = found?.[0];
+      if (!route?.path?.length || route.distanceMeters == null) return null;
+      return {
+        path: route.path.map((point) => ({ lat: point.lat, lng: point.lng })),
+        meters: route.distanceMeters,
+        millis: route.durationMillis ?? null,
+      };
+    };
+
+    // The older Directions service (needs "Directions API" enabled for the key)
+    const viaDirections = async () => {
+      if (typeof routes.DirectionsService !== "function") return null;
+      const result = await new routes.DirectionsService().route({
+        origin,
+        destination,
+        travelMode: google.maps.TravelMode.DRIVING,
+      });
+      const route = result.routes?.[0];
+      const leg = route?.legs?.[0];
+      if (!route?.overview_path?.length || leg?.distance?.value == null) return null;
+      return {
+        path: route.overview_path.map((point) => ({ lat: point.lat(), lng: point.lng() })),
+        meters: leg.distance.value,
+        millis: leg.duration?.value != null ? leg.duration.value * 1000 : null,
+      };
+    };
+
+    // Each way is tried in turn; whatever fails (an API not enabled, no route
+    // found) falls through to the next, and a straight line is the last resort
+    const attempt = async (find: () => Promise<{ path: LatLng[]; meters: number; millis: number | null } | null>) => {
+      try {
+        return await find();
+      } catch {
+        return null;
+      }
+    };
+
+    void (async () => {
+      const found = (await attempt(viaRoutesApi)) ?? (await attempt(viaDirections));
+      if (cancelled) return;
+      if (!found) {
+        drawStraight();
+        return;
+      }
+      try {
+        drawRoute(found.path, found.meters, found.millis);
+      } catch {
+        drawStraight();
+      }
+    })();
 
     return () => {
       cancelled = true;

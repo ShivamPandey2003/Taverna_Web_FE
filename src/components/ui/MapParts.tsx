@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { Component, useEffect, type ReactNode } from "react";
 import { useMap } from "@vis.gl/react-google-maps";
 import type { LatLng } from "@/libs/maps";
 import { cn } from "@/libs/utils";
@@ -14,6 +14,31 @@ export function MapPlaceholder({ message, className }: { message: string; classN
       {message}
     </div>
   );
+}
+
+// Google's map code can throw inside React (e.g. AdvancedMarker failing with a
+// map ID the key can't use), which would take the whole page down. This keeps
+// the failure to the map: it shows the placeholder instead.
+export class MapErrorBoundary extends Component<
+  { message?: string; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error("Map failed to render", error);
+  }
+
+  render() {
+    if (this.state.failed) {
+      return <MapPlaceholder message={this.props.message ?? "The map isn't available right now."} />;
+    }
+    return this.props.children;
+  }
 }
 
 // Our round marker: an icon on white, for AdvancedMarker's content
