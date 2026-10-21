@@ -1,4 +1,5 @@
 import { Plus } from "reicon-react";
+import { DeleteDealershipModal } from "@/components/features/dealerships/DeleteDealershipModal";
 import { DealershipFormModal } from "@/components/features/dealerships/DealershipFormModal";
 import { DealershipGrid } from "@/components/features/dealerships/DealershipGrid";
 import { DealershipsToolbar } from "@/components/features/dealerships/DealershipsToolbar";
@@ -39,6 +40,7 @@ export function AdminDealerships() {
       </div>
 
       <DealershipFormModal />
+      <DeleteDealershipModal />
     </main>
   );
 }

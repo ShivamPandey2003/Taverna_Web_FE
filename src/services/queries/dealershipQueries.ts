@@ -96,6 +96,9 @@ export const useCreateDealership = () =>
     dealershipApi.create(dealerId, input),
   );
 
+export const useDeleteDealership = () =>
+  useDealershipMutation((id: string) => dealershipApi.delete(id));
+
 export const useUpdateDealership = () =>
   useDealershipMutation(({ id, input }: { id: string; input: DealershipInput }) =>
     dealershipApi.update(id, input),

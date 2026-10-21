@@ -103,4 +103,7 @@ export const dealershipApi = {
 
   update: async (id: string, input: DealershipInput): Promise<Dealership> =>
     toDealership(await request<DealershipResponse>("put", `dealerships/update/${id}`, input)),
+
+  // Its answer isn't known, so it isn't read: the lists are just fetched again
+  delete: (id: string) => request("delete", `dealerships/${id}`),
 };
