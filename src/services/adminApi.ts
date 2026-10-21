@@ -134,7 +134,8 @@ const toStaffMember = (member: StaffResponse): StaffMember => ({
 // valet has none to send: they're put on the booking by assigning them.
 // Self-drive is SELF_DRIVE_ASSIGNED both ways.
 const legStatuses: Record<ValetLeg, Partial<Record<IntakeMethod, string>>> = {
-  pickup: { towTruck: "TOW_ASSIGNED", selfDrive: "SELF_DRIVE_ASSIGNED" },
+  // Back to a valet from a tow truck / self-drive puts the booking back at BOOKED
+  pickup: { valet: "BOOKED", towTruck: "TOW_ASSIGNED", selfDrive: "SELF_DRIVE_ASSIGNED" },
   delivery: { selfDrive: "SELF_DRIVE_ASSIGNED" },
 };
 
@@ -412,10 +413,10 @@ export const adminApi = {
   // (delivery). Real API for a tow truck or self-drive (either way):
   // booking/admin/update puts the booking at that method's status (legStatuses),
   // and the hook loads its details again (the mock's copy is told too, since it
-  // still remembers the choice). Switching to a valet
-  // calls nothing: the choice is only remembered, the drawer shows the valet step,
-  // and assigning the valet there is what tells the API. The other choices are
-  // the mock's as well, on a proposed path.
+  // still remembers the choice). Switching the intake back to a valet posts
+  // BOOKED, undoing the tow truck's / self-drive's status; the drawer then shows
+  // the valet step, and assigning the valet there is the next call. The other
+  // choices are the mock's as well, on a proposed path.
   setLegMethod: async (id: string, leg: ValetLeg, method: IntakeMethod): Promise<void> => {
     const bookingStatus = legStatuses[leg][method];
     if (!bookingStatus) {

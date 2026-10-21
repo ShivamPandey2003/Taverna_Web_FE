@@ -155,6 +155,12 @@ export function staffLink(booking: AdminBooking, role: StaffLinkRole) {
 export const isComplete = (booking: AdminBooking) =>
   booking.status === BookingStatus.SERVICE_COMPLETE;
 
+// The API's status is a cancelled one (CANCELLED, ..._CANCELLED): there's
+// nothing left to confirm or assign
+export const isCancelled = (booking: AdminBooking) =>
+  /cancel/i.test(booking.journey?.current ?? "") ||
+  /cancel/i.test(booking.journey?.statusLabel ?? "");
+
 // A step is done once everything in it has happened
 export function isStepDone(booking: AdminBooking, step: WorkflowStep) {
   switch (step) {
