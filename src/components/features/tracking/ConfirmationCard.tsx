@@ -33,7 +33,7 @@ const copy: Record<string, StepCopy> = {
     icon: Driving,
     title: "Did you get your vehicle back?",
     message: "Your valet says your vehicle has been delivered. Confirm you've received it to complete your service.",
-    approve: "Yes, I Received It",
+    approve: "Yes, I Received",
     approved: "Thanks! Your service is complete.",
   },
 };

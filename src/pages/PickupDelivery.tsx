@@ -32,7 +32,7 @@ import {
   selectBookingDealership,
   selectBookingService,
   selectBookingVehicle,
-  setPickupLocation,
+  changePickupLocation,
   setScheduledAt,
 } from "@/redux/booking/bookingSlice";
 import { confirmBooking } from "@/redux/booking/bookingThunks";
@@ -232,7 +232,7 @@ export function PickupDelivery() {
         open={activeModal === "addAddress"}
         onClose={closeModal}
         onSaved={(saved) => {
-          dispatch(setPickupLocation({ type: "saved", addressId: saved.id }));
+          dispatch(changePickupLocation({ type: "saved", addressId: saved.id }));
           closeModal();
         }}
       />

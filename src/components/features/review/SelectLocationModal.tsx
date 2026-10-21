@@ -14,7 +14,7 @@ import { useAddresses, useCreateAddress } from "@/services/queries/addressQuerie
 import {
   selectBooking,
   selectBookingAddress,
-  setPickupLocation,
+  changePickupLocation,
 } from "@/redux/booking/bookingSlice";
 
 interface SelectLocationModalProps {
@@ -98,7 +98,7 @@ function SelectLocationContent({
     : currentAddress ?? locationError ?? "Use your device location";
 
   const pickSaved = (addressId: string) => {
-    dispatch(setPickupLocation({ type: "saved", addressId }));
+    dispatch(changePickupLocation({ type: "saved", addressId }));
     onClose();
   };
 

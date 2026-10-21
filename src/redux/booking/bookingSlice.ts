@@ -51,6 +51,15 @@ const bookingSlice = createSlice({
     setPickupLocation: (state, action: PayloadAction<PickupLocation>) => {
       state.pickupLocation = action.payload;
     },
+    // The customer picked another pickup: the dealership is cleared so the
+    // review page selects the one closest to the new address
+    // (useClosestDealership). The same pickup again keeps it.
+    changePickupLocation: (state, action: PayloadAction<PickupLocation>) => {
+      if (JSON.stringify(state.pickupLocation) !== JSON.stringify(action.payload)) {
+        state.selectedDealership = null;
+      }
+      state.pickupLocation = action.payload;
+    },
     setSelectedDealership: (state, action: PayloadAction<Dealership>) => {
       state.selectedDealership = action.payload;
     },
@@ -86,6 +95,7 @@ export const {
   setSelectedVehicle,
   setSelectedService,
   setPickupLocation,
+  changePickupLocation,
   setSelectedDealership,
   setDriveable,
   setTowTruck,
