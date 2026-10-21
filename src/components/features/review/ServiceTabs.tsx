@@ -28,10 +28,8 @@ export function ServiceTabs({ disabled = false }: { disabled?: boolean }) {
             disabled={disabled}
             onClick={() => dispatch(setSelectedService(service.id))}
             className={cn(
-              "font-bold tracking-tight transition disabled:cursor-not-allowed",
-              active
-                ? "text-2xl text-gray-900"
-                : "text-lg text-gray-300 hover:text-gray-500",
+              "text-2xl font-bold tracking-tight transition disabled:cursor-not-allowed",
+              active ? "text-gray-900" : "text-gray-300 hover:text-gray-500",
             )}
           >
             {service.title}
