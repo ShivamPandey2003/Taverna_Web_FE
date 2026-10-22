@@ -49,8 +49,28 @@ export function ServiceStatusToast() {
   const shown = services
     .filter((service) => isOpenService(service) && service.booking.id !== viewedId)
     .sort(newestFirst);
+  const visible = shown.length > 0;
 
-  if (shown.length === 0) {
+  // The bubbles float over the page, so each page leaves this much room at the end
+  // of its scroll (the `status-bubble-space` spacer in index.css): their height,
+  // which grows when they wrap to a second row on a phone, plus their offset
+  useEffect(() => {
+    const element = rootRef.current;
+    const root = document.documentElement;
+    if (!visible || !element) return;
+
+    const update = () =>
+      root.style.setProperty(BUBBLE_SPACE_VAR, `${element.offsetHeight + BUBBLE_MARGIN}px`);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty(BUBBLE_SPACE_VAR);
+    };
+  }, [visible]);
+
+  if (!visible) {
     return null;
   }
 
@@ -71,6 +91,10 @@ export function ServiceStatusToast() {
     </div>
   );
 }
+
+const BUBBLE_SPACE_VAR = "--status-bubble-space";
+// The bubbles' bottom offset (bottom-4) and a gap above them
+const BUBBLE_MARGIN = 16 + 16;
 
 // Booking ids are numbered in the order they were made ("TD-039" after "TD-018"),
 // which holds for bookings put back from the list too; when an id has no number

@@ -49,23 +49,27 @@ export function Dashboard() {
       ) : (
         <>
           {/* Page Header: above the cards, whose photos would otherwise scroll over it */}
-          <div className="sticky top-0 z-10 flex items-start justify-between border-b border-gray-100 bg-gray-50 px-10 py-4">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+          {/* On phones: tighter padding, no description, and a short button label,
+              so the title and button share one line */}
+          <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-gray-100 bg-gray-50 px-4 py-3 sm:items-start sm:px-10 sm:py-4">
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
                 Vehicle List
               </h1>
 
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 hidden text-sm text-gray-500 sm:block">
                 View and manage all your vehicles in one place.
               </p>
             </div>
 
             <button
               onClick={() => dispatch(openRegisterVehicle())}
-              className="flex items-center gap-2 rounded-lg bg-black px-3 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
+              aria-label="Add New Vehicle"
+              className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-black px-3 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
             >
               <span className="text-md leading-none">+</span>
-              Add New Vehicle
+              <span className="sm:hidden">Add Vehicle</span>
+              <span className="hidden sm:inline">Add New Vehicle</span>
             </button>
           </div>
 

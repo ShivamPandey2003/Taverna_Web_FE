@@ -130,6 +130,18 @@ body {
 }
 
 @layer components {
+  /* The customer's status bubbles float over the bottom-right corner. Each page in
+     the dashboard layout scrolls itself, so its root ends with a spacer as tall as
+     the bubbles (--status-bubble-space, set by ServiceStatusToast; 0 without them)
+     and nothing stays hidden under them. A page whose root doesn't scroll at
+     some size hides it with `after:hidden` (a utility, so it wins over this). */
+  .status-bubble-space > *::after {
+    content: "";
+    display: block;
+    flex-shrink: 0;
+    height: var(--status-bubble-space, 0px);
+  }
+
   .form-input {
     @apply h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none transition;
   }

@@ -30,7 +30,7 @@ export function VehicleCard({
     : service?.display.label;
 
   return (
-    <article className="group w-full max-w-[380px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
+    <article className="@container group w-full max-w-[380px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:shadow-md">
       {/* Image */}
       <div className="relative flex h-[180px] items-center justify-center overflow-hidden">
         {" "}
@@ -67,8 +67,10 @@ export function VehicleCard({
         <div className="my-5 h-px bg-gray-200" />
 
         {/* Stats, with the booking button beside them. The stats keep their
-            width; a long status is cut short in the button instead */}
-        <div className="flex items-end justify-between gap-3">
+            width; a long status is cut short in the button instead. On a narrow
+            card (a phone) there's no room for both, so the button goes under the
+            stats at full width */}
+        <div className="flex flex-col gap-4 @[340px]:flex-row @[340px]:items-end @[340px]:justify-between @[340px]:gap-3">
           <div className="flex shrink-0 gap-4">
             {/* Last 4 of the VIN, like everywhere else; the full VIN is in the tooltip */}
             <VehicleStat
@@ -87,7 +89,7 @@ export function VehicleCard({
               aria-label={`${brandName(vehicle.brand)} ${vehicle.model}, ${statusLabel}: ${service.display.message}. Open tracking`}
               title={service.display.message}
               className={cn(
-                "flex h-10 min-w-0 items-center gap-2 rounded-full px-4 text-sm font-semibold transition hover:brightness-95",
+                "flex h-10 min-w-0 items-center justify-center gap-2 rounded-full px-4 text-sm font-semibold transition hover:brightness-95",
                 service.display.color.soft,
               )}
             >
@@ -103,7 +105,7 @@ export function VehicleCard({
                 onBook();
               }}
               aria-label={`Book a pickup for ${brandName(vehicle.brand)} ${vehicle.model}`}
-              className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-black px-4 text-sm leading-none font-semibold text-white transition hover:bg-gray-800"
+              className="flex h-10 shrink-0 items-center justify-center gap-2 rounded-full bg-black px-4 text-sm leading-none font-semibold text-white transition hover:bg-gray-800"
             >
               {/* The calendar is drawn low in its box; lift it to the text's centre */}
               <Calendar

@@ -19,7 +19,7 @@ export function VehicleList() {
   return (
     // As many columns of at least 300px as fit, sharing the full width: four on a
     // laptop screen. A card caps at 380px, which only shows with a single column.
-    <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] gap-5 px-10">
+    <div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] gap-5 px-4 sm:px-10">
       {vehicles.map((vehicle) => {
         // The vehicle's running service: its status takes the booking button's place
         const service =

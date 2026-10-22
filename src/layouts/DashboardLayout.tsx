@@ -30,8 +30,9 @@ export function DashboardLayout() {
     <div className="flex flex-col h-screen bg-gray-50">
       <Navbar />
 
-      {/* Page Content; both roles navigate from the Navbar */}
-      <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
+      {/* Page Content; both roles navigate from the Navbar. Each page scrolls
+          itself and ends with room for the status bubbles (status-bubble-space) */}
+      <main className="status-bubble-space min-h-0 min-w-0 flex-1 overflow-hidden">
         <Outlet />
       </main>
 
