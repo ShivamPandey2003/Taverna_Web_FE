@@ -26,7 +26,9 @@ export function VehicleSummary({ highlight, step }: StepProps) {
           No vehicle selected.
         </p>
       ) : (
-      // The details are three lines everywhere: the name, the VIN, the miles.
+      // The details. On a wide card: the name on two lines (year and make, then
+      // the model), then VIN and miles side by side. On a narrow one (a phone):
+      // the name on one line, then VIN and miles each on their own line.
       // The photo beside them shrinks with the card's own width, and on a very
       // narrow card (under 260px) it goes above them, across the card's full width.
       <div className="@container">
@@ -43,10 +45,15 @@ export function VehicleSummary({ highlight, step }: StepProps) {
           {/* Vehicle details */}
           <div className="w-full min-w-0 @[260px]:w-auto">
             <h3 className="text-base font-bold leading-tight text-gray-900">
-              <VehicleTitle vehicle={vehicle} singleLine />
+              <span className="block @[480px]:hidden">
+                <VehicleTitle vehicle={vehicle} singleLine />
+              </span>
+              <span className="hidden @[480px]:block">
+                <VehicleTitle vehicle={vehicle} />
+              </span>
             </h3>
 
-            <div className="mt-1 flex flex-col gap-0.5 text-sm text-gray-800">
+            <div className="mt-1 flex flex-col gap-0.5 text-sm text-gray-800 @[480px]:flex-row @[480px]:items-center @[480px]:gap-x-7">
               <p className="whitespace-nowrap">
                 VIN:{" "}
                 <span className="font-semibold text-gray-900" title={vehicle.vin}>

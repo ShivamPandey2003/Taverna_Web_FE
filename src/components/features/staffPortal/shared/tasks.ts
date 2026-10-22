@@ -1,4 +1,4 @@
-import type { StaffLinkRole, StaffMember } from "@/types/admin";
+import type { StaffLinkRole, StaffMember, StaffType } from "@/types/admin";
 
 export type TaskState = "todo" | "active" | "done";
 
@@ -37,6 +37,51 @@ export const taskPath = (role: StaffLinkRole, bookingId: string) =>
 // Tasks per page of the task list
 export const TASKS_PAGE_SIZE = 8;
 
+// The task lists' status filters: the codes staff/valet/bookings and
+// staff/advisor/bookings take as `status`, with the names the app shows for them.
+// The valet's two trips share names, so they're grouped; a group without a name
+// is listed without a heading.
+type StatusFilterGroup = { group?: string; options: { code: string; label: string }[] };
+
+const VALET_STATUS_FILTERS: StatusFilterGroup[] = [
+  {
+    group: "Pickup",
+    options: [
+      { code: "VALET_ASSIGNED", label: "Valet Ready" },
+      { code: "VALET_DISPATCHED", label: "Valet EnRoute" },
+      { code: "VALET_ARRIVED_AT_CUSTOMER", label: "Valet Arrived" },
+      { code: "VALET_PICKUP_CONFIRMED", label: "Pickup Booked" },
+      { code: "VEHICLE_PICKED_UP", label: "Pickup EnRoute" },
+      { code: "VEHICLE_ARRIVED_AT_DEALERSHIP", label: "At Dealership" },
+    ],
+  },
+  {
+    group: "Delivery",
+    options: [
+      { code: "DELIVERY_VALET_ASSIGNED", label: "Valet Ready" },
+      { code: "DELIVERY_VALET_DISPATCHED", label: "Valet EnRoute" },
+      { code: "DELIVERY_VALET_ARRIVED_AT_CUSTOMER", label: "Valet Arrived" },
+      { code: "VEHICLE_DELIVERED", label: "Vehicle Delivered" },
+    ],
+  },
+];
+
+const ADVISOR_STATUS_FILTERS: StatusFilterGroup[] = [
+  {
+    options: [
+      { code: "ADVISOR_ASSIGNED", label: "Advisor Ready" },
+      { code: "VEHICLE_IN_INSPECTION", label: "Inspecting" },
+      { code: "VEHICLE_IN_SERVICE", label: "Servicing" },
+      { code: "INVOICE_GENERATED", label: "Bill Generation" },
+    ],
+  },
+];
+
+export const STATUS_FILTERS: Record<StaffType, StatusFilterGroup[]> = {
+  valet: VALET_STATUS_FILTERS,
+  advisor: ADVISOR_STATUS_FILTERS,
+};
+
 // Booking ID, task, vehicle or customer, whichever the staff member remembers
 export function matchesTask(task: StaffTask, search: string) {
   const query = search.trim().toLowerCase();
@@ -45,11 +90,3 @@ export function matchesTask(task: StaffTask, search: string) {
     text.toLowerCase().includes(query),
   );
 }
-
-const stateOrder: TaskState[] = ["active", "todo", "done"];
-
-// What's under way first, then what hasn't started, then what's finished
-export const sortTasks = (tasks: StaffTask[]) =>
-  [...tasks].sort(
-    (first, second) => stateOrder.indexOf(first.state) - stateOrder.indexOf(second.state),
-  );

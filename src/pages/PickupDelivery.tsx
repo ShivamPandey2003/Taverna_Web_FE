@@ -206,13 +206,14 @@ export function PickupDelivery() {
             the concern on the right, read across in pairs (vehicle / my details,
             address / dealership, driveable / concern). The first card still missing
             something is highlighted. Loaner Only customers drive in themselves, so
-            there's no driveable question, tow or pickup time. */}
+            there's no driveable question or tow: its third row is the drop-off time
+            (5, when one is set) beside the concern (6, or 5 without a time). */}
         <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
           <div className="space-y-5">
             <VehicleSummary step={1} highlight={nextStep === "vehicle"} />
             <AddressSummary step={3} highlight={nextStep === "address"} />
             {!loanerOnly && <DriveableStatus step={5} />}
-            <ScheduleSummary step={loanerOnly ? 6 : 7} />
+            <ScheduleSummary step={loanerOnly ? 5 : 7} />
           </div>
 
           <div className="flex flex-col gap-5">
@@ -222,7 +223,7 @@ export function PickupDelivery() {
               highlight={nextStep === "dealership"}
               loading={findingDealership}
             />
-            <ConcernInput step={loanerOnly ? 5 : 6} />
+            <ConcernInput step={loanerOnly && !scheduled ? 5 : 6} />
           </div>
         </div>
       </div>

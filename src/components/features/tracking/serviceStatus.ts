@@ -173,15 +173,21 @@ export const isOpenService = (service: ActiveService) =>
 // Every booking the customer is tracking, newest first, with where it stands.
 // The Redux snapshot says what was booked and covers the first render and API
 // failures; the status is the API's, from the customer's list of bookings. One
-// the list has as over (complete or cancelled) counts as complete.
+// the list has as over (complete or cancelled) counts as complete, and so does
+// one the list no longer has at all (the snapshot's own status, e.g. In-queue,
+// would otherwise stay up forever). Only a booking made after the list was
+// loaded keeps its snapshot's status until the list catches up.
 export function useActiveServices(): ActiveService[] {
   const bookings = useAppSelector(selectActiveBookings);
-  const { data: list } = useMyBookings();
+  const { data: list, dataUpdatedAt } = useMyBookings();
 
   return bookings.map((booking) => {
     const live = list?.find((item) => item.id === booking.id);
+    const newerThanList = !list || Date.parse(booking.createdAt) > dataUpdatedAt;
     const status = !live
-      ? booking.status
+      ? newerThanList
+        ? booking.status
+        : BookingStatus.SERVICE_COMPLETE
       : live.open
         ? (live.status ?? booking.status)
         : BookingStatus.SERVICE_COMPLETE;

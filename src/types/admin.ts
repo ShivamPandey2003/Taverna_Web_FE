@@ -211,12 +211,12 @@ export function journeyIntakeDone(journey: BookingJourney) {
 }
 
 // How the vehicle came in, as the API tells it: a tow truck while the status is
-// TOW_ASSIGNED, or once it's in with no pickup valet (a Pickup & Delivery intake
-// is a valet or a tow truck). null when the API doesn't say. The admin's choice
-// of tow truck is only kept in the browser it was made in, so this is what other
-// browsers go by.
+// TOW_ASSIGNED, Customer Drop In while it's CUSTOMER_IN, and once it's in with no
+// pickup valet one of those two (see below). null when the API doesn't say. The
+// admin's choice is only kept in the browser it was made in, so this is what
+// other browsers go by.
 export function journeyIntakeMethod(
-  booking: Pick<AdminBooking, "serviceId" | "journey" | "valet">,
+  booking: Pick<AdminBooking, "serviceId" | "journey" | "valet" | "driveable" | "towTruck">,
 ): IntakeMethod | null {
   const { journey } = booking;
   if (!journey || !LEG_METHODS[booking.serviceId].pickup.includes("towTruck")) return null;
@@ -225,7 +225,16 @@ export function journeyIntakeMethod(
   if (journey.current === "customerIn" && !booking.valet && !journeyIntakeDone(journey)) {
     return "selfDrive";
   }
-  if (journeyIntakeDone(journey) && !booking.valet) return "towTruck";
+  // In with no pickup valet: a tow truck or the customer drove it in. The
+  // journey says which when it went through CUSTOMER_IN / TOW_ASSIGNED; else
+  // the booking's own default decides (Customer Drop In for a vehicle that
+  // can't be driven and has no tow truck asked for), as that's what the picker
+  // showed when nobody changed it
+  if (journeyIntakeDone(journey) && !booking.valet) {
+    if (journeyReached(journey, "customerIn")) return "selfDrive";
+    if (journeyReached(journey, "towAssigned")) return "towTruck";
+    return defaultLegMethod(booking, "pickup") === "selfDrive" ? "selfDrive" : "towTruck";
+  }
   return null;
 }
 
@@ -421,6 +430,9 @@ export interface AdminBookingRow {
   scheduled: string;
   // For the badge colour; null when the API's status isn't one the app knows
   status: BookingStatus | null;
+  // The API's status code ("VALET_ARRIVED_AT_CUSTOMER"), which the badge's colour
+  // is picked from first
+  statusCode: string;
   statusLabel: string;
 }
 
@@ -430,7 +442,8 @@ export interface BookingListParams {
   page: number;
   pageSize: number;
   search: string;
-  status: BookingStatus | "all";
+  // An API status code ("VALET_DISPATCHED"; see bookingStatusFilters), or "all"
+  status: string;
   serviceId: ServiceId | "all";
 }
 

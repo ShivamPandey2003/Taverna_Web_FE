@@ -1,7 +1,7 @@
 import { staffRequest, toQueryString } from "./apiClient";
 import {
-  sortTasks,
   taskPath,
+  TASKS_PAGE_SIZE,
   type StaffTask,
   type TaskState,
 } from "@/components/features/staffPortal/shared/tasks";
@@ -49,8 +49,20 @@ interface StaffBookingResponse {
   assignmentTypes: string[];
 }
 
-// The API allows up to 100 bookings a page
-const TASKS_LIMIT = 100;
+
+// GET staff/valet/bookings and staff/advisor/bookings
+interface StaffBookingsResponse {
+  bookings: StaffBookingResponse[];
+  pagination?: { page?: number; pageSize?: number; totalItems?: number; totalPages?: number };
+}
+
+// One page of tasks, with the counts across every page
+export interface StaffTaskPage {
+  tasks: StaffTask[];
+  // Bookings, not tasks: a booking can hold two (its pickup and its delivery)
+  totalItems: number;
+  totalPages: number;
+}
 
 const taskRoles: Record<string, StaffLinkRole> = {
   PICKUP: "pickup",
@@ -237,16 +249,28 @@ export const staffApi = {
     };
   },
 
-  // The signed-in valet's or advisor's bookings, newest first, a task per thing
-  // they have on each. One page of the most the API gives; the list is searched,
-  // filtered and paged in the browser.
-  listTasks: async (type: StaffType, auth: StaffAuth): Promise<StaffTask[]> => {
-    const { bookings } = await staffRequest<{ bookings: StaffBookingResponse[] }>(
+  // One page (TASKS_PAGE_SIZE bookings) of the signed-in valet's or advisor's
+  // bookings, newest first, a task per thing they have on each. The API pages
+  // them; its `pagination` is taken to be the admin list's shape, and without it
+  // the page counts as the only one. `status` (valets: VALET_STATUS_FILTERS) is
+  // filtered by the API; left out when empty.
+  listTasks: async (
+    type: StaffType,
+    auth: StaffAuth,
+    page: number,
+    status = "",
+  ): Promise<StaffTaskPage> => {
+    const { bookings, pagination } = await staffRequest<StaffBookingsResponse>(
       auth,
       "get",
-      `staff/${type}/bookings${toQueryString({ page: 1, pageSize: TASKS_LIMIT })}`,
+      `staff/${type}/bookings${toQueryString({ page, pageSize: TASKS_PAGE_SIZE, status })}`,
     );
-    return sortTasks(bookings.flatMap(toTasks));
+    return {
+      // In the API's order (newest first), not reordered
+      tasks: bookings.flatMap(toTasks),
+      totalItems: pagination?.totalItems ?? bookings.length,
+      totalPages: Math.max(1, pagination?.totalPages ?? 1),
+    };
   },
 
   // One trip of the signed-in valet

@@ -8,19 +8,21 @@ import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useStaffTasks } from "@/services/queries/staffQueries";
 
 // Who is signed in: the sign-in says so itself; one stored before it did is
-// read off the first task of the task list (the page's own query, so it costs
-// no extra request).
+// read off the first task of the task list's first page (the page's own query
+// on page 1, and only asked for when the sign-in has no name).
 function useStaffMember() {
   const onAdvisorTasks = !!useMatch("/advisor");
   const onValetTasks = !!useMatch("/valet");
   const { auth } = useStaffAuth();
-  const { data: tasks } = useStaffTasks(
+  const needed = !auth.name && (onAdvisorTasks || onValetTasks);
+  const { data } = useStaffTasks(
     onAdvisorTasks ? "advisor" : "valet",
-    onAdvisorTasks || onValetTasks ? auth : { gear: "", token: "" },
+    needed ? auth : { gear: "", token: "" },
+    1,
   );
 
   if (auth.name) return { name: auth.name, email: auth.email ?? "" };
-  return tasks?.find((task) => task.staff)?.staff ?? null;
+  return data?.tasks.find((task) => task.staff)?.staff ?? null;
 }
 
 // Chrome of the valet / advisor pages: brand bar (with the signed-in staff

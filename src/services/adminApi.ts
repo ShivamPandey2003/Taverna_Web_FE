@@ -342,9 +342,6 @@ const assignStaff = (bmsId: string, field: StaffAssignment, staffId: string) =>
     [field]: staffId,
   });
 
-const toStatusCode =(status: BookingStatus) =>
-  Object.entries(BookingStatus).find(([, value]) => value === status)![0];
-
 // Sorting, filtering, search and pagination all happen on the server
 export const adminApi = {
   // Real API. It has no sorting: bookings come newest first.
@@ -353,7 +350,7 @@ export const adminApi = {
       page: params.page,
       pageSize: params.pageSize,
       search: params.search.trim(),
-      status: params.status === "all" ? "" : toStatusCode(params.status),
+      status: params.status === "all" ? "" : params.status,
       bookingType: params.serviceId === "all" ? "" : bookingTypes[params.serviceId],
     });
     const { bookings, pagination } = await request<BookingListResponse>(
@@ -370,6 +367,7 @@ export const adminApi = {
         service: booking.service,
         scheduled: booking.scheduled,
         status: toBookingStatus(booking.bookingStatus),
+        statusCode: booking.bookingStatus,
         statusLabel: booking.statusLabel,
       })),
       total: pagination.totalItems,

@@ -9,7 +9,7 @@ import {
 } from "@/redux/modals/offersModal/offersModalSlice";
 import { formatCurrency } from "@/components/features/admin/admin.utils";
 import type { Offer } from "@/types/offer";
-import { cn } from "@/libs/utils";
+import { cn, maskedVin } from "@/libs/utils";
 import { offerExpiry } from "./offer.utils";
 import { OfferUpload } from "./OfferUpload";
 
@@ -43,7 +43,7 @@ export function OfferDetailsModal() {
   return (
     <Modal
       title={<h2>{viewing.vehicleName}</h2>}
-      subtitle={`VIN ${viewing.vin} · Stock ${viewing.stockNumber}`}
+      subtitle={`VIN ${maskedVin(viewing.vin)} · Stock ${viewing.stockNumber}`}
       onClose={() => dispatch(closeOfferDetails())}
       footer={
         <>

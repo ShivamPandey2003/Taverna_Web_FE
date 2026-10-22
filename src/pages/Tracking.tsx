@@ -14,7 +14,7 @@ import { formatPickupTime } from "@/libs/utils";
 import { ConfirmationCard } from "@/components/features/tracking/ConfirmationCard";
 import { InvoiceCard } from "@/components/features/tracking/InvoiceCard";
 import { StaffContactCard } from "@/components/features/tracking/StaffContactCard";
-import { staffNeeded } from "@/services/bookingApi";
+import { CUSTOMER_DRIVES_IN, staffNeeded } from "@/services/bookingApi";
 import {
   useBookingStaff,
   useCustomerBookingDetails,
@@ -116,7 +116,9 @@ export function ServiceTracking() {
   // so the booking details don't flash up meanwhile.
   const showStaff = !!staffNeed;
   const showBill = !!details?.invoice && BILL_STATUSES.includes(statusCode);
-  const showMap = stage === "valet" || staffNeed?.type === "valet";
+  // No valet's map while the customer drives in themselves (Customer Drop In)
+  const showMap =
+    (stage === "valet" && statusCode !== CUSTOMER_DRIVES_IN) || staffNeed?.type === "valet";
   // The booking details: before anyone is assigned, and at any status between
   // hand-offs that has nothing else to show (e.g. the vehicle has arrived at the
   // dealership and no advisor has it yet), so the page is never just the header

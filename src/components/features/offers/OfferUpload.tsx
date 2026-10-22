@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { AlertCircle, CheckCircle, CloudUpload, Download, FileText, X } from "reicon-react";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/Spinner";
-import { cn } from "@/libs/utils";
+import { cn, maskedVin } from "@/libs/utils";
 import type { OfferUploadStep } from "@/services/adminApi";
 import { useUploadOffers } from "@/services/queries/adminQueries";
 import {
@@ -281,7 +281,9 @@ function SelectedFile({
             <tbody className="divide-y divide-gray-100 text-gray-700">
               {check.preview.map((row, index) => (
                 <tr key={index}>
-                  <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{row.VIN}</td>
+                  <td className="whitespace-nowrap px-3 py-2 font-mono text-xs" title={row.VIN}>
+                    {row.VIN ? maskedVin(row.VIN) : ""}
+                  </td>
                   <td className="whitespace-nowrap px-3 py-2">{row["Stock Number"]}</td>
                   <td className="whitespace-nowrap px-3 py-2">
                     {row.Year} {row["Brand Name"]} {row.Model} {row.Trim}

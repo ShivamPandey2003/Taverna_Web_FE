@@ -137,7 +137,7 @@ export function BookingsTable() {
                 </td>
 
                 <td className="px-4 py-2">
-                  <BookingStatusBadge status={booking.status} label={booking.statusLabel} />
+                  <BookingStatusBadge status={booking.status} code={booking.statusCode} label={booking.statusLabel} />
                 </td>
 
                 <td className="px-4 py-2 text-center">

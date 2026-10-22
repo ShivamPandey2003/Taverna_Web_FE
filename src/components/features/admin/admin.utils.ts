@@ -24,11 +24,59 @@ export const serviceLabels: Record<ServiceId, string> = {
   "loaner-only": "Loaner Only",
 };
 
-// The bookings table's status filter. Service Complete is left out (by request):
-// finished bookings aren't filtered for.
-export const bookingStatuses = Object.values(BookingStatus).filter(
-  (status) => status !== BookingStatus.SERVICE_COMPLETE,
-);
+// The bookings table's status filter: the API's status codes (sent as they are)
+// with the names the API shows for them, in the order a booking goes through
+// them, grouped by stage since the two valets' statuses share their names.
+// Service Complete is left out (by request): finished bookings aren't filtered for.
+export const bookingStatusFilters: { group: string; options: { code: string; label: string }[] }[] = [
+  {
+    group: "Booking",
+    options: [
+      { code: "IN_QUEUE", label: "In Queue" },
+      { code: "BOOKED", label: "Booked" },
+    ],
+  },
+  {
+    group: "Vehicle Intake",
+    options: [
+      { code: "VALET_ASSIGNED", label: "Valet Ready" },
+      { code: "VALET_DISPATCHED", label: "Valet EnRoute" },
+      { code: "VALET_ARRIVED_AT_CUSTOMER", label: "Valet Arrived" },
+      { code: "VALET_PICKUP_CONFIRMED", label: "Pickup Booked" },
+      { code: "VEHICLE_PICKED_UP", label: "Pickup EnRoute" },
+      { code: "TOW_ASSIGNED", label: "Tow Booked" },
+      { code: "CUSTOMER_IN", label: "Customer In" },
+      { code: "VEHICLE_ARRIVED_AT_DEALERSHIP", label: "At Dealership" },
+      { code: "VEHICLE_AT_DEALERSHIP_CONFIRMED", label: "Checked In" },
+    ],
+  },
+  {
+    group: "Service",
+    options: [
+      { code: "ADVISOR_ASSIGNED", label: "Advisor Ready" },
+      { code: "VEHICLE_IN_INSPECTION", label: "Inspecting" },
+      { code: "VEHICLE_IN_SERVICE", label: "Servicing" },
+      { code: "INVOICE_GENERATED", label: "Bill Generated" },
+      { code: "PAYMENT_VERIFICATION_PENDING", label: "Verifying Payment" },
+      { code: "PAYMENT_CONFIRMED", label: "Payment Verified" },
+      { code: "READY_FOR_DISPATCH", label: "Ready" },
+    ],
+  },
+  {
+    group: "Vehicle Handover",
+    options: [
+      { code: "DELIVERY_VALET_ASSIGNED", label: "Valet Ready" },
+      { code: "DELIVERY_VALET_DISPATCHED", label: "Valet EnRoute" },
+      { code: "DELIVERY_VALET_ARRIVED_AT_CUSTOMER", label: "Valet Arrived" },
+      { code: "CUSTOMER_DROP_OFF", label: "Customer Drop Off" },
+      { code: "VEHICLE_DELIVERED", label: "Vehicle Delivered" },
+    ],
+  },
+  {
+    group: "Other",
+    options: [{ code: "CANCELLED", label: "Cancelled" }],
+  },
+];
 
 export function formatDateTime(value: string | null) {
   if (!value) return "—";

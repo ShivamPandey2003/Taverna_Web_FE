@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { staffToast } from "@/components/features/staffPortal/shared/staffToast";
 import { errorMessage } from "@/libs/apiError";
 import { liveRefetch } from "@/libs/polling";
@@ -15,6 +15,8 @@ export const staffKeys = {
   allTasks: ["staff", "tasks"] as const,
   tasks: (type: StaffType, { gear, token }: StaffAuth) =>
     ["staff", "tasks", type, gear, token] as const,
+  tasksPage: (type: StaffType, auth: StaffAuth, page: number, status: string) =>
+    [...staffKeys.tasks(type, auth), page, status] as const,
   valetTrip: ({ id, gear, token }: StaffLinkParams) =>
     ["staff", "valetTrip", id, gear, token] as const,
   advisorService: ({ id, gear, token }: StaffLinkParams) =>
@@ -44,11 +46,14 @@ export function useStaffVerifyOtp() {
 const live = { refetchOnWindowFocus: false, retry: 1, refetchInterval: liveRefetch } as const;
 
 // The task list of the signed-in valet or advisor
-export function useStaffTasks(type: StaffType, auth: StaffAuth) {
+// One page of the signed-in staff member's tasks, filtered by the API's `status`
+// ("" for all); the page shown stays up while the next one loads
+export function useStaffTasks(type: StaffType, auth: StaffAuth, page: number, status = "") {
   return useQuery({
-    queryKey: staffKeys.tasks(type, auth),
-    queryFn: () => staffApi.listTasks(type, auth),
+    queryKey: staffKeys.tasksPage(type, auth, page, status),
+    queryFn: () => staffApi.listTasks(type, auth, page, status),
     enabled: !!auth.gear && !!auth.token,
+    placeholderData: keepPreviousData,
     ...live,
   });
 }

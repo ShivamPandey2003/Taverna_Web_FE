@@ -28,7 +28,7 @@ export function BookingDetailsModal() {
       title={
         <>
           <h2>Booking {detailsBookingId}</h2>
-          {booking && <BookingStatusBadge status={booking.status} label={booking.journey?.statusLabel} />}
+          {booking && <BookingStatusBadge status={booking.status} code={booking.journey?.current} label={booking.journey?.statusLabel} />}
         </>
       }
       onClose={onClose}

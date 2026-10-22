@@ -157,6 +157,9 @@ const statusStages: Record<string, BookingStatus> = {
   BOOKED: BookingStatus.BOOKED,
   VALET_ASSIGNED: BookingStatus.VALET_ASSIGNED,
   TOW_ASSIGNED: BookingStatus.VALET_ASSIGNED,
+  // The customer drives in themselves (Customer Drop In): the pickup's colour,
+  // though no valet comes (see CUSTOMER_DRIVES_IN)
+  CUSTOMER_IN: BookingStatus.VALET_ASSIGNED,
   VALET_DISPATCHED: BookingStatus.VALET_ON_ROAD,
   VALET_ARRIVED_AT_CUSTOMER: BookingStatus.VALET_ON_ROAD,
   VEHICLE_HANDED_OVER_TO_VALET: BookingStatus.VALET_ON_ROAD,
@@ -174,18 +177,26 @@ const statusStages: Record<string, BookingStatus> = {
   PAYMENT_VERIFICATION_PENDING: BookingStatus.BILL_GENERATED,
   PAYMENT_CONFIRMED: BookingStatus.VEHICLE_RETURN,
   READY_FOR_DISPATCH: BookingStatus.VEHICLE_RETURN,
+  // The delivery valet's whole trip is the way back (teal), never the pickup
+  // valet's blue "on the road"
   DELIVERY_VALET_ASSIGNED: BookingStatus.VEHICLE_RETURN,
-  DELIVERY_VALET_DISPATCHED: BookingStatus.VALET_ON_ROAD,
-  DELIVERY_VEHICLE_PICKED_UP: BookingStatus.VALET_ON_ROAD,
+  DELIVERY_VALET_DISPATCHED: BookingStatus.VEHICLE_RETURN,
+  DELIVERY_VEHICLE_PICKED_UP: BookingStatus.VEHICLE_RETURN,
   DELIVERY_VALET_ARRIVED_AT_CUSTOMER: BookingStatus.VEHICLE_RETURN,
   VEHICLE_DELIVERED: BookingStatus.VEHICLE_RETURN,
   SELF_COLLECTION_HANDED_OVER: BookingStatus.VEHICLE_RETURN,
+  // The customer collects it themselves (Customer Drop Off): the way back's colour
+  CUSTOMER_DROP_OFF: BookingStatus.VEHICLE_RETURN,
   VEHICLE_RECEIPT_CONFIRMED: BookingStatus.VEHICLE_RETURN,
   SERVICE_COMPLETE: BookingStatus.SERVICE_COMPLETE,
 };
 
 // The stage of one of the API's status codes; null for a code the app doesn't know
 export const statusStage = (code: string): BookingStatus | null => statusStages[code] ?? null;
+
+// The customer brings the vehicle in themselves: it has the pickup's colour, but
+// the tracking page keeps the booking details instead of a valet's map
+export const CUSTOMER_DRIVES_IN = "CUSTOMER_IN";
 
 // The statuses during which the customer is shown the valet of a leg, or the
 // advisor; at any other status nobody is shown and staff-details isn't called

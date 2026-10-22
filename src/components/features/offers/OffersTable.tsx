@@ -6,7 +6,7 @@ import {
   openOfferDetails,
   openOfferUpload,
 } from "@/redux/modals/offersModal/offersModalSlice";
-import { cn } from "@/libs/utils";
+import { cn, maskedVin } from "@/libs/utils";
 import { useAdminOffers } from "@/services/queries/adminQueries";
 import { TablePagination } from "@/components/features/admin/TablePagination";
 import { formatCurrency } from "@/components/features/admin/admin.utils";
@@ -114,8 +114,11 @@ export function OffersTable() {
                 className="cursor-pointer transition hover:bg-gray-50"
               >
                 {/* One line per row; the description and disclaimer are in the details modal */}
-                <td className="whitespace-nowrap px-4 py-2 font-mono text-xs font-semibold text-gray-900">
-                  {offer.vin}
+                <td
+                  className="whitespace-nowrap px-4 py-2 font-mono text-xs font-semibold text-gray-900"
+                  title={offer.vin}
+                >
+                  {maskedVin(offer.vin)}
                 </td>
                 <td className="whitespace-nowrap px-4 py-2 text-gray-700">{offer.stockNumber}</td>
                 <td

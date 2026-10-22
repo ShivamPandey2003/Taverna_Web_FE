@@ -14,6 +14,7 @@ import { useDeleteOffer, useUpdateOffer } from "@/services/queries/adminQueries"
 import { offerSchema, type OfferFormData } from "@/schema/offer.schema";
 import type { Offer } from "@/types/offer";
 import { OFFER_CONDITIONS } from "./offer.utils";
+import { maskedVin } from "@/libs/utils";
 
 // Edits one offer, opened from its row or its details modal
 export function OfferFormModal() {
@@ -208,7 +209,7 @@ export function DeleteOfferModal() {
   return (
     <ConfirmModal
       title="Delete Offer"
-      subtitle={`VIN ${deleting.vin} · Stock ${deleting.stockNumber}`}
+      subtitle={`VIN ${maskedVin(deleting.vin)} · Stock ${deleting.stockNumber}`}
       onClose={onClose}
       onConfirm={handleDelete}
       pending={deleteOffer.isPending}

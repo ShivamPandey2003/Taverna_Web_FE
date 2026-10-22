@@ -10,14 +10,14 @@ import { StatusChip } from "@/components/features/staffPortal/shared/StatusChip"
 import { useStaffAuth } from "@/components/features/staffPortal/shared/useStaffAuth";
 import {
   matchesTask,
+  STATUS_FILTERS,
   TASKS_PAGE_SIZE,
-  taskStateLabels,
   taskTitles,
   type StaffTask,
-  type TaskState,
 } from "@/components/features/staffPortal/shared/tasks";
 import { cn } from "@/libs/utils";
 import { useStaffTasks } from "@/services/queries/staffQueries";
+import type { StaffTaskPage } from "@/services/staffApi";
 import type { StaffType } from "@/types/admin";
 
 // /valet and /advisor — every task of the signed-in valet or advisor. Like the
@@ -25,7 +25,15 @@ import type { StaffType } from "@/types/admin";
 // the email + OTP form shows first. A task opens its booking page.
 export function StaffTasks({ type }: { type: StaffType }) {
   const { auth, signedIn, signOut } = useStaffAuth();
-  const tasks = useStaffTasks(type, auth);
+  // The API pages the list (TASKS_PAGE_SIZE bookings a page) and filters it by
+  // status ("" = all)
+  const [page, setPage] = useState(1);
+  const [status, setStatus] = useState("");
+  const tasks = useStaffTasks(type, auth, page, status);
+
+  // The list refreshes by itself, so the page being looked at can disappear
+  const lastPage = tasks.data?.totalPages;
+  if (lastPage && page > lastPage) setPage(lastPage);
 
   if (!signedIn) {
     return <StaffLogin type={type} hint="Sign in with your Taverna staff email to see your tasks." />;
@@ -42,35 +50,49 @@ export function StaffTasks({ type }: { type: StaffType }) {
     );
   }
 
-  return <TaskList tasks={tasks.data} />;
+  return (
+    <TaskList
+      type={type}
+      data={tasks.data}
+      page={page}
+      onPageChange={setPage}
+      status={status}
+      onStatusChange={(next) => {
+        setStatus(next);
+        setPage(1);
+      }}
+    />
+  );
 }
 
-const filters: { value: TaskState | "all"; label: string }[] = [
-  { value: "all", label: "All Status" },
-  { value: "todo", label: taskStateLabels.todo },
-  { value: "active", label: taskStateLabels.active },
-  { value: "done", label: taskStateLabels.done },
-];
-
-// Every task in one table, finished ones included: search, a status filter and
-// TASKS_PAGE_SIZE rows to a page. All of it happens in the browser, on the one
-// list the API returns.
-function TaskList({ tasks }: { tasks: StaffTask[] }) {
+// One page of tasks, finished ones included, in one table. The API pages them
+// and filters them by status (STATUS_FILTERS); the search works on the page
+// shown. The pagination only shows when there's more than one page.
+function TaskList({
+  type,
+  data,
+  page,
+  onPageChange,
+  status,
+  onStatusChange,
+}: {
+  type: StaffType;
+  data: StaffTaskPage;
+  page: number;
+  onPageChange: (page: number) => void;
+  status: string;
+  onStatusChange: (status: string) => void;
+}) {
+  const { tasks, totalItems, totalPages } = data;
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<TaskState | "all">("all");
-  const [page, setPage] = useState(1);
 
-  const matches = tasks.filter(
-    (task) => (filter === "all" || task.state === filter) && matchesTask(task, search),
-  );
-  const totalPages = Math.max(1, Math.ceil(matches.length / TASKS_PAGE_SIZE));
-  // The list refreshes by itself, so the page being looked at can disappear
-  const current = Math.min(page, totalPages);
-  const shown = matches.slice((current - 1) * TASKS_PAGE_SIZE, current * TASKS_PAGE_SIZE);
+  const shown = tasks.filter((task) => matchesTask(task, search));
+  const filtered = search !== "" || status !== "";
 
   return (
     <div className="page-body pb-8">
-      {tasks.length === 0 ? (
+      {/* Nothing assigned at all; with a filter on, the toolbar stays so it can be cleared */}
+      {totalItems === 0 && !filtered ? (
         <StateScreen icon={<TaskSquare size={30} />} title="No Tasks Yet">
           Bookings the Taverna team assigns to you show up here.
         </StateScreen>
@@ -85,40 +107,44 @@ function TaskList({ tasks }: { tasks: StaffTask[] }) {
               <input
                 type="search"
                 value={search}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setPage(1);
-                }}
+                onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search booking, vehicle or customer"
                 aria-label="Search tasks"
                 className="field pl-10"
               />
             </div>
 
-            {/* A dropdown, like the status filter of the admin's bookings table */}
+            {/* A dropdown, like the status filter of the admin's bookings table:
+                the API's statuses (a valet's grouped by trip) */}
             <select
-              value={filter}
-              onChange={(event) => {
-                setFilter(event.target.value as TaskState | "all");
-                setPage(1);
-              }}
+              value={status}
+              onChange={(event) => onStatusChange(event.target.value)}
               className="field w-auto pr-8 text-sm"
               aria-label="Filter by status"
             >
-              {filters.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
+              <option value="">All Status</option>
+              {STATUS_FILTERS[type].map(({ group, options }) => {
+                const items = options.map((option) => (
+                  <option key={option.code} value={option.code}>
+                    {option.label}
+                  </option>
+                ));
+                return group ? (
+                  <optgroup key={group} label={group}>
+                    {items}
+                  </optgroup>
+                ) : (
+                  items
+                );
+              })}
             </select>
 
-            {(search !== "" || filter !== "all") && (
+            {filtered && (
               <button
                 type="button"
                 onClick={() => {
                   setSearch("");
-                  setFilter("all");
-                  setPage(1);
+                  if (status) onStatusChange("");
                 }}
                 className="h-12 rounded-button px-3 text-sm font-medium text-text-secondary transition hover:bg-white hover:text-text"
               >
@@ -152,18 +178,18 @@ function TaskList({ tasks }: { tasks: StaffTask[] }) {
 
           {shown.length === 0 && (
             <p className="card py-10 text-center text-sm text-text-secondary">
-              No tasks match your search.
+              No tasks match your search or filter.
             </p>
           )}
 
-          {matches.length > 0 && (
+          {totalPages > 1 && (
             <div className="card overflow-hidden p-0 [&>div]:border-t-0">
               <TablePagination
-                page={current}
+                page={page}
                 pageSize={TASKS_PAGE_SIZE}
-                total={matches.length}
+                total={totalItems}
                 totalPages={totalPages}
-                onPageChange={setPage}
+                onPageChange={onPageChange}
               />
             </div>
           )}
