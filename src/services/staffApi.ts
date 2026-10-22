@@ -44,9 +44,11 @@ interface StaffBookingResponse {
   valet: StaffPersonResponse | null;
   advisor: StaffPersonResponse | null;
   customer: { name: string | null } | null;
-  // What this person has on the booking: "PICKUP" and "ADVISOR" seen and, by its
-  // name, "DELIVERY"
+  // What this person has on the booking: "PICKUP", "DELIVERY" and "ADVISOR". A
+  // valet can have both trips of one booking
   assignmentTypes: string[];
+  // Where the booking is: "PICKUP" and "RETURN" seen
+  statusStage?: string | null;
 }
 
 
@@ -59,7 +61,7 @@ interface StaffBookingsResponse {
 // One page of tasks, with the counts across every page
 export interface StaffTaskPage {
   tasks: StaffTask[];
-  // Bookings, not tasks: a booking can hold two (its pickup and its delivery)
+  // Bookings, each one row of the list
   totalItems: number;
   totalPages: number;
 }
@@ -77,27 +79,47 @@ function taskState(booking: StaffBookingResponse): TaskState {
   return booking.bookingStatus.endsWith("_ASSIGNED") ? "todo" : "active";
 }
 
+// The booking is on its way back: its stage says so, or its status is the
+// delivery valet's
+const onReturnTrip = (booking: StaffBookingResponse) =>
+  booking.statusStage?.toUpperCase() === "RETURN" ||
+  /^DELIVERY_|^VEHICLE_DELIVERED$/.test(booking.bookingStatus);
+
+// The one thing this person is doing on the booking now. A valet with both
+// trips of a booking works the delivery once the booking is on its way back,
+// the pickup before; the list shows a booking once, never a row per trip.
+function currentRole(booking: StaffBookingResponse): StaffLinkRole | null {
+  const roles = booking.assignmentTypes.flatMap((type) => {
+    const role = taskRoles[type.toUpperCase()];
+    return role ? [role] : [];
+  });
+  if (roles.includes("pickup") && roles.includes("delivery")) {
+    return onReturnTrip(booking) ? "delivery" : "pickup";
+  }
+  return roles[0] ?? null;
+}
+
+// A row of the task list per booking (none when the API names no task the app
+// knows)
 function toTasks(booking: StaffBookingResponse): StaffTask[] {
   const { vehicle } = booking;
+  const role = currentRole(booking);
+  if (!role) return [];
+  const person = role === "advisor" ? booking.advisor : booking.valet;
 
-  return booking.assignmentTypes.flatMap((type) => {
-    const role = taskRoles[type.toUpperCase()];
-    if (!role) return [];
-    const person = role === "advisor" ? booking.advisor : booking.valet;
-    return [
-      {
-        key: `${booking.bmsId}-${role}`,
-        bookingId: booking.bmsId,
-        role,
-        client: booking.customer?.name ?? "—",
-        vehicle: vehicleName({ year: vehicle.year, brand: vehicle.make, model: vehicle.model }),
-        state: taskState(booking),
-        status: booking.statusMessage,
-        path: taskPath(role, booking.bmsId),
-        staff: person?.name ? { name: person.name, email: person.email ?? "" } : null,
-      },
-    ];
-  });
+  return [
+    {
+      key: `${booking.bmsId}-${role}`,
+      bookingId: booking.bmsId,
+      role,
+      client: booking.customer?.name ?? "—",
+      vehicle: vehicleName({ year: vehicle.year, brand: vehicle.make, model: vehicle.model }),
+      state: taskState(booking),
+      status: booking.statusMessage,
+      path: taskPath(role, booking.bmsId),
+      staff: person?.name ? { name: person.name, email: person.email ?? "" } : null,
+    },
+  ];
 }
 
 // What the two booking pages' details share. Their steps come three fields
@@ -250,9 +272,9 @@ export const staffApi = {
   },
 
   // One page (TASKS_PAGE_SIZE bookings) of the signed-in valet's or advisor's
-  // bookings, newest first, a task per thing they have on each. The API pages
+  // bookings, newest first, one task each (what they do on it now). The API pages
   // them; its `pagination` is taken to be the admin list's shape, and without it
-  // the page counts as the only one. `status` (valets: VALET_STATUS_FILTERS) is
+  // the page counts as the only one. `status` (STATUS_FILTERS in tasks.ts) is
   // filtered by the API; left out when empty.
   listTasks: async (
     type: StaffType,

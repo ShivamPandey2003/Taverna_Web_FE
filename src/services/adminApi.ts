@@ -291,12 +291,18 @@ interface StatusSummaryResponse {
   previousStatus: string | null;
 }
 
-// A booking's step names don't change, so they're asked for once
+// A booking's steps are kept once asked for. They do change when the admin
+// changes how a trip is made (Customer Drop Off has no delivery valet steps), so
+// that clears them (setLegMethod), and they're asked for again whenever the
+// booking's current status isn't one of them.
 const journeySteps = new Map<string, BookingJourney["steps"]>();
+// The status the steps were last asked for again on, so a status that's never
+// among them (e.g. PAYMENT_VERIFICATION_PENDING) doesn't ask on every poll
+const stepsRefreshedFor = new Map<string, string>();
 
-async function getJourneySteps(id: string) {
+async function getJourneySteps(id: string, fresh = false) {
   const cached = journeySteps.get(id);
-  if (cached) return cached;
+  if (cached && !fresh) return cached;
 
   const labels = await request<JourneyLabelsResponse>("get", `booking/admin/${id}/journey-labels`);
   const steps = Object.entries(labels).flatMap(([field, label]) =>
@@ -311,14 +317,21 @@ const toStepKey = (status: string) =>
   status.toLowerCase().replace(/_([a-z0-9])/g, (_, letter: string) => letter.toUpperCase());
 
 async function getJourney(id: string): Promise<{ journey: BookingJourney; status: string }> {
-  const [steps, summary] = await Promise.all([
+  const [cachedSteps, summary] = await Promise.all([
     getJourneySteps(id),
     request<StatusSummaryResponse>("get", `booking/admin/${id}/status-summary`),
   ]);
+  const current = toStepKey(summary.currentStatus);
+  // A status the kept steps don't have means they're out of date: without it
+  // nothing counts as reached and the drawer would fall back to the first step
+  const known = cachedSteps.some((step) => step.key === current);
+  const refresh = !known && stepsRefreshedFor.get(id) !== current;
+  if (refresh) stepsRefreshedFor.set(id, current);
+  const steps = refresh ? await getJourneySteps(id, true) : cachedSteps;
   return {
     journey: {
       steps,
-      current: toStepKey(summary.currentStatus),
+      current,
       statusLabel: summary.label,
       doneAt: summary.doneAt,
     },
@@ -420,6 +433,9 @@ export const adminApi = {
   // the valet step, and assigning the valet there is the next call. The other
   // choices are the mock's as well, on a proposed path.
   setLegMethod: async (id: string, leg: ValetLeg, method: IntakeMethod): Promise<void> => {
+    // The booking's steps change with how the trip is made
+    journeySteps.delete(id);
+    stepsRefreshedFor.delete(id);
     const bookingStatus = legStatuses[leg][method];
     if (!bookingStatus) {
       await callApi(
