@@ -218,11 +218,20 @@ export const isCancelled = (booking: AdminBooking) =>
   /cancel/i.test(booking.journey?.current ?? "") ||
   /cancel/i.test(booking.journey?.statusLabel ?? "");
 
+// The booking has been accepted: the API's confirmedAt, or a status past In
+// Queue. A booking can move on without the admin's confirmation (one booked
+// with a tow truck goes straight to TOW_ASSIGNED), and then has no confirmedAt.
+export function isConfirmed(booking: AdminBooking) {
+  if (booking.confirmedAt) return true;
+  const current = booking.journey?.current;
+  return !!current && current !== "inQueue" && !isCancelled(booking);
+}
+
 // A step is done once everything in it has happened
 export function isStepDone(booking: AdminBooking, step: WorkflowStep) {
   switch (step) {
     case "confirm":
-      return !!booking.confirmedAt;
+      return isConfirmed(booking);
     case "pickup":
       return tripDone(booking, "pickup");
     case "advisor":

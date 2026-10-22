@@ -25,7 +25,7 @@ export function ScheduleSummary({ step }: { step?: number }) {
     <BookingSummaryCard
       step={step}
       // Optional, so no check or warning sign; a passed time is flagged in red below
-      title={loanerOnly ? "Scheduled Drop-off" : "Scheduled Pickup"}
+      title={loanerOnly ? "Scheduled Drop In" : "Scheduled Pickup"}
       onChange={() => dispatch(openReviewModal("schedule"))}
       onClear={() => dispatch(setScheduledAt(null))}
     >

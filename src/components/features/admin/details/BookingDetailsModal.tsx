@@ -8,7 +8,7 @@ import {
 import { useAdminBooking } from "@/services/queries/adminQueries";
 import type { AdminBooking, StaffMember } from "@/types/admin";
 import { BookingStatusBadge } from "../BookingStatusBadge";
-import { formatCurrency, formatDateTime, methodLabel, legMethod } from "../admin.utils";
+import { formatCurrency, formatDateTime, isConfirmed, methodLabel, legMethod } from "../admin.utils";
 import { BookingOverview } from "./BookingOverview";
 
 // Read-only view of a booking; the workflow steps live in BookingWorkflowDrawer
@@ -84,7 +84,11 @@ function BookingHandling({ booking }: { booking: AdminBooking }) {
   const rows: { label: string; value: string }[] = [
     {
       label: "Confirmed",
-      value: booking.confirmedAt ? formatDateTime(booking.confirmedAt) : "Not confirmed yet",
+      value: booking.confirmedAt
+        ? formatDateTime(booking.confirmedAt)
+        : isConfirmed(booking)
+          ? "Confirmed"
+          : "Not confirmed yet",
     },
     method && method !== "valet"
       ? { label: "Vehicle intake", value: methodLabel("pickup", method) }

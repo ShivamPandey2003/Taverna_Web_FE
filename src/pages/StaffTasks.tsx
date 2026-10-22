@@ -98,8 +98,11 @@ function TaskList({
         </StateScreen>
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative min-w-[220px] flex-1">
+          {/* One line from sm: the search box gives up its width so the status
+              filter and Clear Filters fit beside it (the valet's statuses are
+              longer than the advisor's); on a phone they may wrap */}
+          <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+            <div className="relative min-w-[180px] flex-1 sm:min-w-0">
               <Search
                 size={18}
                 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"
@@ -119,7 +122,7 @@ function TaskList({
             <select
               value={status}
               onChange={(event) => onStatusChange(event.target.value)}
-              className="field w-auto pr-8 text-sm"
+              className="field w-auto shrink-0 pr-8 text-sm"
               aria-label="Filter by status"
             >
               <option value="">All Status</option>
@@ -146,7 +149,7 @@ function TaskList({
                   setSearch("");
                   if (status) onStatusChange("");
                 }}
-                className="h-12 rounded-button px-3 text-sm font-medium text-text-secondary transition hover:bg-white hover:text-text"
+                className="h-12 shrink-0 whitespace-nowrap rounded-button px-3 text-sm font-medium text-text-secondary transition hover:bg-white hover:text-text"
               >
                 Clear Filters
               </button>
