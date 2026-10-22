@@ -80,7 +80,7 @@ function ValetTrip({ trip, link }: { trip: ValetTripDetails; link: StaffLinkPara
             {trip.leg === "pickup"
               ? `The vehicle arrived at ${trip.to.label}`
               : `The vehicle was delivered to ${trip.to.label}`}
-            {last?.at && ` at ${formatTime(last.at)}`}. Thanks! Nothing else to do here.
+            {last?.at && ` at ${formatTime(last.at)}`}. Thanks!
           </StateScreen>
         ) : (
           <RouteCard from={trip.from} to={trip.to} heading={heading} />

@@ -1,15 +1,20 @@
 import { useEffect } from "react";
 import {
   CalendarTick,
+  BillCheck,
   Car,
+  CheckCircle,
   Driving,
   Garage,
   Invoice,
+  MapPoint,
   People,
   Routing,
   Setting2,
   TickCircle,
+  UserLaptop,
   UserTick,
+  XCircle2,
 } from "reicon-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
@@ -43,6 +48,38 @@ export const statusIcons: Record<BookingStatus, typeof People> = {
   [BookingStatus.VEHICLE_RETURN]: Driving,
   [BookingStatus.SERVICE_COMPLETE]: TickCircle,
 };
+
+// An icon for each of the API's status labels, matched on their letters
+// ("Valet EnRoute" = "valetenroute"); both valet legs share their labels
+const labelIcons: Record<string, typeof People> = {
+  inqueue: People,
+  booked: CalendarTick,
+  valetready: UserTick,
+  valetenroute: Routing,
+  valetarrived: MapPoint,
+  pickupbooked: Car,
+  pickupenroute: Routing,
+  atdealership: Garage,
+  checkedin: Garage,
+  advisorready: UserLaptop,
+  inspecting: UserLaptop,
+  servicing: Setting2,
+  billgenerated: Invoice,
+  verifyingpayment: BillCheck,
+  paymentverified: CheckCircle,
+  ready: Car,
+  vehicledelivered: Car,
+  servicedone: TickCircle,
+  cancelled: XCircle2,
+};
+
+// The icon for a status label, else the stage's own icon
+export function statusLabelIcon(label: string | null | undefined, status: BookingStatus) {
+  const key = label?.toLowerCase().replace(/[^a-z]/g, "") ?? "";
+  // The delivery valet's "Valet Ready" is driving to the customer
+  if (key === "valetready" && status === BookingStatus.VEHICLE_RETURN) return Driving;
+  return labelIcons[key] ?? statusIcons[status];
+}
 
 export interface StatusDisplay {
   // Same colour as the admin's status badge
