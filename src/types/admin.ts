@@ -221,9 +221,8 @@ export function journeyIntakeMethod(
   const { journey } = booking;
   if (!journey || !LEG_METHODS[booking.serviceId].pickup.includes("towTruck")) return null;
   if (journey.current === "towAssigned") return "towTruck";
-  // The handover's self-drive sends the same code: with a pickup valet the
-  // vehicle came in by valet, so it's the way back that's self-drive
-  if (journey.current === "customerDropOff" && !booking.valet && !journeyIntakeDone(journey)) {
+  // Customer Drop In (CUSTOMER_IN); the way back's drop off has its own code
+  if (journey.current === "customerIn" && !booking.valet && !journeyIntakeDone(journey)) {
     return "selfDrive";
   }
   if (journeyIntakeDone(journey) && !booking.valet) return "towTruck";

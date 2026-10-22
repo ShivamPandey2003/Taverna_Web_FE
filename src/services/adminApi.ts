@@ -132,11 +132,13 @@ const toStaffMember = (member: StaffResponse): StaffMember => ({
 
 // The status booking/admin/update puts a booking at for each way in and back. A
 // valet has none to send: they're put on the booking by assigning them.
-// Self-drive (Customer Drop Off) is CUSTOMER_DROP_OFF both ways.
+// Self-drive is CUSTOMER_IN on the way in (Customer Drop In) and
+// CUSTOMER_DROP_OFF on the way back (Customer Drop Off).
+const CUSTOMER_IN = "CUSTOMER_IN";
 const CUSTOMER_DROP_OFF = "CUSTOMER_DROP_OFF";
 const legStatuses: Record<ValetLeg, Partial<Record<IntakeMethod, string>>> = {
   // Back to a valet from a tow truck / self-drive puts the booking back at BOOKED
-  pickup: { valet: "BOOKED", towTruck: "TOW_ASSIGNED", selfDrive: CUSTOMER_DROP_OFF },
+  pickup: { valet: "BOOKED", towTruck: "TOW_ASSIGNED", selfDrive: CUSTOMER_IN },
   // Back to a valet from drop off puts the booking back where the service left it
   delivery: { valet: "PAYMENT_CONFIRMED", selfDrive: CUSTOMER_DROP_OFF },
 };
