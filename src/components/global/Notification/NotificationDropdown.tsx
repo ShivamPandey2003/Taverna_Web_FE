@@ -98,8 +98,8 @@ export function NotificationDropdown() {
             </div>
 
             {/* Notifications */}
-            {/* Never taller than the screen below the header */}
-            <div className="max-h-[min(450px,calc(100dvh-160px))] overflow-y-auto px-4 pb-4">
+            {/* Never taller than the screen between the header and the bottom tab bar */}
+            <div className="max-h-[min(450px,calc(100dvh-230px))] overflow-y-auto px-4 pb-4">
               <NotificationList />
             </div>
           </div>

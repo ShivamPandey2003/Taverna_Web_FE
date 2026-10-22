@@ -78,7 +78,8 @@ export function ServiceStatusToast() {
     // Newest first, on the left; a row that doesn't fit wraps upwards
     <div
       ref={rootRef}
-      className="fixed right-4 bottom-4 z-40 flex max-w-[calc(100vw-32px)] animate-toast-in flex-wrap-reverse items-center justify-end gap-3 sm:right-6"
+      // On phones above the bottom tab bar (MobileNav: 4rem + the home indicator)
+      className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 md:bottom-4 flex max-w-[calc(100vw-32px)] animate-toast-in flex-wrap-reverse items-center justify-end gap-3 sm:right-6"
     >
       {shown.map((service) => (
         <ServiceBubble

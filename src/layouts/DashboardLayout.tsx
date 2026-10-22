@@ -1,6 +1,6 @@
 import { Outlet } from "react-router";
 
-import { Navbar } from "@/components/global/Navbar";
+import { MobileNav, Navbar } from "@/components/global/Navbar";
 import { ServiceStatusToast } from "@/components/features/tracking/ServiceStatusToast";
 import { useSyncActiveBookings } from "@/components/features/tracking/serviceStatus";
 import { usePendingBooking } from "@/hooks/usePendingBooking";
@@ -27,7 +27,9 @@ export function DashboardLayout() {
   usePushNotifications(!isAdmin);
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    // dvh: on phones the browser's toolbars come and go, and 100vh would put the
+    // bottom tab bar behind them
+    <div className="flex h-dvh flex-col bg-gray-50">
       <Navbar />
 
       {/* Page Content; both roles navigate from the Navbar. Each page scrolls
@@ -35,6 +37,9 @@ export function DashboardLayout() {
       <main className="status-bubble-space min-h-0 min-w-0 flex-1 overflow-hidden">
         <Outlet />
       </main>
+
+      {/* The page links on phones (the Navbar has them from md up) */}
+      <MobileNav />
 
       {/* Customers see their running service on every dashboard page */}
       {!isAdmin && <ServiceStatusToast />}
