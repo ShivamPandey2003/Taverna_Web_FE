@@ -108,9 +108,7 @@ export type IntakeMethod = (typeof INTAKE_METHODS)[number];
 // which the admin confirms (`pickupProgress.reached` / `deliveryProgress.delivered`).
 // A trip with a single choice needs no picking: see `defaultLegMethod`.
 export const LEG_METHODS: Record<ServiceId, Record<ValetLeg, readonly IntakeMethod[]>> = {
-  // Self-drive on the way back is switched off for now:
-  // "pickup-delivery": { pickup: ["valet", "towTruck", "selfDrive"], delivery: ["valet", "selfDrive"] },
-  "pickup-delivery": { pickup: ["valet", "towTruck", "selfDrive"], delivery: ["valet"] },
+  "pickup-delivery": { pickup: ["valet", "towTruck", "selfDrive"], delivery: ["valet", "selfDrive"] },
   "loaner-only": { pickup: ["selfDrive"], delivery: ["selfDrive"] },
 };
 
@@ -225,8 +223,20 @@ export function journeyIntakeMethod(
   if (journey.current === "towAssigned") return "towTruck";
   // The handover's self-drive sends the same code: with a pickup valet the
   // vehicle came in by valet, so it's the way back that's self-drive
-  if (journey.current === "selfDriveAssigned" && !booking.valet) return "selfDrive";
+  if (journey.current === "customerDropOff" && !booking.valet && !journeyIntakeDone(journey)) {
+    return "selfDrive";
+  }
   if (journeyIntakeDone(journey) && !booking.valet) return "towTruck";
+  return null;
+}
+
+// The way back, as the API tells it: Customer Drop Off while the status is
+// CUSTOMER_DROP_OFF after the vehicle came in. null when the API doesn't say.
+export function journeyHandoverMethod(
+  booking: Pick<AdminBooking, "journey">,
+): IntakeMethod | null {
+  const { journey } = booking;
+  if (journey?.current === "customerDropOff" && journeyIntakeDone(journey)) return "selfDrive";
   return null;
 }
 
@@ -253,17 +263,17 @@ export function journeyTripProgress(
 
 // The service on the journey, as the Service Details step shows it. The API
 // has more steps in between (inspection completed / approved, service completed);
-// they're left out.
+// they're left out. The step ends once the payment is confirmed; the API's
+// "ready for dispatch" isn't on it.
 export const SERVICE_JOURNEY = [
   "advisorAssigned",
   "vehicleInInspection",
   "vehicleInService",
   "invoiceGenerated",
   "paymentConfirmed",
-  "readyForDispatch",
 ] as const;
 
-// The advisor's last step (the bill), then the admin's two that end the service
+// The advisor's last step (the bill), then the admin's that ends the service
 export const SERVICE_INVOICED = "invoiceGenerated";
 export const SERVICE_PAID = "paymentConfirmed";
 // Between the two: the customer paid in the app and the admin hasn't confirmed it
@@ -274,7 +284,8 @@ export const SERVICE_READY = "readyForDispatch";
 const SERVICE_JOURNEY_STEPS: Record<AdvisorMilestone, string> = {
   inspecting: "vehicleInInspection",
   inService: "vehicleInService",
-  readyForDispatch: SERVICE_READY,
+  // The handover opens once the payment is confirmed
+  readyForDispatch: SERVICE_PAID,
 };
 
 // The advisor's milestone log as the journey has it (see journeyTripProgress)

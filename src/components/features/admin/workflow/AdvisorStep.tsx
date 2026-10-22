@@ -5,7 +5,6 @@ import {
   SERVICE_INVOICED,
   SERVICE_JOURNEY,
   SERVICE_PAID,
-  SERVICE_READY,
   SERVICE_VERIFYING,
   type AdminBooking,
   type Invoice,
@@ -21,11 +20,10 @@ interface AdvisorStepProps {
 
 // The advisor is the customer's contact while the vehicle is at the dealership:
 // assigned → inspecting → service in progress → invoice generated → payment
-// confirmed → ready to dispatch. It's drawn from the API's journey
-// (`booking.journey`): the advisor posts their steps and the bill from their own
-// page, so the admin only watches those, and then makes the last two: confirming
-// the payment (also when the customer paid in the app) and marking the vehicle ready
-// to dispatch. The delivery valet stays locked until the last one.
+// confirmed. It's drawn from the API's journey (`booking.journey`): the advisor
+// posts their steps and the bill from their own page, so the admin only watches
+// those, and then makes the last one: confirming the payment (also when the
+// customer paid in the app), which opens the Vehicle Handover step.
 export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
   const assignAdvisor = useAssignRelationshipManager();
   // The API's one admin confirmation: it applies whichever the stage allows
@@ -39,7 +37,6 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
   // Paid in the app first moves it on to "verification pending", not past it.
   const awaitingPayment = reached(SERVICE_INVOICED) && !paid;
   const paidInApp = journey?.current === SERVICE_VERIFYING;
-  const ready = reached(SERVICE_READY);
   const stepLabel = (key: string) => journey?.steps.find((step) => step.key === key)?.label;
   // What comes after: a valet to assign, or (self-drive, as Loaner Only always
   // is) the customer collecting the vehicle, which the handover step confirms
@@ -62,8 +59,15 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
     ];
   });
 
-  const confirmStep = (message: string) =>
-    confirm.mutate(booking.id, { onSuccess: () => toast.success(message) });
+  // Confirming the payment ends the step, so the handover opens straight after
+  // (the booking's details have been loaded again by then)
+  const confirmPayment = () =>
+    confirm.mutate(booking.id, {
+      onSuccess: () => {
+        toast.success(`Payment confirmed for ${booking.id}`);
+        onDone();
+      },
+    });
 
   return (
     <div className="space-y-4">
@@ -129,31 +133,16 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
           <ActionButton
             pending={confirm.isPending}
             pendingLabel="Confirming..."
-            onClick={() => confirmStep(`Payment confirmed for ${booking.id}`)}
+            onClick={confirmPayment}
           >
             Confirm Payment Received
           </ActionButton>
         </>
       )}
 
-      {advisor && journey?.current === SERVICE_PAID && (
-        <>
-          <p className="text-xs text-gray-500">
-            The bill is paid. Mark the vehicle ready once it's handed back to the dealership for
-            delivery.
-          </p>
-          <ActionButton
-            pending={confirm.isPending}
-            onClick={() => confirmStep("Vehicle ready to dispatch")}
-          >
-            Mark “Vehicle Ready to Dispatch”
-          </ActionButton>
-        </>
-      )}
-
-      {ready && (
+      {advisor && paid && (
         <StepDone
-          text={stepLabel(SERVICE_READY) ?? "Ready to dispatch"}
+          text={stepLabel(SERVICE_PAID) ?? "Payment confirmed"}
           actionLabel={isComplete(booking) ? undefined : nextLabel}
           onAction={onDone}
         />

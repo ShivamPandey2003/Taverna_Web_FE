@@ -17,7 +17,7 @@ import {
 } from "@/types/admin";
 import {
   formatDateTime,
-  intakeMethodLabels,
+  methodLabel,
   isComplete,
   legMethod,
   legTitles,
@@ -135,7 +135,7 @@ export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
       { id: booking.id, leg, method: picked },
       {
         onSuccess: () => {
-          toast.success(`${text.step} set to ${intakeMethodLabels[picked]}`);
+          toast.success(`${text.step} set to ${methodLabel(leg, picked)}`);
           closeConfirm();
         },
       },
@@ -183,7 +183,7 @@ export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
                 )}
               >
                 {methodIcons[option]}
-                {intakeMethodLabels[option]}
+                {methodLabel(leg, option)}
               </button>
             );
           })}
@@ -245,7 +245,7 @@ export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
 
       {picked && (
         <ConfirmModal
-          title={`${text.step} by ${intakeMethodLabels[picked]}`}
+          title={`${text.step}: ${methodLabel(leg, picked)}`}
           subtitle={`${booking.id} · ${booking.customer.name}`}
           confirmLabel="Confirm"
           pendingLabel="Saving..."
@@ -265,7 +265,7 @@ export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
             {method && (
               <p>
                 Replaces{" "}
-                <span className="font-medium text-gray-900">{intakeMethodLabels[method]}</span>
+                <span className="font-medium text-gray-900">{methodLabel(leg, method)}</span>
               </p>
             )}
 

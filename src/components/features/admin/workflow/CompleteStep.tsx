@@ -6,7 +6,7 @@ import type { AdminBooking } from "@/types/admin";
 import {
   formatCurrency,
   formatDateTime,
-  intakeMethodLabels,
+  methodLabel,
   isComplete,
   legMethod,
 } from "../admin.utils";
@@ -31,7 +31,7 @@ export function CompleteStep({ booking }: { booking: AdminBooking }) {
     {
       label: method && method !== "valet" ? "Vehicle intake" : "Pickup valet",
       value:
-        method && method !== "valet" ? intakeMethodLabels[method] : (booking.valet?.name ?? "—"),
+        method && method !== "valet" ? methodLabel("pickup", method) : (booking.valet?.name ?? "—"),
       at: booking.pickupProgress?.reached,
     },
     {
@@ -48,7 +48,7 @@ export function CompleteStep({ booking }: { booking: AdminBooking }) {
       label: handover && handover !== "valet" ? "Vehicle handover" : "Delivery valet",
       value:
         handover && handover !== "valet"
-          ? intakeMethodLabels[handover]
+          ? methodLabel("delivery", handover)
           : (booking.deliveryValet?.name ?? "—"),
       at: booking.deliveryProgress?.delivered,
     },

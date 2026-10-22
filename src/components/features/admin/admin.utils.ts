@@ -4,9 +4,10 @@ import {
   HANDOVER_DELIVERED,
   INTAKE_CONFIRMED,
   journeyIntakeDone,
+  journeyHandoverMethod,
   journeyIntakeMethod,
   journeyReached,
-  SERVICE_READY,
+  SERVICE_PAID,
   TRIP_END,
   type AdminBooking,
   type AdvisorMilestone,
@@ -89,17 +90,25 @@ export const legTitles: Record<ValetLeg, string> = {
   delivery: "Delivery Valet",
 };
 
-export const intakeMethodLabels: Record<IntakeMethod, string> = {
-  valet: "Valet",
-  towTruck: "Tow Truck",
-  selfDrive: "Self-Drive",
+// How each way of making a trip reads: the customer drops the vehicle in at the
+// dealership on the way in, and it's dropped off with them on the way back
+const legMethodLabels: Record<ValetLeg, Record<IntakeMethod, string>> = {
+  pickup: { valet: "Valet", towTruck: "Tow Truck", selfDrive: "Customer Drop In" },
+  delivery: { valet: "Valet", towTruck: "Tow Truck", selfDrive: "Customer Drop Off" },
 };
+
+export const methodLabel = (leg: ValetLeg, method: IntakeMethod) => legMethodLabels[leg][method];
 
 // How the vehicle makes a trip: what the admin picked (kept only in this
 // browser), else for the way in what the API's journey says (journeyIntakeMethod),
 // else "valet" for a booking that already has the trip's valet, else what the
 // booking starts with (defaultLegMethod). null when the admin still has to pick.
 export function legMethod(booking: AdminBooking, leg: ValetLeg): IntakeMethod | null {
+  // The API's CUSTOMER_DROP_OFF on the way back beats a choice stored elsewhere
+  if (leg === "delivery") {
+    const handover = journeyHandoverMethod(booking);
+    if (handover) return handover;
+  }
   const saved = leg === "pickup" ? booking.intakeMethod : booking.handoverMethod;
   if (saved) return saved;
   const fromApi = leg === "pickup" ? journeyIntakeMethod(booking) : null;
@@ -169,10 +178,10 @@ export function isStepDone(booking: AdminBooking, step: WorkflowStep) {
     case "pickup":
       return tripDone(booking, "pickup");
     case "advisor":
-      // The advisor's part ends with the paid-up vehicle ready for the delivery valet
+      // The advisor's part ends once the admin confirms the payment
       if (!booking.relationshipManager) return false;
       return booking.journey
-        ? journeyReached(booking.journey, SERVICE_READY)
+        ? journeyReached(booking.journey, SERVICE_PAID)
         : !!booking.advisorProgress?.readyForDispatch;
     case "delivery":
       return tripDone(booking, "delivery");
