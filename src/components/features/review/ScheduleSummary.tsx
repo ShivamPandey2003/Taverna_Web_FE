@@ -29,8 +29,8 @@ export function ScheduleSummary({ step }: { step?: number }) {
       onChange={() => dispatch(openReviewModal("schedule"))}
       onClear={() => dispatch(setScheduledAt(null))}
     >
-      <div className="flex items-center gap-5">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-50">
+      <div className="flex items-center gap-3 sm:gap-5">
+        <div className="flex h-10 w-10 shrink-0 items-center sm:h-12 sm:w-12 justify-center rounded-full bg-gray-50">
           <Calendar size={21} strokeWidth={2} className="text-gray-700" />
         </div>
 

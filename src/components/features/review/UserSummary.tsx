@@ -32,8 +32,8 @@ export function UserSummary({ highlight, step }: StepProps) {
       // Opens the Account page to edit the profile
       changeLabel="Update"
     >
-      <div className="flex items-center gap-5">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-50">
+      <div className="flex items-center gap-3 sm:gap-5">
+        <div className="flex h-10 w-10 shrink-0 items-center sm:h-12 sm:w-12 justify-center rounded-full bg-gray-50">
           <User size={21} strokeWidth={2} className="text-gray-700" />
         </div>
 
@@ -43,7 +43,7 @@ export function UserSummary({ highlight, step }: StepProps) {
           </p>
 
           <div className="mt-1 flex flex-wrap gap-x-6 gap-y-1 text-sm text-gray-800">
-            <p className="truncate">{user.email}</p>
+            <p className="max-w-full truncate">{user.email}</p>
             <p className={user.phone.trim() ? undefined : "text-gray-500"}>
               {user.phone.trim() || "No phone number added"}
             </p>

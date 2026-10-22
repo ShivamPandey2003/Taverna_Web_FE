@@ -85,12 +85,12 @@ export function BookingSummaryCard({
   return (
     <section
       className={cn(
-        "rounded-2xl border border-gray-200 bg-white p-5 transition",
+        "rounded-2xl border border-gray-200 bg-white p-4 transition sm:p-5",
         highlight && highlightClass,
         className
       )}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="text-sm font-bold text-gray-900">
             {step !== undefined && <StepNumber step={step} />}
@@ -100,7 +100,7 @@ export function BookingSummaryCard({
           {highlight && <NextStepTag />}
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex shrink-0 items-center gap-4">
           {onChange && <CardLink label={changeLabel} onClick={onChange} />}
           {onClear && <CardLink label="Clear" onClick={onClear} />}
         </div>

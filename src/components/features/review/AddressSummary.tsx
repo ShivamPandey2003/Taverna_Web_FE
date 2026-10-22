@@ -61,9 +61,9 @@ export function AddressSummary({ highlight, step }: StepProps) {
       }}
       onChange={() => dispatch(openReviewModal("location"))}
     >
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-3 sm:gap-5">
         {/* Icon */}
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-50">
+        <div className="flex h-10 w-10 shrink-0 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-gray-50">
           <Pin
             size={21}
             strokeWidth={2}
@@ -72,7 +72,7 @@ export function AddressSummary({ highlight, step }: StepProps) {
         </div>
 
         {/* Address */}
-        <div>{renderAddress()}</div>
+        <div className="min-w-0">{renderAddress()}</div>
       </div>
     </BookingSummaryCard>
   );

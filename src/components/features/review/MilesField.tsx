@@ -76,10 +76,11 @@ export function MilesField({ vehicle }: { vehicle: Vehicle }) {
   }
 
   return (
-    <p className="flex items-center gap-1.5">
+    // One line: "Miles:", the value and its pencil
+    <p className="flex items-center gap-1.5 whitespace-nowrap">
       Miles:
       {miles ? (
-        <>
+        <span className="flex items-center gap-1.5 whitespace-nowrap">
           <span className="font-semibold text-gray-900">{miles}</span>
           <button
             type="button"
@@ -90,7 +91,7 @@ export function MilesField({ vehicle }: { vehicle: Vehicle }) {
           >
             <Pen size={13} />
           </button>
-        </>
+        </span>
       ) : (
         <button
           type="button"

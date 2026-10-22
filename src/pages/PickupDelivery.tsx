@@ -146,7 +146,7 @@ export function PickupDelivery() {
       <div className="mx-auto max-w-[1400px]">
         {/* Page header: title on the left, booking actions on the right */}
         <header className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex w-full items-center gap-3 sm:w-auto sm:gap-4">
             <button
               type="button"
               onClick={() => navigate(-1)}
@@ -156,7 +156,7 @@ export function PickupDelivery() {
               <ArrowLeft size={20} />
             </button>
 
-            <div>
+            <div className="min-w-0 flex-1 sm:flex-none">
               {/* The page title, and the switch between the services */}
               <h1 className="sr-only">{service.title}</h1>
               <ServiceTabs disabled={booking} />
@@ -171,16 +171,24 @@ export function PickupDelivery() {
               type="button"
               disabled={!canBook || booking}
               onClick={() => dispatch(openReviewModal("schedule"))}
-              className="h-11 flex-1 rounded-lg border border-gray-900 bg-white px-8 text-sm font-semibold text-gray-900 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
+              className="h-11 flex-1 whitespace-nowrap rounded-lg border border-gray-900 bg-white px-4 text-sm font-semibold text-gray-900 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none sm:px-8"
             >
-              {scheduled ? "Reschedule" : "Schedule for Later"}
+              {/* "Schedule" alone on phones, where the full label wraps */}
+              {scheduled ? (
+                "Reschedule"
+              ) : (
+                <>
+                  <span className="sm:hidden">Schedule</span>
+                  <span className="hidden sm:inline">Schedule for Later</span>
+                </>
+              )}
             </button>
 
             <button
               type="button"
               disabled={!canBook || booking}
               onClick={() => handleBook()}
-              className="h-11 flex-1 rounded-lg bg-black px-8 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
+              className="h-11 flex-1 whitespace-nowrap rounded-lg bg-black px-4 sm:px-8 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
             >
               {booking ? "Booking..." : scheduled ? "Confirm Booking" : "Book Now"}
             </button>
