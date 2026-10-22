@@ -78,7 +78,9 @@ export function NotificationDropdown() {
             onClick={() => dispatch(closeNotifications())}
           />
 
-          <div className="absolute right-0 top-[calc(100%+12px)] z-50 w-[390px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.12)]">
+          {/* On phones the panel spans the screen under the navbar (60px high), since
+              anchored to the bell it ran off the left edge; from md it hangs off the bell */}
+          <div className="fixed inset-x-3 top-17 z-50 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.12)] md:absolute md:inset-x-auto md:right-0 md:top-[calc(100%+12px)] md:w-[390px]">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-4">
               <h2 className="text-lg font-bold text-[#111827]">
@@ -96,7 +98,8 @@ export function NotificationDropdown() {
             </div>
 
             {/* Notifications */}
-            <div className="max-h-112.5 overflow-y-auto px-4 pb-4">
+            {/* Never taller than the screen below the header */}
+            <div className="max-h-[min(450px,calc(100dvh-160px))] overflow-y-auto px-4 pb-4">
               <NotificationList />
             </div>
           </div>
