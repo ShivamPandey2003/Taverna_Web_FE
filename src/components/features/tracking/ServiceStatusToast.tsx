@@ -13,35 +13,16 @@ import { cn, maskedVin, vehicleName } from "@/libs/utils";
 
 // The customer's running services, floating in the bottom-right corner: one round
 // bubble per booking showing just the vehicle. Hovering a bubble opens a small
-// card above it with that vehicle and where its service stands; a click opens
-// its tracking page. It can't be dismissed: a bubble goes away once its service
-// is complete. On the tracking page the booking being looked at is left out, so
-// what remains are the ways to the other ones.
+// card above it with that vehicle and where its service stands (mouse only); a
+// click or tap opens its tracking page. It can't be dismissed: a bubble goes away
+// once its service is complete. On the tracking page the booking being looked at
+// is left out, so what remains are the ways to the other ones.
 export function ServiceStatusToast() {
   const services = useActiveServices();
   const trackingMatch = useMatch(TRACKING_ROUTE);
   const rootRef = useRef<HTMLDivElement>(null);
-  // The booking whose card is open, one at a time
+  // The booking whose card is open (hovered), one at a time
   const [openId, setOpenId] = useState<string | null>(null);
-
-  // A card opened by a tap (no hover there) closes on a tap outside or Escape
-  useEffect(() => {
-    if (!openId) return;
-
-    const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpenId(null);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpenId(null);
-    };
-
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [openId]);
 
   const viewedId = trackingMatch
     ? pickTrackedService(services, trackingMatch.params.bookingId)?.booking.id
@@ -161,14 +142,9 @@ function ServiceBubble({ service, open, onOpenChange }: ServiceBubbleProps) {
 
       <button
         type="button"
-        // A mouse click goes straight to tracking (the card is already showing);
-        // a tap or the keyboard opens the card first, which then leads there
-        onClick={(event) => {
-          const { pointerType } = event.nativeEvent as PointerEvent;
-          if (pointerType === "mouse" || open) openTracking();
-          else onOpenChange(true);
-        }}
-        aria-expanded={open}
+        // Straight to tracking, a tap included (no card first on touch screens,
+        // where there's no hover); the card is only a mouse's hover preview
+        onClick={openTracking}
         aria-label={`${vehicleName(vehicle)}, ${display.label}: ${display.message}. Open tracking`}
         // The border is the status colour (border-current takes the text colour), so a
         // closed bubble still hints where the service stands
