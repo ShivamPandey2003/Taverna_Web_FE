@@ -19,7 +19,7 @@ export function SpecialOfferCard({ offer, onViewOffer }: SpecialOfferCardProps) 
   const expiry = offerExpiry(offer.expiresAt);
 
   return (
-    <article className="flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+    <article className="flex h-full min-w-0 flex-col rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-6 transition-shadow hover:shadow-md">
       {/* Kind of deal */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="inline-flex rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">
@@ -33,7 +33,7 @@ export function SpecialOfferCard({ offer, onViewOffer }: SpecialOfferCardProps) 
       </div>
 
       {/* Vehicle */}
-      <h2 className="mt-4 text-lg font-bold leading-6 tracking-tight text-gray-900">
+      <h2 className="mt-3 text-lg font-bold leading-6 tracking-tight text-gray-900 sm:mt-4">
         {offer.vehicleName}
       </h2>
       <p className="mt-1 text-xs text-gray-500">
@@ -42,7 +42,7 @@ export function SpecialOfferCard({ offer, onViewOffer }: SpecialOfferCardProps) 
       </p>
 
       {/* Payment */}
-      <div className="mt-5 rounded-xl bg-[#f4f4f6] px-4 py-3">
+      <div className="mt-4 rounded-xl bg-[#f4f4f6] px-4 py-3 sm:mt-5">
         <p className="text-2xl font-bold tracking-tight text-gray-900">
           {formatCurrency(offer.payment)}
           <span className="text-sm font-medium text-gray-500">/mo</span>
@@ -50,13 +50,13 @@ export function SpecialOfferCard({ offer, onViewOffer }: SpecialOfferCardProps) 
         <p className="mt-0.5 text-xs text-gray-500">{terms.join(" · ")}</p>
       </div>
 
-      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
         <div>
-          <dt className="text-xs text-gray-500">Due at signing</dt>
+          <dt className="whitespace-nowrap text-xs text-gray-500">Due at signing</dt>
           <dd className="font-semibold text-gray-900">{formatCurrency(offer.dueAtSigning)}</dd>
         </div>
         <div>
-          <dt className="text-xs text-gray-500">Total rebate</dt>
+          <dt className="whitespace-nowrap text-xs text-gray-500">Total rebate</dt>
           <dd className="font-semibold text-gray-900">{formatCurrency(offer.totalRebate)}</dd>
         </div>
       </dl>
@@ -73,7 +73,7 @@ export function SpecialOfferCard({ offer, onViewOffer }: SpecialOfferCardProps) 
         </p>
       )}
 
-      <div className="mt-auto pt-6">
+      <div className="mt-auto pt-5 sm:pt-6">
         <button
           type="button"
           onClick={() => onViewOffer(offer)}

@@ -20,12 +20,12 @@ export function Specials() {
   return (
     // Scrolls inside the layout (which clips its content)
     // The layout's spacer leaves room for the status bubbles at the end
-    <section className="h-full overflow-y-auto bg-[#f8f9fa] px-6 py-4 lg:px-10">
+    <section className="h-full overflow-y-auto bg-[#f8f9fa] px-4 py-4 sm:px-6 lg:px-10">
       <div className="mx-auto">
         {/* The title on the left and the filters on the right, on one line; on
             a narrow screen the filters drop below the title */}
         <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+          <h1 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
             Offers Picked for You
           </h1>
 
