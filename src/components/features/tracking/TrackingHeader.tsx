@@ -36,8 +36,8 @@ export function TrackingHeader({
     <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
       <div className="flex flex-col md:flex-row md:items-stretch">
         {/* Vehicle */}
-        <div className="flex items-center gap-5 p-4 md:w-[58%] md:p-5">
-          <div className="flex h-[100px] w-[150px] shrink-0 items-center justify-center overflow-hidden rounded-xl md:h-[130px] md:w-[200px]"> {/* bg-[#f6f7f8] */}
+        <div className="flex items-center gap-4 p-4 md:w-[58%] md:gap-5 md:p-5">
+          <div className="flex h-[76px] w-[110px] shrink-0 items-center justify-center overflow-hidden rounded-xl md:h-[130px] md:w-[200px]"> {/* bg-[#f6f7f8] */}
             <img
               src={vehicle.image}
               alt={`${vehicle.brand} ${vehicle.model}`}
@@ -46,11 +46,18 @@ export function TrackingHeader({
           </div>
 
           <div className="min-w-0">
+            {/* Two lines ("2026 Ram" over "1500") on phones, where one would be
+                cut short; one line from md */}
             <h2 className="text-lg font-bold leading-tight tracking-tight text-gray-900 md:text-2xl">
-              <VehicleTitle vehicle={vehicle} singleLine />
+              <span className="block md:hidden">
+                <VehicleTitle vehicle={vehicle} />
+              </span>
+              <span className="hidden md:block">
+                <VehicleTitle vehicle={vehicle} singleLine />
+              </span>
             </h2>
 
-            <div className="mt-3 flex gap-6">
+            <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2 md:mt-3">
               <VehicleInfo label="VIN" value={maskedVin(vehicle.vin)} title={vehicle.vin} />
               <VehicleInfo label="MILES" value={vehicle.miles || "—"} />
             </div>
@@ -60,7 +67,7 @@ export function TrackingHeader({
         {/* Status, in its own colour panel inside the card */}
         <div
           className={cn(
-            "m-3 flex flex-1 flex-col items-center justify-center rounded-xl bg-linear-to-br px-6 py-7 text-center text-white",
+            "m-3 mt-0 flex flex-1 flex-col items-center justify-center rounded-xl bg-linear-to-br px-5 py-6 text-center text-white md:mt-3 md:px-6 md:py-7",
             gradient,
           )}
         >
@@ -68,7 +75,9 @@ export function TrackingHeader({
             {dealership}
           </p>
 
-          <h1 className="mt-1.5 flex items-center justify-center gap-2.5 text-xl font-bold tracking-tight md:text-2xl">
+          {/* The icon over the title on phones, so the title keeps the width;
+              beside it from md */}
+          <h1 className="mt-2 flex flex-col items-center justify-center gap-1.5 text-xl font-bold leading-tight tracking-tight md:mt-1.5 md:flex-row md:gap-2.5 md:text-2xl">
             <Icon size={26} strokeWidth={2} className="shrink-0" />
             {title}
           </h1>

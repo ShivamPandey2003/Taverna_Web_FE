@@ -123,7 +123,7 @@ export function ServiceTracking() {
   const showDetails = stage === "details" || (!showStaff && !showBill && !showMap);
 
   return (
-    <div className="min-h-0 h-full bg-[#f8f9fa] px-6 py-4 lg:px-10 overflow-auto">
+    <div className="min-h-0 h-full bg-[#f8f9fa] px-4 py-4 sm:px-6 lg:px-10 overflow-auto">
       <div className="mx-auto max-w-[1200px] space-y-6">
         {/* Vehicle and live status together */}
         <TrackingHeader
@@ -212,7 +212,7 @@ function TripMap({
 // The page's shape while the booking is loaded: the header panel and two cards
 function TrackingSkeleton() {
   return (
-    <div className="min-h-0 h-full bg-[#f8f9fa] px-6 py-4 lg:px-10 overflow-auto">
+    <div className="min-h-0 h-full bg-[#f8f9fa] px-4 py-4 sm:px-6 lg:px-10 overflow-auto">
       <div
         className="mx-auto max-w-[1200px] animate-pulse space-y-6"
         role="status"
