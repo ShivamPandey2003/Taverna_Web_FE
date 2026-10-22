@@ -42,7 +42,7 @@ export function AccountSettings() {
   };
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5">
+    <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
       <h2 className="text-base font-bold text-gray-900">
         Settings
       </h2>

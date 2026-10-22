@@ -31,14 +31,16 @@ export function Account() {
     // scrolls. Stacked (phones) the whole page scrolls, ending with the layout's
     // room for the status bubbles; side by side the root doesn't scroll, so
     // that spacer is off there.
-    <main className="flex h-full flex-col overflow-y-auto bg-[#f8f9fa] px-6 pb-4 pt-4 lg:overflow-hidden lg:px-10 lg:after:hidden">
+    <main className="flex h-full flex-col overflow-y-auto bg-[#f8f9fa] px-4 pb-4 pt-4 sm:px-6 lg:overflow-hidden lg:px-10 lg:after:hidden">
       <div className="lg:min-h-0 lg:flex-1">
-        {/* Content */}
-        <div className="grid gap-6 lg:h-full lg:grid-cols-[280px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
+        {/* Content. Stacked, the one column is the screen's width (minmax(0, 1fr)),
+            not as wide as its widest line, so a long email is cut short instead
+            of pushing the page off the screen */}
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:gap-6 lg:h-full lg:grid-cols-[280px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
           {/* Left */}
-          <aside className="space-y-6 lg:overflow-y-auto">
+          <aside className="min-w-0 space-y-5 sm:space-y-6 lg:overflow-y-auto">
             <header>
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
                 Account
               </h1>
 
@@ -51,7 +53,7 @@ export function Account() {
 
             <AccountSettings />
           </aside>
-        <div ref={sectionRef} className={cn("lg:overflow-y-auto", overflowing && "pb-24")}>
+        <div ref={sectionRef} className={cn("min-w-0 lg:overflow-y-auto", overflowing && "pb-24")}>
           <div ref={sectionContentRef}>
             <Content />
           </div>

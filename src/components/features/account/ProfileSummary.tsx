@@ -9,16 +9,16 @@ export function ProfileSummary() {
   const onEdit = () => dispatch(setActiveSection("account"));
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5">
-      <div className="flex items-center gap-4">
+    <div className="rounded-2xl border border-gray-200 bg-white p-4 sm:p-5">
+      <div className="flex items-center gap-3 sm:gap-4">
         {/* Avatar */}
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-600">
+        <div className="flex h-10 w-10 shrink-0 items-center sm:h-12 sm:w-12 justify-center rounded-full bg-gray-50 text-gray-600">
           <UserCircle size={22} strokeWidth={1.8} />
         </div>
 
         {/* User information */}
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-bold text-gray-900">
+          <h2 className="truncate text-base font-bold text-gray-900">
             {name}
           </h2>
 
