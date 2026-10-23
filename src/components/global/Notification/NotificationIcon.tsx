@@ -1,58 +1,21 @@
-import type { NotificationType } from "@/types/notification";
-import { Truck, Car, Check, Tag, Card, FileText } from 'reicon-react';
+import { Bell } from "reicon-react";
+import { statusIcons } from "@/components/features/tracking/serviceStatus";
+import { statusColors } from "@/libs/statusColors";
+import { cn } from "@/libs/utils";
+import { statusStage } from "@/services/bookingApi";
 
-export function NotificationIcon({
-  type,
-}: {
-  type: NotificationType;
-}) {
-  const config = {
-    valet: {
-      icon: Truck,
-      className: "bg-[#111827] text-white",
-    },
-
-    pickup: {
-      icon: Car,
-      className: "bg-black text-white",
-    },
-
-    booking: {
-      icon: Check,
-      className: "bg-[#111827] text-white",
-    },
-
-    offer: {
-      icon: Tag,
-      className: "bg-black text-white",
-    },
-
-    payment: {
-      icon: Card,
-      className: "bg-[#111827] text-white",
-    },
-
-    plan: {
-      icon: Check,
-      className: "bg-[#111827] text-white",
-    },
-
-    document: {
-      icon: FileText,
-      className: "bg-gray-400 text-white",
-    },
-  };
-
-  const { icon: Icon, className } =
-    config[type];
+// The icon and colour of the booking stage the notification reports; a bell for
+// anything else
+export function NotificationIcon({ bookingStatus }: { bookingStatus: string | null }) {
+  const stage = bookingStatus ? statusStage(bookingStatus) : null;
+  const Icon = stage ? statusIcons[stage] : Bell;
 
   return (
     <div
-      className={[
-        "flex h-10 w-10 shrink-0 items-center justify-center",
-        "rounded-full",
-        className,
-      ].join(" ")}
+      className={cn(
+        "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+        stage ? statusColors[stage].soft : "bg-gray-100 text-gray-700",
+      )}
     >
       <Icon size={18} strokeWidth={2} />
     </div>

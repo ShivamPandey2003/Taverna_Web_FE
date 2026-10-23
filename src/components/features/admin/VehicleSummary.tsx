@@ -8,8 +8,8 @@ interface VehicleSummaryProps {
 
 // A vehicle on one row: photo, "2021 Jeep Wrangler" and its VIN
 export function VehicleSummary({ vehicle, className }: VehicleSummaryProps) {
-  // Only the VIN's end, which is what gets matched against the windshield plate
-  const vinEnd = vehicle.vin.slice(-5);
+  // Only the VIN's last 6, which is what gets matched against the windshield plate
+  const vinEnd = vehicle.vin.slice(-6);
 
   return (
     <div className={cn("flex min-w-0 items-center gap-3", className)}>
@@ -21,7 +21,7 @@ export function VehicleSummary({ vehicle, className }: VehicleSummaryProps) {
       />
       <div className="min-w-0">
         <p className="truncate text-base font-bold text-gray-900">{vehicleName(vehicle)}</p>
-        <p className="truncate text-xs text-gray-500">
+        <p className="truncate text-xs text-gray-500" title={vehicle.vin}>
           VIN ***
           <strong className="font-bold text-gray-900">{vinEnd}</strong>
         </p>

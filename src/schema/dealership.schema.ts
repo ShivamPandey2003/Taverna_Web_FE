@@ -1,6 +1,9 @@
 import { z } from "zod";
 
 export const dealershipSchema = z.object({
+  // The dealer's own ID. Only asked for (and required) when adding.
+  dealerId: z.string().trim().max(100, "Dealer ID is too long"),
+
   name: z
     .string()
     .trim()
@@ -12,14 +15,15 @@ export const dealershipSchema = z.object({
     .trim()
     .min(5, "Address is required"),
 
-  image: z.union([
-    z.literal(""),
-    z.string().trim().url("Enter a valid image URL"),
-  ]),
+  // An empty number input comes through as NaN (the input uses valueAsNumber)
+  serviceRadiusMiles: z
+    .number({ error: "Enter the service radius" })
+    .positive("The service radius must be more than 0")
+    .max(500, "The service radius is too large"),
 
-  valetAvailable: z.boolean(),
+  timezone: z.string().min(1, "Choose a timezone"),
 
-  loanerAvailable: z.boolean(),
+  isActive: z.boolean(),
 });
 
 export type DealershipFormData = z.infer<typeof dealershipSchema>;

@@ -1,8 +1,8 @@
 import { Plus } from "reicon-react";
+import { DeleteDealershipModal } from "@/components/features/dealerships/DeleteDealershipModal";
 import { DealershipFormModal } from "@/components/features/dealerships/DealershipFormModal";
 import { DealershipGrid } from "@/components/features/dealerships/DealershipGrid";
 import { DealershipsToolbar } from "@/components/features/dealerships/DealershipsToolbar";
-import { DeleteDealershipModal } from "@/components/features/dealerships/DeleteDealershipModal";
 import { useAppDispatch } from "@/redux/hooks";
 import { openAddDealership } from "@/redux/modals/dealershipModal/dealershipModalSlice";
 

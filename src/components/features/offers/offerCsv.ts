@@ -126,10 +126,8 @@ export interface OfferCsvCheck {
   rowCount: number;
   // Line numbers (the header is 1) of rows with the wrong number of cells or no VIN
   badRows: number[];
-  // First few rows, to look over before uploading
+  // First few rows, to look over before uploading (none while columns are missing)
   preview: OfferCsvRow[];
-  // Every row (empty while columns are missing); the mock API stores these
-  rows: OfferCsvRow[];
 }
 
 const PREVIEW_ROWS = 5;
@@ -145,9 +143,9 @@ export function checkOfferCsv(text: string): OfferCsvCheck {
     cells.length !== headerRow.length || (vin !== -1 && !cells[vin]?.trim()) ? [index + 2] : [],
   );
 
-  const parsed = missingHeaders.length
+  const preview = missingHeaders.length
     ? []
-    : rows.map(
+    : rows.slice(0, PREVIEW_ROWS).map(
         (cells) =>
           Object.fromEntries(
             OFFER_CSV_HEADERS.map((header) => [header, cells[indexOf(header)]?.trim() ?? ""]),
@@ -158,8 +156,7 @@ export function checkOfferCsv(text: string): OfferCsvCheck {
     missingHeaders,
     rowCount: rows.length,
     badRows,
-    preview: parsed.slice(0, PREVIEW_ROWS),
-    rows: parsed,
+    preview,
   };
 }
 

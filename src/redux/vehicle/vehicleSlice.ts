@@ -1,8 +1,9 @@
-import { createSlice, nanoid, type PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
 import { logout } from "@/redux/auth/authSlice";
 import type { Vehicle } from "@/types/vehicle";
 
+// Mirror of the customer's saved vehicles on the server (see useSyncVehicles)
 type VehicleState = {
   vehicleList: Vehicle[];
 };
@@ -15,13 +16,16 @@ const vehicleSlice = createSlice({
   name: "vehicle",
   initialState,
   reducers: {
-    addVehicle: {
-      reducer: (state, action: PayloadAction<Vehicle>) => {
+    // The list as the server returned it (mileage included: MilesField saves it
+    // with vehicles/:id/mileage)
+    setVehicles: (state, action: PayloadAction<Vehicle[]>) => {
+      state.vehicleList = action.payload;
+    },
+    // A vehicle the server just saved
+    addVehicle: (state, action: PayloadAction<Vehicle>) => {
+      if (!state.vehicleList.some((item) => item.id === action.payload.id)) {
         state.vehicleList.unshift(action.payload);
-      },
-      prepare: (vehicle: Omit<Vehicle, "id">) => ({
-        payload: { ...vehicle, id: nanoid() },
-      }),
+      }
     },
     editVehicle: (state, action: PayloadAction<Vehicle>) => {
       state.vehicleList = state.vehicleList.map((item) =>
@@ -40,7 +44,7 @@ const vehicleSlice = createSlice({
   },
 });
 
-export const { addVehicle, editVehicle, removeVehicle } = vehicleSlice.actions;
+export const { setVehicles, addVehicle, editVehicle, removeVehicle } = vehicleSlice.actions;
 
 export const selectVehicles = (state: RootState) => state.vehicle.vehicleList;
 

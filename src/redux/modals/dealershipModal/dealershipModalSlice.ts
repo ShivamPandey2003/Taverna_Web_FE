@@ -7,7 +7,7 @@ type DealershipModalState = {
   formOpen: boolean;
   // Dealership being edited (a copy of the card); null while adding
   editing: Dealership | null;
-  // Dealership waiting for delete confirmation
+  // Dealership awaiting delete confirmation
   deleting: Dealership | null;
 };
 

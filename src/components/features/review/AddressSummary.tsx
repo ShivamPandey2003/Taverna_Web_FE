@@ -1,3 +1,4 @@
+import type { StepProps } from "./BookingSummaryCard";
 import { Pin } from "reicon-react";
 import { BookingSummaryCard } from "./BookingSummaryCard";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -7,7 +8,7 @@ import {
 } from "@/redux/booking/bookingSlice";
 import { openReviewModal } from "@/redux/modals/reviewModal/reviewModalSlice";
 
-export function AddressSummary() {
+export function AddressSummary({ highlight, step }: StepProps) {
   const dispatch = useAppDispatch();
   const { pickupLocation } = useAppSelector(selectBooking);
   const address = useAppSelector(selectBookingAddress);
@@ -51,6 +52,8 @@ export function AddressSummary() {
 
   return (
     <BookingSummaryCard
+      step={step}
+      highlight={highlight}
       title="My Address"
       status={{
         valid: !!address || pickupLocation?.type === "current",
@@ -58,9 +61,9 @@ export function AddressSummary() {
       }}
       onChange={() => dispatch(openReviewModal("location"))}
     >
-      <div className="flex items-center gap-5">
+      <div className="flex items-center gap-3 sm:gap-5">
         {/* Icon */}
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-50">
+        <div className="flex h-10 w-10 shrink-0 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-gray-50">
           <Pin
             size={21}
             strokeWidth={2}
@@ -69,7 +72,7 @@ export function AddressSummary() {
         </div>
 
         {/* Address */}
-        <div>{renderAddress()}</div>
+        <div className="min-w-0">{renderAddress()}</div>
       </div>
     </BookingSummaryCard>
   );

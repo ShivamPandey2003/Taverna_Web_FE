@@ -1,23 +1,15 @@
-export type NotificationType =
-  | "valet"
-  | "pickup"
-  | "booking"
-  | "offer"
-  | "payment"
-  | "plan"
-  | "document";
-
-export type NotificationSection =
-  | "TODAY"
-  | "YESTERDAY"
-  | "EARLIER THIS WEEK";
-
+// One of the customer's in-app notifications (user/notifications)
 export interface Notification {
   id: string;
-  type: NotificationType;
+  // The booking it's about
+  bookingId: string | null;
+  // The API's kind, e.g. "BOOKING_STATUS_UPDATED", "BOOKING_CREATED"
+  type: string;
   title: string;
-  description: string;
-  time: string;
-  section: NotificationSection;
+  message: string;
+  // The booking's status code it reports, from the metadata, e.g. "VALET_ASSIGNED"
+  bookingStatus: string | null;
+  // ISO string
+  createdAt: string;
   read: boolean;
 }

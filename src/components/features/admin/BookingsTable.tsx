@@ -1,40 +1,26 @@
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import {
-  selectBookingListParams,
-  setPage,
-  toggleSort,
-} from "@/redux/adminBookings/adminBookingsSlice";
+import { selectBookingListParams, setPage } from "@/redux/adminBookings/adminBookingsSlice";
 import {
   openBookingDetails,
   openBookingWorkflow,
   selectAdminModal,
 } from "@/redux/modals/adminModal/adminModalSlice";
 import { useAdminBookings } from "@/services/queries/adminQueries";
-import type { BookingSortField } from "@/types/admin";
-import { cn, vehicleName } from "@/libs/utils";
+import { cn } from "@/libs/utils";
 import { BookingStatusBadge } from "./BookingStatusBadge";
-import { SortButton } from "./SortButton";
 import { TablePagination } from "./TablePagination";
-import { formatShortDateTime, serviceLabels } from "./admin.utils";
 
-const columns: { label: string; sortField?: BookingSortField }[] = [
-  { label: "Booking ID", sortField: "id" },
-  { label: "Customer", sortField: "customer" },
-  { label: "Contact" },
-  { label: "Vehicle" },
-  { label: "Service" },
-  // { label: "Created", sortField: "createdAt" },
-  { label: "Scheduled", sortField: "scheduledAt" },
-  { label: "Status", sortField: "status" },
-  { label: "Actions" },
+// The API has no sorting (bookings come newest first), so the headers are plain text
+const columns = [
+  "Booking ID",
+  "Customer",
+  "Contact",
+  "Vehicle",
+  "Service",
+  "Scheduled",
+  "Status",
+  "Actions",
 ];
-
-// A Book Now booking has no scheduled time: the pickup is expected this long
-// after it was made
-const ASAP_PICKUP_MINUTES = 45;
-
-const asapPickupTime = (createdAt: string) =>
-  new Date(new Date(createdAt).getTime() + ASAP_PICKUP_MINUTES * 60_000).toISOString();
 
 export function BookingsTable() {
   const dispatch = useAppDispatch();
@@ -47,7 +33,7 @@ export function BookingsTable() {
     <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white">
       {/* Scrolls on its own only if the screen is too short for a full page */}
       <div className="relative min-h-0 overflow-auto">
-        {/* Thin bar while a new page / sort / search loads over the current rows */}
+        {/* Thin bar while a new page / search loads over the current rows */}
         {isFetching && !isPending && (
           <div className="absolute inset-x-0 top-0 z-10 h-0.5 animate-pulse bg-black" />
         )}
@@ -57,23 +43,14 @@ export function BookingsTable() {
             <tr>
               {columns.map((column) => (
                 <th
-                  key={column.label}
+                  key={column}
                   className={cn(
                     "whitespace-nowrap px-4 py-2.5",
                     // Sits over the centred Manage button
-                    column.label === "Actions" && "text-center",
+                    column === "Actions" && "text-center",
                   )}
                 >
-                  {column.sortField ? (
-                    <SortButton
-                      label={column.label}
-                      active={params.sortBy === column.sortField}
-                      order={params.sortOrder}
-                      onClick={() => dispatch(toggleSort(column.sortField!))}
-                    />
-                  ) : (
-                    column.label
-                  )}
+                  {column}
                 </th>
               ))}
             </tr>
@@ -135,36 +112,32 @@ export function BookingsTable() {
 
                 <td
                   className="max-w-[200px] truncate px-4 py-2 font-medium text-gray-900"
-                  title={`${booking.customer.name} · ${booking.customer.email}`}
+                  title={booking.customerName}
                 >
-                  {booking.customer.name}
+                  {booking.customerName}
                 </td>
 
                 <td className="whitespace-nowrap px-4 py-2 text-gray-700">
-                  {booking.customer.phone}
+                  {booking.customerPhone}
                 </td>
 
                 <td
                   className="max-w-[220px] truncate px-4 py-2 text-gray-900"
-                  title={`VIN ${booking.vehicle.vin}`}
+                  title={booking.vehicle}
                 >
-                  {vehicleName(booking.vehicle)}
+                  {booking.vehicle}
                 </td>
 
                 <td className="whitespace-nowrap px-4 py-2 text-gray-700">
-                  {serviceLabels[booking.serviceId]}
+                  {booking.service}
                 </td>
 
-                {/* <td className="whitespace-nowrap px-4 py-2 text-gray-700">
-                  {formatShortDateTime(booking.createdAt)}
-                </td> */}
-
                 <td className="whitespace-nowrap px-4 py-2 text-gray-700">
-                  {formatShortDateTime(booking.scheduledAt ?? asapPickupTime(booking.createdAt))}
+                  {booking.scheduled}
                 </td>
 
                 <td className="px-4 py-2">
-                  <BookingStatusBadge status={booking.status} />
+                  <BookingStatusBadge status={booking.status} code={booking.statusCode} label={booking.statusLabel} />
                 </td>
 
                 <td className="px-4 py-2 text-center">

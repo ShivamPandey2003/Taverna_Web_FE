@@ -6,16 +6,20 @@ import { NotificationList } from "./NotificationList";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   closeNotifications,
-  markAllAsRead,
   selectNotificationsOpen,
-  selectUnreadCount,
   toggleNotifications,
 } from "@/redux/notification/notificationSlice";
+import {
+  useMarkAllNotificationsRead,
+  useNotifications,
+} from "@/services/queries/notificationQueries";
 
 export function NotificationDropdown() {
   const dispatch = useAppDispatch();
   const open = useAppSelector(selectNotificationsOpen);
-  const unreadCount = useAppSelector(selectUnreadCount);
+  const { data: notifications } = useNotifications();
+  const markAllRead = useMarkAllNotificationsRead();
+  const unreadCount = notifications?.filter((item) => !item.read).length ?? 0;
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Close on a click outside the bell + panel, or on Escape
@@ -74,7 +78,9 @@ export function NotificationDropdown() {
             onClick={() => dispatch(closeNotifications())}
           />
 
-          <div className="absolute right-0 top-[calc(100%+12px)] z-50 w-[390px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.12)]">
+          {/* On phones the panel spans the screen under the navbar (60px high), since
+              anchored to the bell it ran off the left edge; from md it hangs off the bell */}
+          <div className="fixed inset-x-3 top-17 z-50 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-[0_12px_40px_rgba(0,0,0,0.12)] md:absolute md:inset-x-auto md:right-0 md:top-[calc(100%+12px)] md:w-[390px]">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-4">
               <h2 className="text-lg font-bold text-[#111827]">
@@ -83,8 +89,8 @@ export function NotificationDropdown() {
 
               <button
                 type="button"
-                onClick={() => dispatch(markAllAsRead())}
-                disabled={unreadCount === 0}
+                onClick={() => markAllRead.mutate()}
+                disabled={unreadCount === 0 || markAllRead.isPending}
                 className="text-sm font-medium text-gray-900 underline underline-offset-4 transition hover:text-black disabled:cursor-default disabled:opacity-40"
               >
                 Mark All Read
@@ -92,7 +98,8 @@ export function NotificationDropdown() {
             </div>
 
             {/* Notifications */}
-            <div className="max-h-112.5 overflow-y-auto px-4 pb-4">
+            {/* Never taller than the screen between the header and the bottom tab bar */}
+            <div className="max-h-[min(450px,calc(100dvh-230px))] overflow-y-auto px-4 pb-4">
               <NotificationList />
             </div>
           </div>

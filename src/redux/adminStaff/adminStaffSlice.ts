@@ -8,7 +8,8 @@ import {
   type StaffSortField,
 } from "@/types/admin";
 
-// Query sent to the staff list APIs, one per role; any change here triggers a refetch
+// What each staff table shows, one per role. The whole list comes from the API at
+// once, so these are applied in the browser (see staffPage).
 const initialParams: StaffListParams = {
   page: 1,
   pageSize: ADMIN_PAGE_SIZE,

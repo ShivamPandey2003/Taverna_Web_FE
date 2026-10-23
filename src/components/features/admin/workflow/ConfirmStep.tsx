@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 import type { AdminBooking } from "@/types/admin";
 import { useConfirmBooking } from "@/services/queries/adminQueries";
-import { formatDateTime, isComplete } from "../admin.utils";
+import { formatDateTime, isCancelled, isComplete, isConfirmed } from "../admin.utils";
 import { BookingOverview } from "../details/BookingOverview";
 import { ActionButton, StepDone } from "./StepParts";
 
@@ -27,9 +27,17 @@ export function ConfirmStep({ booking, onDone }: ConfirmStepProps) {
     <div className="space-y-4">
       <BookingOverview booking={booking} />
 
-      {booking.confirmedAt ? (
+      {isCancelled(booking) ? (
+        <p className="rounded-xl bg-gray-50 px-4 py-3 text-center text-sm text-gray-600">
+          This booking was cancelled, so it can't be confirmed.
+        </p>
+      ) : isConfirmed(booking) ? (
         <StepDone
-          text={`Confirmed on ${formatDateTime(booking.confirmedAt)}`}
+          // Without confirmedAt the booking moved on by itself (e.g. a tow truck
+          // booked by the customer), so there's no time to show
+          text={
+            booking.confirmedAt ? `Confirmed on ${formatDateTime(booking.confirmedAt)}` : "Confirmed"
+          }
           actionLabel={isComplete(booking) ? undefined : "Next: Vehicle Intake"}
           onAction={onDone}
         />

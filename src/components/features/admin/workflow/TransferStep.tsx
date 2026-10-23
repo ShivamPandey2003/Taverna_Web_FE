@@ -3,7 +3,11 @@ import { Building, Car, Check, Truck, User } from "reicon-react";
 import { toast } from "sonner";
 import { cn } from "@/libs/utils";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { useConfirmLegDone, useSetLegMethod } from "@/services/queries/adminQueries";
+import {
+  useConfirmBooking,
+  useConfirmLegDone,
+  useSetLegMethod,
+} from "@/services/queries/adminQueries";
 import {
   LEG_METHODS,
   TRIP_END,
@@ -13,7 +17,7 @@ import {
 } from "@/types/admin";
 import {
   formatDateTime,
-  intakeMethodLabels,
+  methodLabel,
   isComplete,
   legMethod,
   legTitles,
@@ -93,7 +97,10 @@ const legText: Record<
 // confirms that the vehicle got there.
 export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
   const setMethod = useSetLegMethod();
+  // Both post booking/admin/:bmsId/confirm. A tow truck's intake is read off the
+  // API's journey, like a valet's; self-drive also stamps the mock's copy
   const confirmDone = useConfirmLegDone();
+  const confirmReceived = useConfirmBooking();
   // Picked in the row of choices, waiting for the admin to confirm
   const [picked, setPicked] = useState<IntakeMethod | null>(null);
   const closeConfirm = () => setPicked(null);
@@ -128,20 +135,25 @@ export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
       { id: booking.id, leg, method: picked },
       {
         onSuccess: () => {
-          toast.success(`${text.step} set to ${intakeMethodLabels[picked]}`);
+          toast.success(`${text.step} set to ${methodLabel(leg, picked)}`);
           closeConfirm();
         },
       },
     );
   };
 
-  const markDone = () =>
-    confirmDone.mutate({ id: booking.id, leg }, { onSuccess: () => toast.success(text.done) });
+  const viaApi = leg === "pickup" && method === "towTruck";
+  const confirming = viaApi ? confirmReceived.isPending : confirmDone.isPending;
+  const markDone = () => {
+    const onSuccess = () => toast.success(text.done);
+    if (viaApi) confirmReceived.mutate(booking.id, { onSuccess });
+    else confirmDone.mutate({ id: booking.id, leg }, { onSuccess });
+  };
 
   return (
     <div className="space-y-4">
-      {/* One slim row: label on the left, the choices as a segmented control */}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      {/* One slim row: the label, then the choices beside it as a segmented control */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
           {text.pickerLabel}
         </p>
@@ -171,7 +183,7 @@ export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
                 )}
               >
                 {methodIcons[option]}
-                {intakeMethodLabels[option]}
+                {methodLabel(leg, option)}
               </button>
             );
           })}
@@ -214,7 +226,7 @@ export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
 
           <div className="mt-5 w-full max-w-xs">
             {!doneAt && (
-              <ActionButton pending={confirmDone.isPending} onClick={markDone}>
+              <ActionButton pending={confirming} onClick={markDone}>
                 {text.confirm}
               </ActionButton>
             )}
@@ -233,7 +245,7 @@ export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
 
       {picked && (
         <ConfirmModal
-          title={`${text.step} by ${intakeMethodLabels[picked]}`}
+          title={`${text.step}: ${methodLabel(leg, picked)}`}
           subtitle={`${booking.id} · ${booking.customer.name}`}
           confirmLabel="Confirm"
           pendingLabel="Saving..."
@@ -253,7 +265,7 @@ export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
             {method && (
               <p>
                 Replaces{" "}
-                <span className="font-medium text-gray-900">{intakeMethodLabels[method]}</span>
+                <span className="font-medium text-gray-900">{methodLabel(leg, method)}</span>
               </p>
             )}
 

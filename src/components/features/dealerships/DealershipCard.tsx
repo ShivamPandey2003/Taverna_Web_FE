@@ -1,10 +1,7 @@
 import { Location } from "reicon-react";
 import { cn } from "@/libs/utils";
 import { useAppDispatch } from "@/redux/hooks";
-import {
-  openDeleteDealership,
-  openEditDealership,
-} from "@/redux/modals/dealershipModal/dealershipModalSlice";
+import { openDeleteDealership, openEditDealership } from "@/redux/modals/dealershipModal/dealershipModalSlice";
 import type { Dealership } from "@/types/dealership";
 import defaultImage from "@/assets/background.webp";
 
@@ -18,7 +15,7 @@ export function DealershipCard({ dealership }: { dealership: Dealership }) {
         <img
           src={dealership.image || defaultImage}
           alt={dealership.name}
-          className="h-full w-full object-cover"
+          className={cn("h-full w-full object-cover", !dealership.isActive && "opacity-50 grayscale")}
         />
       </div>
 
@@ -32,8 +29,9 @@ export function DealershipCard({ dealership }: { dealership: Dealership }) {
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <Availability label="Valet" available={dealership.valetAvailable} />
-          <Availability label="Loaner" available={dealership.loanerAvailable} />
+          <Chip muted={!dealership.isActive}>{dealership.isActive ? "Active" : "Inactive"}</Chip>
+          <Chip>{dealership.serviceRadiusMiles} mi radius</Chip>
+          {dealership.timezone && <Chip>{dealership.timezone}</Chip>}
         </div>
 
         <div className="mt-auto flex justify-end gap-2 pt-4">
@@ -57,15 +55,15 @@ export function DealershipCard({ dealership }: { dealership: Dealership }) {
   );
 }
 
-function Availability({ label, available }: { label: string; available: boolean }) {
+function Chip({ muted = false, children }: { muted?: boolean; children: React.ReactNode }) {
   return (
     <span
       className={cn(
-        "rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
-        available ? "bg-gray-100 text-gray-900" : "bg-gray-100 text-gray-500",
+        "rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold",
+        muted ? "text-gray-500" : "text-gray-900",
       )}
     >
-      {label} {available ? "available" : "unavailable"}
+      {children}
     </span>
   );
 }

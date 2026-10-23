@@ -1,6 +1,13 @@
 import { BookingStatus } from "@/types/booking";
 import {
-  LEG_METHODS,
+  defaultLegMethod,
+  HANDOVER_DELIVERED,
+  INTAKE_CONFIRMED,
+  journeyIntakeDone,
+  journeyHandoverMethod,
+  journeyIntakeMethod,
+  journeyReached,
+  SERVICE_PAID,
   TRIP_END,
   type AdminBooking,
   type AdvisorMilestone,
@@ -17,7 +24,59 @@ export const serviceLabels: Record<ServiceId, string> = {
   "loaner-only": "Loaner Only",
 };
 
-export const bookingStatuses = Object.values(BookingStatus);
+// The bookings table's status filter: the API's status codes (sent as they are)
+// with the names the API shows for them, in the order a booking goes through
+// them, grouped by stage since the two valets' statuses share their names.
+// Service Complete is left out (by request): finished bookings aren't filtered for.
+export const bookingStatusFilters: { group: string; options: { code: string; label: string }[] }[] = [
+  {
+    group: "Booking",
+    options: [
+      { code: "IN_QUEUE", label: "In Queue" },
+      { code: "BOOKED", label: "Booked" },
+    ],
+  },
+  {
+    group: "Vehicle Intake",
+    options: [
+      { code: "VALET_ASSIGNED", label: "Valet Ready" },
+      { code: "VALET_DISPATCHED", label: "Valet EnRoute" },
+      { code: "VALET_ARRIVED_AT_CUSTOMER", label: "Valet Arrived" },
+      { code: "VALET_PICKUP_CONFIRMED", label: "Pickup Booked" },
+      { code: "VEHICLE_PICKED_UP", label: "Pickup EnRoute" },
+      { code: "TOW_ASSIGNED", label: "Tow Booked" },
+      { code: "CUSTOMER_IN", label: "Customer In" },
+      { code: "VEHICLE_ARRIVED_AT_DEALERSHIP", label: "At Dealership" },
+      { code: "VEHICLE_AT_DEALERSHIP_CONFIRMED", label: "Checked In" },
+    ],
+  },
+  {
+    group: "Service",
+    options: [
+      { code: "ADVISOR_ASSIGNED", label: "Advisor Ready" },
+      { code: "VEHICLE_IN_INSPECTION", label: "Inspecting" },
+      { code: "VEHICLE_IN_SERVICE", label: "Servicing" },
+      { code: "INVOICE_GENERATED", label: "Bill Generated" },
+      { code: "PAYMENT_VERIFICATION_PENDING", label: "Verifying Payment" },
+      { code: "PAYMENT_CONFIRMED", label: "Payment Verified" },
+      { code: "READY_FOR_DISPATCH", label: "Ready" },
+    ],
+  },
+  {
+    group: "Vehicle Handover",
+    options: [
+      { code: "DELIVERY_VALET_ASSIGNED", label: "Valet Ready" },
+      { code: "DELIVERY_VALET_DISPATCHED", label: "Valet EnRoute" },
+      { code: "DELIVERY_VALET_ARRIVED_AT_CUSTOMER", label: "Valet Arrived" },
+      { code: "CUSTOMER_DROP_OFF", label: "Customer Drop Off" },
+      { code: "VEHICLE_DELIVERED", label: "Vehicle Delivered" },
+    ],
+  },
+  {
+    group: "Other",
+    options: [{ code: "CANCELLED", label: "Cancelled" }],
+  },
+];
 
 export function formatDateTime(value: string | null) {
   if (!value) return "—";
@@ -79,21 +138,31 @@ export const legTitles: Record<ValetLeg, string> = {
   delivery: "Delivery Valet",
 };
 
-export const intakeMethodLabels: Record<IntakeMethod, string> = {
-  valet: "Valet",
-  towTruck: "Tow Truck",
-  selfDrive: "Self-Drive",
+// How each way of making a trip reads: the customer drops the vehicle in at the
+// dealership on the way in, and it's dropped off with them on the way back
+const legMethodLabels: Record<ValetLeg, Record<IntakeMethod, string>> = {
+  pickup: { valet: "Valet", towTruck: "Tow Truck", selfDrive: "Customer Drop In" },
+  delivery: { valet: "Valet", towTruck: "Tow Truck", selfDrive: "Customer Drop Off" },
 };
 
-// How the vehicle makes a trip; null until the admin picks. A booking that
-// already has the trip's valet counts as "valet", and a trip with only one
-// choice for the booked service (LEG_METHODS) has it picked from the start.
+export const methodLabel = (leg: ValetLeg, method: IntakeMethod) => legMethodLabels[leg][method];
+
+// How the vehicle makes a trip: what the admin picked (kept only in this
+// browser), else for the way in what the API's journey says (journeyIntakeMethod),
+// else "valet" for a booking that already has the trip's valet, else what the
+// booking starts with (defaultLegMethod). null when the admin still has to pick.
 export function legMethod(booking: AdminBooking, leg: ValetLeg): IntakeMethod | null {
+  // The API's CUSTOMER_DROP_OFF on the way back beats a choice stored elsewhere
+  if (leg === "delivery") {
+    const handover = journeyHandoverMethod(booking);
+    if (handover) return handover;
+  }
   const saved = leg === "pickup" ? booking.intakeMethod : booking.handoverMethod;
   if (saved) return saved;
+  const fromApi = leg === "pickup" ? journeyIntakeMethod(booking) : null;
+  if (fromApi) return fromApi;
   if (valetTrip(booking, leg).valet) return "valet";
-  const options = LEG_METHODS[booking.serviceId][leg];
-  return options.length === 1 ? options[0] : null;
+  return defaultLegMethod(booking, leg);
 }
 
 // The valet and milestone log of one trip
@@ -114,36 +183,63 @@ export function nextMilestone<T extends string>(
 // A trip is done once the vehicle is at the other end: taken by the valet (their
 // last milestone), a tow truck or the customer (confirmed by the admin)
 const tripDone = (booking: AdminBooking, leg: ValetLeg) => {
+  // The API says the vehicle is in: done, however it came (a tow truck chosen in
+  // another browser leaves this one guessing the method)
+  if (leg === "pickup" && booking.journey && journeyIntakeDone(booking.journey)) return true;
   const { valet, progress } = valetTrip(booking, leg);
   const method = legMethod(booking, leg);
   if (!method || (method === "valet" && !valet)) return false;
+  // Read off the API's journey. The intake, by valet or tow truck, isn't over
+  // until the admin confirms the vehicle was received; a valet's delivery is over
+  // once the vehicle is delivered.
+  if (booking.journey && leg === "pickup" && method !== "selfDrive") {
+    return journeyReached(booking.journey, INTAKE_CONFIRMED);
+  }
+  if (booking.journey && method === "valet") {
+    return journeyReached(booking.journey, HANDOVER_DELIVERED);
+  }
   return !!progress[TRIP_END[leg]];
 };
 
-// Personal link the staff member opens to post updates for this booking. Its
-// `gear` and `token` search params sign them in, so they skip the email + OTP
-// form. Must match the staff routes in routes/index.tsx and useStaffAuth.
+// The link the staff member opens to post updates for this booking: the page
+// alone, with nothing in it that signs them in (they sign in there with email +
+// OTP). Must match the staff routes in routes/index.tsx.
 export function staffLink(booking: AdminBooking, role: StaffLinkRole) {
-  const auth = booking.staffTokens?.[role];
-  if (!auth) return null;
   const path = role === "advisor" ? `advisor/${booking.id}` : `valet/${role}/${booking.id}`;
-  const search = new URLSearchParams({ gear: auth.gear, token: auth.token });
-  return `${window.location.origin}/${path}?${search}`;
+  return `${window.location.origin}/${path}`;
 }
 
 export const isComplete = (booking: AdminBooking) =>
   booking.status === BookingStatus.SERVICE_COMPLETE;
 
+// The API's status is a cancelled one (CANCELLED, ..._CANCELLED): there's
+// nothing left to confirm or assign
+export const isCancelled = (booking: AdminBooking) =>
+  /cancel/i.test(booking.journey?.current ?? "") ||
+  /cancel/i.test(booking.journey?.statusLabel ?? "");
+
+// The booking has been accepted: the API's confirmedAt, or a status past In
+// Queue. A booking can move on without the admin's confirmation (one booked
+// with a tow truck goes straight to TOW_ASSIGNED), and then has no confirmedAt.
+export function isConfirmed(booking: AdminBooking) {
+  if (booking.confirmedAt) return true;
+  const current = booking.journey?.current;
+  return !!current && current !== "inQueue" && !isCancelled(booking);
+}
+
 // A step is done once everything in it has happened
 export function isStepDone(booking: AdminBooking, step: WorkflowStep) {
   switch (step) {
     case "confirm":
-      return !!booking.confirmedAt;
+      return isConfirmed(booking);
     case "pickup":
       return tripDone(booking, "pickup");
     case "advisor":
-      // The advisor's part ends with the paid-up vehicle ready for the delivery valet
-      return !!booking.relationshipManager && !!booking.advisorProgress?.readyForDispatch;
+      // The advisor's part ends once the admin confirms the payment
+      if (!booking.relationshipManager) return false;
+      return booking.journey
+        ? journeyReached(booking.journey, SERVICE_PAID)
+        : !!booking.advisorProgress?.readyForDispatch;
     case "delivery":
       return tripDone(booking, "delivery");
     case "complete":

@@ -13,6 +13,7 @@ import adminBookings from "./adminBookings/adminBookingsSlice";
 import adminOffers from "./adminOffers/adminOffersSlice";
 import adminDealerships from "./adminDealerships/adminDealershipsSlice";
 import adminStaff from "./adminStaff/adminStaffSlice";
+import specials from "./specials/specialsSlice";
 import { authStorage } from "@/services/authStorage";
 
 // Modal visibility, one reducer per page
@@ -25,6 +26,7 @@ import adminModal from "./modals/adminModal/adminModalSlice";
 import dealershipModal from "./modals/dealershipModal/dealershipModalSlice";
 import staffModal from "./modals/staffModal/staffModalSlice";
 import offersModal from "./modals/offersModal/offersModalSlice";
+import specialsModal from "./modals/specialsModal/specialsModalSlice";
 
 const rootReducer = combineReducers({
   vehicle,
@@ -39,6 +41,7 @@ const rootReducer = combineReducers({
   adminOffers,
   adminDealerships,
   adminStaff,
+  specials,
 
   homeModal,
   dashboardModal,
@@ -49,6 +52,7 @@ const rootReducer = combineReducers({
   dealershipModal,
   staffModal,
   offersModal,
+  specialsModal,
 });
 
 export const store = configureStore({
@@ -67,7 +71,12 @@ store.subscribe(() => {
   if (auth.session) {
     authStorage.save({
       ...auth.session,
-      user: { ...auth.session.user, name: account.user.name, phone: account.user.phone },
+      user: {
+        ...auth.session.user,
+        name: account.user.name,
+        email: account.user.email,
+        phone: account.user.phone,
+      },
     });
   } else {
     authStorage.clear();

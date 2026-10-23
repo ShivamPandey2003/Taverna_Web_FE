@@ -1,49 +1,42 @@
-import type { Offer, OfferInput, OfferList, OfferListParams } from "@/types/offer";
-import type { OfferCsvRow } from "@/components/features/offers/offerCsv";
 import { BookingStatus } from "@/types/booking";
-import type { AuthSession, AuthUser } from "@/types/auth";
 import {
   ADVISOR_HANDOVER,
   ADVISOR_MILESTONES,
   INVOICE_TAX_RATE,
   LEG_MILESTONES,
   LEG_METHODS,
+  defaultLegMethod,
   TRIP_END,
+  VALET_LEGS,
   type AdminBooking,
   type AdvisorMilestone,
-  type BookingListParams,
   type Invoice,
   type InvoiceLine,
-  type Paginated,
-  type StaffAuth,
-  type StaffBooking,
-  type StaffLinkRole,
-  type StaffListParams,
+  journeyAdvisorProgress,
+  journeyIntakeMethod,
+  journeyTripProgress,
+  journeyReached,
+  SERVICE_PAID,
   type StaffMember,
   type StaffRole,
-  type StaffType,
   type IntakeMethod,
   type ValetLeg,
   type ValetMilestone,
 } from "@/types/admin";
-import type { Dealership } from "@/types/dealership";
 import type { ServiceId } from "@/types/service";
 import { authStorage } from "@/services/authStorage";
 import { shortName } from "@/libs/utils";
-import { dealerships as seedDealerships } from "@/components/features/review/dealership.data";
 
-// In-browser stand-in for the backend. Data is kept in localStorage so bookings
-// placed from the user dashboard show up in the admin dashboard.
+// In-browser stand-in for the parts of the backend that aren't wired up yet. Data is
+// kept in localStorage so bookings placed from the user dashboard show up in the
+// admin dashboard. Auth (login, signup, OTP, logout) is the real API: see authApi.ts.
 
 const DB_KEY = "taverna_mock_db";
 
 type MockDb = {
-  users: AuthUser[];
   bookings: AdminBooking[];
   valets: StaffMember[];
   relationshipManagers: StaffMember[];
-  dealerships: Dealership[];
-  offers: Offer[];
 };
 
 const staff = (id: string, name: string, phone: string, available: boolean): StaffMember => ({
@@ -66,23 +59,6 @@ const relationshipManagers: StaffMember[] = [
   staff("rm-1", "Olivia Bennett", "(954) 555-0220", true),
   staff("rm-2", "Ethan Walker", "(954) 555-0236", true),
   staff("rm-3", "Priya Shah", "(954) 555-0251", false),
-];
-
-const seedUsers: AuthUser[] = [
-  {
-    id: "u-admin",
-    name: "Taverna Admin",
-    email: "admin@taverna.com",
-    phone: "(954) 555-0100",
-    role: "admin",
-  },
-  {
-    id: "u-alex",
-    name: "Alex",
-    email: "alex@gmail.com",
-    phone: "(218) 123-4567",
-    role: "user",
-  },
 ];
 
 // Deterministic pseudo-random numbers so the seed is identical on every machine
@@ -177,7 +153,6 @@ function seedBookings(): AdminBooking[] {
       valet: null,
       relationshipManager: null,
       payment: null,
-      staffTokens: mockStaffTokens(seedBookingId(index)),
     };
     if (inQueue) return booking;
 
@@ -208,98 +183,11 @@ function seedBookings(): AdminBooking[] {
   });
 }
 
-// How much of an upload the mock keeps: localStorage is small
-const MOCK_OFFERS_LIMIT = 2000;
-
-const toNumber = (value: string) => Number(value.replace(/[^0-9.-]/g, "")) || 0;
-
-function toOffer(row: OfferCsvRow, index: number): Offer {
-  return {
-    id: `offer-${index + 1}`,
-    vin: row.VIN.toUpperCase(),
-    stockNumber: row["Stock Number"],
-    brand: row["Brand Name"],
-    year: toNumber(row.Year),
-    model: row.Model,
-    trim: row.Trim,
-    condition: row.Condition,
-    offerType: row["Offer Type"],
-    payment: toNumber(row.Payment),
-    paymentNoTax: toNumber(row["Payment No Tax"]),
-    totalRebate: toNumber(row["Total Rebate"]),
-    term: toNumber(row.Term),
-    downPayment: toNumber(row["Down Payment"]),
-    dueAtSigning: toNumber(row["Due At Signing"]),
-    apr: toNumber(row.APR),
-    lender: row.Lender,
-    description: row.Description,
-    disclaimer: row.Disclaimer,
-  };
-}
-
-// Offers the admin sees before uploading a file of their own
-function seedOffers(): Offer[] {
-  const random = createRandom(7);
-  const pick = <T,>(items: readonly T[]) => items[Math.floor(random() * items.length)];
-  const models = [
-    ["Ram", "1500", "Big Horn"],
-    ["Ram", "2500", "Tradesman"],
-    ["Jeep", "Grand Cherokee", "Limited"],
-    ["Jeep", "Wrangler", "Sahara"],
-    ["Jeep", "Compass", "Latitude"],
-    ["Dodge", "Durango", "GT"],
-    ["Dodge", "Hornet", "R/T"],
-    ["Chrysler", "Pacifica", "Touring L"],
-  ] as const;
-  const deals = [
-    ["First and Fees", "CAL", "Cal Automotive Closed End Lease"],
-    ["Zero Down Lease", "CAL", "Cal Automotive Closed End Lease"],
-    ["Low APR Finance Deal", "SFS", "Stellantis Financial Services Stand-Alone APR Program"],
-    ["Cash Rebate Deal", "SFS", "Stellantis Financial Services Retail Bonus Cash"],
-  ] as const;
-
-  return Array.from({ length: 34 }, (_, index) => {
-    const [brand, model, trim] = pick(models);
-    const [offerType, lender, description] = pick(deals);
-    const finance = offerType === "Low APR Finance Deal" || offerType === "Cash Rebate Deal";
-    const used = random() < 0.2;
-    const payment = (finance ? 520 : 229) + Math.floor(random() * 40) * 10;
-    const term = finance ? pick([48, 60, 72]) : pick([24, 36, 39]);
-    const dueAtSigning = finance || offerType === "Zero Down Lease" ? 0 : 2500 + Math.floor(random() * 30) * 100;
-    const stock = `${brand.charAt(0)}${200000 + Math.floor(random() * 9999)}`;
-
-    return {
-      id: `offer-${index + 1}`,
-      vin: `3C6RR${String(10000000000000 + Math.floor(random() * 89999999999999)).slice(0, 12)}`,
-      stockNumber: stock,
-      brand,
-      year: used ? 2023 + Math.floor(random() * 2) : 2026,
-      model,
-      trim,
-      condition: used ? "Used" : "New",
-      offerType,
-      payment,
-      paymentNoTax: Math.round(payment / 1.07),
-      totalRebate: finance ? Math.floor(random() * 6) * 500 : 13000 - Math.floor(random() * 10) * 500,
-      term,
-      downPayment: 0,
-      dueAtSigning,
-      apr: finance ? pick([0, 1.9, 2.9, 3.9]) : Math.round((5 + random() * 3) * 1000) / 1000,
-      lender,
-      description,
-      disclaimer: `*Stock#: ${stock}. $${payment}/Mo. for ${term} Months. $${dueAtSigning.toLocaleString("en-US")} total due at signing. See dealer for details.`,
-    };
-  });
-}
-
 function loadDb(): MockDb {
   const seed: MockDb = {
-    users: seedUsers,
     bookings: seedBookings(),
     valets,
     relationshipManagers,
-    dealerships: seedDealerships,
-    offers: seedOffers(),
   };
 
   try {
@@ -314,9 +202,8 @@ function loadDb(): MockDb {
       // Older seeds left paid bookings at "Valet assigned" forever, which kept
       // every valet and advisor on an active booking (so none could be deleted)
       saved.bookings.forEach((booking) => {
-        // Bookings saved before staff links carried a token
-        // Always rebuilt: they were plain strings before the staff sign-in
-        booking.staffTokens = mockStaffTokens(booking.id);
+        // Staff links used to carry sign-in tokens; drop them from older saves
+        delete (booking as { staffTokens?: unknown }).staffTokens;
         // Saved while the status was still spelled "Service complete"
         if ((booking.status as string) === "Service complete") {
           booking.status = BookingStatus.SERVICE_COMPLETE;
@@ -396,13 +283,9 @@ function persist() {
   }
 }
 
-function findUserByEmail(email: string) {
-  return db.users.find((user) => user.email.toLowerCase() === email.toLowerCase());
-}
-
+// Accounts live in the real API now; the mock trusts whoever is logged in
 function currentUser() {
-  const session = authStorage.load();
-  const user = session && db.users.find((item) => item.id === session.user.id);
+  const user = authStorage.load()?.user;
   if (!user) throw new Error("Your session has expired. Please log in again.");
   return user;
 }
@@ -413,51 +296,8 @@ function requireAdmin() {
   }
 }
 
-const staffIdPrefixes: Record<StaffRole, string> = { valet: "valet", manager: "rm" };
-const staffLabels: Record<StaffRole, string> = {
-  valet: "valet",
-  manager: "advisor",
-};
-
 function staffList(role: StaffRole) {
   return role === "valet" ? db.valets : db.relationshipManagers;
-}
-
-function findStaff(role: StaffRole, id: string) {
-  const member = staffList(role).find((item) => item.id === id);
-  if (!member) throw new Error(`We couldn't find this ${staffLabels[role]}.`);
-  return member;
-}
-
-const phoneDigits = (phone: string) => phone.replace(/\D/g, "");
-
-type StaffFields = Pick<StaffMember, "name" | "email" | "phone" | "available">;
-
-function assertContactFree(
-  role: StaffRole,
-  input: Pick<StaffMember, "email" | "phone">,
-  exceptId?: string,
-) {
-  const others = staffList(role).filter((member) => member.id !== exceptId);
-  if (others.some((member) => phoneDigits(member.phone) === phoneDigits(input.phone))) {
-    throw new Error("Someone with this phone number already exists.");
-  }
-  const email = input.email.toLowerCase();
-  if (others.some((member) => member.email.toLowerCase() === email)) {
-    throw new Error("Someone with this email already exists.");
-  }
-}
-
-// Unfinished bookings the member is assigned to
-function activeAssignments(role: StaffRole, id: string) {
-  return db.bookings.filter((booking) => {
-    const assigned =
-      role === "valet" ? [booking.valet, booking.deliveryValet] : [booking.relationshipManager];
-    return (
-      assigned.some((member) => member?.id === id) &&
-      booking.status !== BookingStatus.SERVICE_COMPLETE
-    );
-  });
 }
 
 // A customer's bookings that aren't complete yet, newest first: one per vehicle
@@ -472,120 +312,6 @@ function findOpenBookings(customerId: string) {
 function findBooking(id: string) {
   const booking = db.bookings.find((item) => item.id === id);
   if (!booking) throw new Error("We couldn't find this booking.");
-  return booking;
-}
-
-const STAFF_TYPES: StaffType[] = ["valet", "advisor"];
-const STAFF_LINK_ROLES: StaffLinkRole[] = ["pickup", "advisor", "delivery"];
-
-const linkRoleType = (role: StaffLinkRole): StaffType => (role === "advisor" ? "advisor" : "valet");
-
-// Stand-in for the encrypted staff type (the `token` search param); the real API
-// encrypts it so it can't be read or changed in the browser
-const mockStaffTypeToken = (type: StaffType) => `mock-enc-${type}`;
-
-// The auth token (`gear`) of someone who signed in with email + OTP
-const mockStaffGear = (member: StaffMember) => `mock-staff-${member.id}`;
-
-// What goes in each staff link. The real API issues signed tokens; these only have
-// to be the same on every load, so a copied link keeps working.
-function mockStaffTokens(bookingId: string): Record<StaffLinkRole, StaffAuth> {
-  const auth = (role: StaffLinkRole): StaffAuth => ({
-    gear: `mock-${role}-${bookingId.toLowerCase()}`,
-    token: mockStaffTypeToken(linkRoleType(role)),
-  });
-  return { pickup: auth("pickup"), advisor: auth("advisor"), delivery: auth("delivery") };
-}
-
-function findStaffByEmail(email: string) {
-  const match = (member: StaffMember) => member.email.toLowerCase() === email.trim().toLowerCase();
-  const valet = db.valets.find(match);
-  if (valet) return { member: valet, type: "valet" as StaffType };
-  const advisor = db.relationshipManagers.find(match);
-  return advisor ? { member: advisor, type: "advisor" as StaffType } : null;
-}
-
-// The booking a staff page opens, and which of its pages the caller may use.
-// `gear` is either a link's token (good for that one page of that booking) or a
-// signed-in staff member's (good for whatever they're assigned to on it).
-function findStaffBooking(auth: StaffAuth, id: string) {
-  const type = STAFF_TYPES.find((item) => mockStaffTypeToken(item) === auth.token);
-  if (!type) throw new Error("This link isn't valid. Sign in again to continue.");
-  const booking = findBooking(id);
-  const ofType = STAFF_LINK_ROLES.filter((role) => linkRoleType(role) === type);
-
-  const linked = ofType.filter((role) => booking.staffTokens?.[role]?.gear === auth.gear);
-  if (linked.length) return { booking, roles: linked };
-
-  const member = (type === "valet" ? db.valets : db.relationshipManagers).find(
-    (item) => mockStaffGear(item) === auth.gear,
-  );
-  if (!member) throw new Error("Your sign-in has expired. Sign in again to continue.");
-  const assigned: Record<StaffLinkRole, StaffMember | null | undefined> = {
-    pickup: booking.valet,
-    advisor: booking.relationshipManager,
-    delivery: booking.deliveryValet,
-  };
-  const roles = ofType.filter((role) => assigned[role]?.id === member.id);
-  if (!roles.length) throw new Error("You're not assigned to this booking.");
-  return { booking, roles };
-}
-
-// Every booking the caller has a task on, with the pages of it they may use: a
-// signed-in member gets all they're assigned to, a link's token just its booking
-function findStaffBookings(auth: StaffAuth) {
-  const type = STAFF_TYPES.find((item) => mockStaffTypeToken(item) === auth.token);
-  if (!type) throw new Error("This link isn't valid. Sign in again to continue.");
-  const ofType = STAFF_LINK_ROLES.filter((role) => linkRoleType(role) === type);
-  const member = (type === "valet" ? db.valets : db.relationshipManagers).find(
-    (item) => mockStaffGear(item) === auth.gear,
-  );
-
-  const found = db.bookings.flatMap((booking) => {
-    const assigned: Record<StaffLinkRole, StaffMember | null | undefined> = {
-      pickup: booking.valet,
-      advisor: booking.relationshipManager,
-      delivery: booking.deliveryValet,
-    };
-    const roles = ofType.filter((role) =>
-      member
-        ? assigned[role]?.id === member.id
-        : booking.staffTokens?.[role]?.gear === auth.gear,
-    );
-    return roles.length ? [{ booking, roles }] : [];
-  });
-
-  if (!member && !found.length) {
-    throw new Error("Your sign-in has expired. Sign in again to continue.");
-  }
-  return found;
-}
-
-function assertStaffRole(roles: StaffLinkRole[], expected: StaffLinkRole) {
-  if (!roles.includes(expected)) {
-    throw new Error("You can't make that update on this booking.");
-  }
-}
-
-// What staff get back: the booking with the dealership's address for directions,
-// and without the links' tokens
-function staffView(booking: AdminBooking, linkRoles: StaffLinkRole[]): StaffBooking {
-  return {
-    ...booking,
-    linkRoles,
-    staffTokens: undefined,
-    dealershipAddress: db.dealerships.find((item) => item.name === booking.dealershipName)
-      ?.address,
-  };
-}
-
-// A booking the logged-in customer owns (admins can open any)
-function findMyBooking(id: string) {
-  const user = currentUser();
-  const booking = findBooking(id);
-  if (booking.customer.id !== user.id && user.role !== "admin") {
-    throw new Error("We couldn't find this booking.");
-  }
   return booking;
 }
 
@@ -626,28 +352,6 @@ function createInvoice(lines: InvoiceLine[]): Invoice {
     tax,
     total: roundCents(subtotal + tax),
   };
-}
-
-function findDealership(id: string) {
-  const dealership = db.dealerships.find((item) => item.id === id);
-  if (!dealership) throw new Error("We couldn't find this dealership.");
-  return dealership;
-}
-
-function assertDealershipNameFree(name: string, exceptId?: string) {
-  const value = name.trim().toLowerCase();
-  const taken = db.dealerships.some(
-    (dealership) => dealership.id !== exceptId && dealership.name.toLowerCase() === value,
-  );
-  if (taken) throw new Error("A dealership with this name already exists.");
-}
-
-// Bookings store the dealership by name
-function activeDealershipBookings(name: string) {
-  return db.bookings.filter(
-    (booking) =>
-      booking.dealershipName === name && booking.status !== BookingStatus.SERVICE_COMPLETE,
-  );
 }
 
 // Timestamps for workflow actions; the seed swaps in its own past times
@@ -692,14 +396,12 @@ function nextMilestone<T extends string>(order: readonly T[], log: Partial<Recor
 }
 
 // How the vehicle makes this trip. A booking that already has the trip's valet
-// counts as "valet"; the choices depend on the booked service.
+// counts as "valet"; otherwise it starts from what the customer booked.
 function legMethod(booking: AdminBooking, leg: ValetLeg): IntakeMethod | null {
   const saved = leg === "pickup" ? booking.intakeMethod : booking.handoverMethod;
   if (saved) return saved;
   if (legValet(booking, leg)) return "valet";
-  // The only choice for the booked service needs no picking
-  const options = LEG_METHODS[booking.serviceId][leg];
-  return options.length === 1 ? options[0] : null;
+  return defaultLegMethod(booking, leg);
 }
 
 // The vehicle is at the other end: taken by the valet, a tow truck or the customer
@@ -946,7 +648,44 @@ function nextAction(booking: AdminBooking, pickStaff: StaffPicker): (() => void)
 const payAction = (booking: AdminBooking) =>
   booking.invoice && booking.payment?.status !== "paid" ? () => markPaid(booking) : null;
 
-const firstAvailable = (list: StaffMember[]) => list.find((item) => item.available) ?? list[0];
+
+// Who is on a booking comes from the API's details, which name each person
+// without an id: they're matched by email. Someone new there is put on the copy
+// the way an assignment here would be (their trip, or the service, starts over);
+// if the copy isn't that far yet, they're put on it as they are.
+function syncAssigned(copy: AdminBooking, real: AdminBooking) {
+  const key = (member: StaffMember) => member.email.toLowerCase() || member.name;
+  // The copy kept of the staff list has the person's real id
+  const person = (role: StaffRole, from: StaffMember) =>
+    staffList(role).find((member) => key(member) === key(from)) ?? from;
+  const isNew = (current: StaffMember | null | undefined, member: StaffMember) => {
+    if (!current || key(current) !== key(member)) return true;
+    Object.assign(current, member);
+    return false;
+  };
+
+  VALET_LEGS.forEach((leg) => {
+    const assigned = legValet(real, leg);
+    if (!assigned) return;
+    const valet = person("valet", assigned);
+    if (!isNew(legValet(copy, leg), valet)) return;
+    try {
+      assignValet(copy, leg, valet);
+    } catch {
+      if (leg === "pickup") copy.valet = { ...valet };
+      else copy.deliveryValet = { ...valet };
+    }
+  });
+
+  if (!real.relationshipManager) return;
+  const advisor = person("manager", real.relationshipManager);
+  if (!isNew(copy.relationshipManager, advisor)) return;
+  try {
+    assignAdvisor(copy, advisor);
+  } catch {
+    copy.relationshipManager = { ...advisor };
+  }
+}
 
 // Created after the workflow helpers above, which the seed uses
 let db = loadDb();
@@ -958,37 +697,6 @@ window.addEventListener("storage", (event) => {
 });
 
 export const mockServer = {
-  // ---- Auth ----
-  sendLoginOtp(email: string) {
-    if (!findUserByEmail(email)) {
-      throw new Error("No account found for this email. Please sign up.");
-    }
-    return { sent: true };
-  },
-
-  signup(data: { name: string; email: string; phone: string }) {
-    if (findUserByEmail(data.email)) {
-      throw new Error("An account with this email already exists. Please log in.");
-    }
-    db.users.push({ id: `u-${Date.now()}`, ...data, role: "user" });
-    persist();
-    return { sent: true };
-  },
-
-  // Any 6-digit code is accepted
-  verifyOtp(email: string): AuthSession {
-    const user = findUserByEmail(email);
-    if (!user) throw new Error("No account found for this email. Please sign up.");
-    return { token: `mock-token-${user.id}`, user };
-  },
-
-  updateMe(patch: Partial<Pick<AuthUser, "name" | "phone">>) {
-    const user = currentUser();
-    Object.assign(user, patch);
-    persist();
-    return user;
-  },
-
   // ---- Customer bookings ----
   createBooking(
     input: Omit<
@@ -1001,17 +709,22 @@ export const mockServer = {
       | "valet"
       | "relationshipManager"
       | "payment"
-      | "staffTokens"
     >,
+    // The id the real API gave the booking: it has already accepted it, so the
+    // copy kept here is never refused
+    savedId?: string,
   ) {
     const user = currentUser();
     // One service per vehicle at a time; other vehicles can be booked alongside
-    if (findOpenBookings(user.id).some((booking) => booking.vehicle.vin === input.vehicle.vin)) {
+    if (
+      !savedId &&
+      findOpenBookings(user.id).some((booking) => booking.vehicle.vin === input.vehicle.vin)
+    ) {
       throw new Error(
         "This vehicle already has a service in progress. You can book it again once that's complete.",
       );
     }
-    const id = `PC-${Date.now().toString().slice(-6)}`;
+    const id = savedId ?? `PC-${Date.now().toString().slice(-6)}`;
     const booking: AdminBooking = {
       ...input,
       id,
@@ -1022,142 +735,84 @@ export const mockServer = {
       valet: null,
       relationshipManager: null,
       payment: null,
-      staffTokens: mockStaffTokens(id),
     };
     db.bookings.unshift(booking);
     persist();
     return booking;
   },
 
-  getMyOpenBookings() {
-    return findOpenBookings(currentUser().id);
-  },
-
-  getMyBooking(id: string) {
-    return findMyBooking(id);
-  },
-
-  // The customer withdraws a booking the dealership hasn't confirmed yet; it's removed
-  cancelBooking(id: string) {
-    const booking = findMyBooking(id);
-    if (booking.status !== BookingStatus.IN_QUEUE) {
-      throw new Error("The dealership has confirmed this booking, so it can't be cancelled here.");
-    }
-    db.bookings.splice(db.bookings.indexOf(booking), 1);
+  // A booking cancelled with the real API: the copy kept here goes too
+  removeBooking(id: string) {
+    const index = db.bookings.findIndex((booking) => booking.id === id);
+    if (index === -1) return;
+    db.bookings.splice(index, 1);
     persist();
-    return { id };
-  },
-
-  // Pays the generated bill; the delivery valet can then bring the vehicle back
-  payInvoice(id: string) {
-    const booking = findMyBooking(id);
-    markPaid(booking);
-    persist();
-    return booking;
-  },
-
-  // Demo only: does what the admin and valets would do next, until the customer
-  // can see a change (a new status, or a valet / advisor assigned)
-  simulateNextStatus(id: string) {
-    const booking = findMyBooking(id);
-    if (booking.status === BookingStatus.SERVICE_COMPLETE) {
-      throw new Error("This service is already complete.");
-    }
-
-    const pickStaff: StaffPicker = {
-      valet: () => firstAvailable(db.valets),
-      manager: () => firstAvailable(db.relationshipManagers),
-    };
-    const staffOf = () => [booking.valet, booking.relationshipManager, booking.deliveryValet];
-    const statusBefore = booking.status;
-
-    for (let count = 0; count < WORKFLOW_ACTIONS; count++) {
-      const action = nextAction(booking, pickStaff);
-      if (!action) {
-        if (booking.status === statusBefore) {
-          throw new Error("Pay the bill to get your vehicle back.");
-        }
-        break;
-      }
-
-      const staffBefore = staffOf();
-      action();
-      const staffChanged = staffOf().some((member, index) => member !== staffBefore[index]);
-      if (booking.status !== statusBefore || staffChanged) break;
-    }
-
-    persist();
-    return booking;
   },
 
   // ---- Admin ----
-  listBookings(params: BookingListParams): Paginated<AdminBooking> {
+  // A booking's details from the real API, while the workflow is still answered
+  // here: keeps a copy (so the workflow steps have a booking to act on) and
+  // returns it. What the booking is comes from the API; how far its workflow has
+  // got comes from the copy.
+  syncBooking(real: AdminBooking) {
     requireAdmin();
-    const search = params.search.trim().toLowerCase();
+    const copy = db.bookings.find((item) => item.id === real.id);
+    if (!copy) {
+      const booking = { ...real };
+      db.bookings.unshift(booking);
+      persist();
+      return booking;
+    }
 
-    const filtered = db.bookings.filter((booking) => {
-      if (params.status !== "all" && booking.status !== params.status) return false;
-      if (params.serviceId !== "all" && booking.serviceId !== params.serviceId) return false;
-      if (!search) return true;
-
-      return [
-        booking.id,
-        booking.customer.name,
-        booking.customer.email,
-        booking.customer.phone,
-        booking.vehicle.vin,
-        `${booking.vehicle.brand} ${booking.vehicle.model}`,
-      ].some((value) => value.toLowerCase().includes(search));
+    Object.assign(copy, {
+      // The customer's own bookings are found by the id the copy was made with
+      customer: { ...real.customer, id: copy.customer.id },
+      serviceId: real.serviceId,
+      vehicle: real.vehicle,
+      pickup: real.pickup,
+      dealershipName: real.dealershipName,
+      driveable: real.driveable,
+      towTruck: real.towTruck,
+      concern: real.concern,
+      scheduledAt: real.scheduledAt,
     });
-
-    const sortValue = (booking: AdminBooking) => {
-      switch (params.sortBy) {
-        case "customer":
-          return booking.customer.name.toLowerCase();
-        case "scheduledAt":
-          return booking.scheduledAt ?? "";
-        case "status":
-          return booking.status;
-        case "id":
-          return booking.id;
-        default:
-          return booking.createdAt;
+    // Confirming is done with the API: a booking it has confirmed is confirmed here
+    if (real.confirmedAt && !copy.confirmedAt) {
+      copy.confirmedAt = real.confirmedAt;
+      confirm(copy);
+    }
+    syncAssigned(copy, real);
+    // A tow truck picked in another browser isn't remembered here: take it from the API
+    if (!copy.intakeMethod) copy.intakeMethod = journeyIntakeMethod(real) ?? undefined;
+    // The valets post their trips to the API: the copy follows them, keeping the
+    // times it already has
+    if (real.journey && legMethod(copy, "pickup") !== "selfDrive") {
+      copy.pickupProgress = journeyTripProgress(real.journey, "pickup", copy.pickupProgress);
+    }
+    if (real.journey && copy.deliveryValet) {
+      copy.deliveryProgress = journeyTripProgress(
+        real.journey,
+        "delivery",
+        copy.deliveryProgress,
+      );
+    }
+    // So do the service, the bill and the payment, which the handover (still
+    // answered here) waits for
+    if (real.journey && copy.relationshipManager) {
+      copy.advisorProgress = journeyAdvisorProgress(real.journey, copy.advisorProgress);
+      copy.invoice = real.invoice ?? null;
+      if (journeyReached(real.journey, SERVICE_PAID) && copy.payment?.status !== "paid") {
+        copy.payment = {
+          amount: real.invoice?.total ?? 0,
+          method: "card",
+          status: "paid",
+          transactionId: `API-${real.id}`,
+          updatedAt: clock(),
+        };
       }
-    };
-
-    const direction = params.sortOrder === "asc" ? 1 : -1;
-    const sorted = [...filtered].sort((first, second) =>
-      sortValue(first) < sortValue(second)
-        ? -direction
-        : sortValue(first) > sortValue(second)
-          ? direction
-          : 0,
-    );
-
-    const totalPages = Math.max(1, Math.ceil(sorted.length / params.pageSize));
-    const page = Math.min(params.page, totalPages);
-    const start = (page - 1) * params.pageSize;
-
-    return {
-      items: sorted.slice(start, start + params.pageSize),
-      total: sorted.length,
-      page,
-      pageSize: params.pageSize,
-      totalPages,
-    };
-  },
-
-  getBooking(id: string) {
-    requireAdmin();
-    return findBooking(id);
-  },
-
-  confirmBooking(id: string) {
-    requireAdmin();
-    const booking = findBooking(id);
-    confirm(booking);
+    }
     persist();
-    return booking;
+    return copy;
   },
 
   setLegMethod(id: string, leg: ValetLeg, method: IntakeMethod) {
@@ -1176,58 +831,7 @@ export const mockServer = {
     return booking;
   },
 
-  assignValet(id: string, leg: ValetLeg, valetId: string) {
-    requireAdmin();
-    const booking = findBooking(id);
-    assignValet(booking, leg, findStaff("valet", valetId));
-    persist();
-    return booking;
-  },
-
   // Normally posted by the valet from their link; the admin can post it too
-  updateValetProgress(id: string, leg: ValetLeg, milestone: ValetMilestone) {
-    requireAdmin();
-    const booking = findBooking(id);
-    markValetMilestone(booking, leg, milestone);
-    persist();
-    return booking;
-  },
-
-  assignRelationshipManager(id: string, managerId: string) {
-    requireAdmin();
-    const booking = findBooking(id);
-    assignAdvisor(booking, findStaff("manager", managerId));
-    persist();
-    return booking;
-  },
-
-  // Service updates the advisor shares with the customer
-  updateAdvisorProgress(id: string, milestone: AdvisorMilestone) {
-    requireAdmin();
-    const booking = findBooking(id);
-    markAdvisorMilestone(booking, milestone);
-    persist();
-    return booking;
-  },
-
-  // Sends the customer the standard bill; the admin never enters an amount
-  generateInvoice(id: string) {
-    requireAdmin();
-    const booking = findBooking(id);
-    generateBill(booking);
-    persist();
-    return booking;
-  },
-
-  // The admin only confirms that the customer paid the bill
-  confirmPayment(id: string) {
-    requireAdmin();
-    const booking = findBooking(id);
-    markPaid(booking);
-    persist();
-    return booking;
-  },
-
   completeBooking(id: string) {
     requireAdmin();
     const booking = findBooking(id);
@@ -1236,302 +840,41 @@ export const mockServer = {
     return booking;
   },
 
-  listOffers(params: OfferListParams): OfferList {
-    requireAdmin();
-    const search = params.search.trim().toLowerCase();
-    const vehicle = (offer: Offer) => `${offer.year} ${offer.brand} ${offer.model} ${offer.trim}`;
-
-    const filtered = db.offers.filter((offer) => {
-      if (params.condition !== "all" && offer.condition !== params.condition) return false;
-      if (params.offerType !== "all" && offer.offerType !== params.offerType) return false;
-      if (!search) return true;
-
-      return [offer.vin, offer.stockNumber, vehicle(offer), offer.lender].some((value) =>
-        value.toLowerCase().includes(search),
-      );
-    });
-
-    const sortValue = (offer: Offer) => {
-      switch (params.sortBy) {
-        case "vin":
-          return offer.vin;
-        case "stockNumber":
-          return offer.stockNumber;
-        case "offerType":
-          return offer.offerType.toLowerCase();
-        case "payment":
-          return offer.payment;
-        case "term":
-          return offer.term;
-        case "apr":
-          return offer.apr;
-        default:
-          return vehicle(offer).toLowerCase();
-      }
-    };
-
-    const direction = params.sortOrder === "asc" ? 1 : -1;
-    const sorted = [...filtered].sort((first, second) =>
-      sortValue(first) < sortValue(second)
-        ? -direction
-        : sortValue(first) > sortValue(second)
-          ? direction
-          : 0,
-    );
-
-    const totalPages = Math.max(1, Math.ceil(sorted.length / params.pageSize));
-    const page = Math.min(params.page, totalPages);
-    const start = (page - 1) * params.pageSize;
-    const distinct = (values: string[]) => [...new Set(values.filter(Boolean))].sort();
-
-    return {
-      items: sorted.slice(start, start + params.pageSize),
-      total: sorted.length,
-      page,
-      pageSize: params.pageSize,
-      totalPages,
-      conditions: distinct(db.offers.map((offer) => offer.condition)),
-      offerTypes: distinct(db.offers.map((offer) => offer.offerType)),
-    };
-  },
-
-  updateOffer(id: string, input: OfferInput) {
-    requireAdmin();
-    const offer = db.offers.find((item) => item.id === id);
-    if (!offer) throw new Error("We couldn't find this offer.");
-    Object.assign(offer, input);
-    persist();
-    return offer;
-  },
-
-  deleteOffer(id: string) {
-    requireAdmin();
-    const index = db.offers.findIndex((item) => item.id === id);
-    if (index === -1) throw new Error("We couldn't find this offer.");
-    db.offers.splice(index, 1);
-    persist();
-    return { id };
-  },
-
-  // A new file replaces the offers there were. The mock keeps the first
-  // MOCK_OFFERS_LIMIT of them but reports them all as imported.
-  uploadOffers(rows: OfferCsvRow[]) {
-    requireAdmin();
-    db.offers = rows.slice(0, MOCK_OFFERS_LIMIT).map(toOffer);
-    persist();
-    return { imported: rows.length };
-  },
-
-  // ---- Staff pages (valet / advisor; signed in by the link's search params or
-  // by email + OTP, never by the app's session) ----
-  sendStaffOtp(email: string) {
-    if (!findStaffByEmail(email)) {
-      throw new Error("No valet or advisor account found for this email.");
-    }
-    return { sent: true };
-  },
-
-  // Like the app's login, the mock accepts any 6-digit code
-  verifyStaffOtp(email: string): StaffAuth {
-    const found = findStaffByEmail(email);
-    if (!found) throw new Error("No valet or advisor account found for this email.");
-    return { gear: mockStaffGear(found.member), token: mockStaffTypeToken(found.type) };
-  },
-
-  listStaffBookings(auth: StaffAuth) {
-    return findStaffBookings(auth).map(({ booking, roles }) => staffView(booking, roles));
-  },
-
-  getStaffBooking(auth: StaffAuth, id: string) {
-    const { booking, roles } = findStaffBooking(auth, id);
-    return staffView(booking, roles);
-  },
-
-  staffUpdateValetProgress(auth: StaffAuth, id: string, leg: ValetLeg, milestone: ValetMilestone) {
-    const { booking, roles } = findStaffBooking(auth, id);
-    assertStaffRole(roles, leg);
-    markValetMilestone(booking, leg, milestone);
-    persist();
-    return staffView(booking, roles);
-  },
-
-  staffUpdateAdvisorProgress(auth: StaffAuth, id: string, milestone: AdvisorMilestone) {
-    const { booking, roles } = findStaffBooking(auth, id);
-    assertStaffRole(roles, "advisor");
-    markAdvisorMilestone(booking, milestone);
-    persist();
-    return staffView(booking, roles);
-  },
-
-  // The advisor types the bill's rows; tax and totals are added here
-  staffGenerateInvoice(auth: StaffAuth, id: string, items: InvoiceLine[]) {
-    const { booking, roles } = findStaffBooking(auth, id);
-    assertStaffRole(roles, "advisor");
-    generateBill(booking, items);
-    persist();
-    return staffView(booking, roles);
-  },
-
-  // The advisor has checked that the customer paid another way
-  staffConfirmPayment(auth: StaffAuth, id: string) {
-    const { booking, roles } = findStaffBooking(auth, id);
-    assertStaffRole(roles, "advisor");
-    markPaid(booking);
-    persist();
-    return staffView(booking, roles);
-  },
-
   // ---- Staff (valets and advisors) ----
-  listStaff(role: StaffRole, params: StaffListParams): Paginated<StaffMember> {
-    requireAdmin();
-    const search = params.search.trim().toLowerCase();
-    const digits = phoneDigits(search);
-
-    const filtered = staffList(role).filter((member) => {
-      if (params.availability === "available" && !member.available) return false;
-      if (params.availability === "busy" && member.available) return false;
-      if (!search) return true;
-
-      return (
-        member.name.toLowerCase().includes(search) ||
-        member.email.toLowerCase().includes(search) ||
-        (digits !== "" && phoneDigits(member.phone).includes(digits))
-      );
-    });
-
-    const sortValue = (member: StaffMember) => {
-      switch (params.sortBy) {
-        case "email":
-          return member.email.toLowerCase();
-        case "phone":
-          return member.phone;
-        case "available":
-          return member.available ? 1 : 0;
-        default:
-          return member.name.toLowerCase();
-      }
-    };
-
-    const direction = params.sortOrder === "asc" ? 1 : -1;
-    const sorted = [...filtered].sort((first, second) =>
-      sortValue(first) < sortValue(second)
-        ? -direction
-        : sortValue(first) > sortValue(second)
-          ? direction
-          : 0,
-    );
-
-    const totalPages = Math.max(1, Math.ceil(sorted.length / params.pageSize));
-    const page = Math.min(params.page, totalPages);
-    const start = (page - 1) * params.pageSize;
-
-    return {
-      items: sorted.slice(start, start + params.pageSize).map((member) => ({
-        ...member,
-        activeBookings: activeAssignments(role, member.id).length,
-      })),
-      total: sorted.length,
-      page,
-      pageSize: params.pageSize,
-      totalPages,
-    };
-  },
-
-  createStaff(role: StaffRole, input: StaffFields) {
-    requireAdmin();
-    assertContactFree(role, input);
-    const member: StaffMember = { id: `${staffIdPrefixes[role]}-${Date.now()}`, ...input };
-    staffList(role).push(member);
-    persist();
-    return member;
-  },
-
-  updateStaff(
-    role: StaffRole,
-    id: string,
-    input: StaffFields,
-  ) {
-    requireAdmin();
-    const member = findStaff(role, id);
-    assertContactFree(role, input, id);
-    Object.assign(member, input);
-
-    // Bookings keep a copy of the assigned member; keep their details current
-    db.bookings.forEach((booking) => {
-      if (role === "valet" && booking.valet?.id === id) booking.valet = { ...member };
-      if (role === "valet" && booking.deliveryValet?.id === id) {
-        booking.deliveryValet = { ...member };
-      }
-      if (role === "manager" && booking.relationshipManager?.id === id) {
-        booking.relationshipManager = { ...member };
-      }
-    });
-
-    persist();
-    return member;
-  },
-
-  deleteStaff(role: StaffRole, id: string) {
-    requireAdmin();
-    const member = findStaff(role, id);
-    const active = activeAssignments(role, id).length;
-    if (active > 0) {
-      throw new Error(
-        `${member.name} is assigned to ${active} active booking${active === 1 ? "" : "s"} and can't be deleted.`,
-      );
-    }
+  // The staff list from the real API, while adding, editing and deleting staff
+  // and the workflow's assign steps are still answered here: keeps a copy of each
+  // person under the API's id, so they can be assigned to a booking.
+  syncStaff(role: StaffRole, staff: StaffMember[]) {
     const list = staffList(role);
-    list.splice(list.indexOf(member), 1);
-    persist();
-    return { id };
-  },
+    staff.forEach((member) => {
+      const fields = { ...member };
+      // Counted here from the bookings, not stored
+      delete fields.activeBookings;
+      const copy = list.find((item) => item.id === member.id);
+      if (copy) Object.assign(copy, fields);
+      else list.push(fields);
 
-  // ---- Dealerships ----
-  listDealerships(search: string) {
-    requireAdmin();
-    const query = search.trim().toLowerCase();
-    if (!query) return db.dealerships;
-
-    return db.dealerships.filter((dealership) =>
-      [dealership.name, dealership.address].some((value) =>
-        value.toLowerCase().includes(query),
-      ),
-    );
-  },
-
-  createDealership(input: Omit<Dealership, "id">) {
-    requireAdmin();
-    assertDealershipNameFree(input.name);
-    const dealership: Dealership = { id: `dealership-${Date.now()}`, ...input };
-    db.dealerships.push(dealership);
-    persist();
-    return dealership;
-  },
-
-  updateDealership(id: string, input: Omit<Dealership, "id">) {
-    requireAdmin();
-    const dealership = findDealership(id);
-    assertDealershipNameFree(input.name, id);
-    // Keep unfinished bookings pointing at the renamed dealership
-    activeDealershipBookings(dealership.name).forEach((booking) => {
-      booking.dealershipName = input.name;
+      // Bookings keep a copy of the assigned member; keep their details current
+      db.bookings.forEach((booking) => {
+        if (role === "valet" && booking.valet?.id === member.id) booking.valet = { ...fields };
+        if (role === "valet" && booking.deliveryValet?.id === member.id) {
+          booking.deliveryValet = { ...fields };
+        }
+        if (role === "manager" && booking.relationshipManager?.id === member.id) {
+          booking.relationshipManager = { ...fields };
+        }
+      });
     });
-    Object.assign(dealership, input);
     persist();
-    return dealership;
   },
 
-  deleteDealership(id: string) {
-    requireAdmin();
-    const dealership = findDealership(id);
-    const active = activeDealershipBookings(dealership.name).length;
-    if (active > 0) {
-      throw new Error(
-        `${dealership.name} has ${active} active booking${active === 1 ? "" : "s"} and can't be deleted.`,
-      );
-    }
-    db.dealerships.splice(db.dealerships.indexOf(dealership), 1);
+  // Someone deleted with the real API: the copy kept here goes too. Bookings
+  // they were on keep their own copy of the person.
+  removeStaff(role: StaffRole, id: string) {
+    const list = staffList(role);
+    const index = list.findIndex((member) => member.id === id);
+    if (index === -1) return;
+    list.splice(index, 1);
     persist();
-    return { id };
   },
 };

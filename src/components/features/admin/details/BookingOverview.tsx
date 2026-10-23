@@ -1,4 +1,4 @@
-import { vehicleName } from "@/libs/utils";
+import { maskedVin, vehicleName } from "@/libs/utils";
 import type { AdminBooking } from "@/types/admin";
 import { formatDateTime, serviceLabels } from "../admin.utils";
 
@@ -14,7 +14,8 @@ export function BookingOverview({ booking }: { booking: AdminBooking }) {
       label: "Vehicle",
       value: vehicleName(booking.vehicle),
     },
-    { label: "VIN", value: booking.vehicle.vin },
+    // The last 6, like everywhere else
+    { label: "VIN", value: maskedVin(booking.vehicle.vin) },
     { label: "Pickup", value: booking.pickup },
     { label: "Dealership", value: booking.dealershipName },
     {
@@ -25,12 +26,10 @@ export function BookingOverview({ booking }: { booking: AdminBooking }) {
   ];
 
   if (booking.serviceId === "pickup-delivery") {
-    rows.push({ label: "Driveable", value: booking.driveable
-        ? "Yes"
-        : booking.towTruck === false
-          ? "No — customer declined the tow truck"
-          : "No — tow truck needed",
-    });
+    rows.push(
+      { label: "Driveable", value: booking.driveable ? "Yes" : "No" },
+      { label: "Tow Truck", value: booking.towTruck ? "Yes" : "No" },
+    );
   }
 
   return (

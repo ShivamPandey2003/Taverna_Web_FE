@@ -10,9 +10,10 @@ export function brandName(brand: string) {
   return brand.toLowerCase().replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-// Only the end of a VIN fits on cards: "1C4RJF...4567" -> "***4567"
-export function maskedVin(vin: string) {
-  return `***${vin.slice(-4)}`;
+// Only the end of a VIN fits on cards: "1C4RJF...234567" -> "***234567" (or the
+// last `visible` characters)
+export function maskedVin(vin: string, visible = 6) {
+  return `***${vin.slice(-visible)}`;
 }
 
 // "Michael Rivera" -> "Michael R."

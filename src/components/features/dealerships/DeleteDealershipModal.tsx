@@ -5,25 +5,25 @@ import {
   closeDeleteDealership,
   selectDealershipModal,
 } from "@/redux/modals/dealershipModal/dealershipModalSlice";
-import { useDeleteDealership } from "@/services/queries/adminQueries";
+import { useDeleteDealership } from "@/services/queries/dealershipQueries";
 
+// Asks before deleting the dealership a card's Delete button picked
 export function DeleteDealershipModal() {
   const dispatch = useAppDispatch();
   const { deleting } = useAppSelector(selectDealershipModal);
   const deleteDealership = useDeleteDealership();
 
-  if (!deleting) {
-    return null;
-  }
+  if (!deleting) return null;
 
-  const onClose = () => dispatch(closeDeleteDealership());
+  const close = () => {
+    if (!deleteDealership.isPending) dispatch(closeDeleteDealership());
+  };
 
-  // The API refuses while it has active bookings; that error is toasted for us
-  const handleDelete = () => {
+  const handleConfirm = () => {
     deleteDealership.mutate(deleting.id, {
       onSuccess: () => {
         toast.success(`${deleting.name} deleted`);
-        onClose();
+        dispatch(closeDeleteDealership());
       },
     });
   };
@@ -31,13 +31,13 @@ export function DeleteDealershipModal() {
   return (
     <ConfirmModal
       title="Delete Dealership"
-      onClose={onClose}
-      onConfirm={handleDelete}
+      subtitle={deleting.address}
       pending={deleteDealership.isPending}
+      onConfirm={handleConfirm}
+      onClose={close}
     >
-      Are you sure you want to delete{" "}
-      <span className="font-semibold text-gray-900">{deleting.name}</span>? Customers won't be
-      able to choose it for new bookings, and this can't be undone.
+      Delete <span className="font-semibold text-gray-900">{deleting.name}</span>? Customers
+      won't be able to pick it any more. This can't be undone.
     </ConfirmModal>
   );
 }

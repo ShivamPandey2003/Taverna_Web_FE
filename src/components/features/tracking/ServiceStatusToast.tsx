@@ -13,52 +13,54 @@ import { cn, maskedVin, vehicleName } from "@/libs/utils";
 
 // The customer's running services, floating in the bottom-right corner: one round
 // bubble per booking showing just the vehicle. Hovering a bubble opens a small
-// card above it with that vehicle and where its service stands; a click opens
-// its tracking page. It can't be dismissed: a bubble goes away once its service
-// is complete. On the tracking page the booking being looked at is left out, so
-// what remains are the ways to the other ones.
+// card above it with that vehicle and where its service stands (mouse only); a
+// click or tap opens its tracking page. It can't be dismissed: a bubble goes away
+// once its service is complete. On the tracking page the booking being looked at
+// is left out, so what remains are the ways to the other ones.
 export function ServiceStatusToast() {
   const services = useActiveServices();
   const trackingMatch = useMatch(TRACKING_ROUTE);
   const rootRef = useRef<HTMLDivElement>(null);
-  // The booking whose card is open, one at a time
+  // The booking whose card is open (hovered), one at a time
   const [openId, setOpenId] = useState<string | null>(null);
-
-  // A card opened by a tap (no hover there) closes on a tap outside or Escape
-  useEffect(() => {
-    if (!openId) return;
-
-    const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) setOpenId(null);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpenId(null);
-    };
-
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [openId]);
 
   const viewedId = trackingMatch
     ? pickTrackedService(services, trackingMatch.params.bookingId)?.booking.id
     : undefined;
-  const shown = services.filter(
-    (service) => isOpenService(service) && service.booking.id !== viewedId,
-  );
+  const shown = services
+    .filter((service) => isOpenService(service) && service.booking.id !== viewedId)
+    .sort(newestFirst);
+  const visible = shown.length > 0;
 
-  if (shown.length === 0) {
+  // The bubbles float over the page, so each page leaves this much room at the end
+  // of its scroll (the `status-bubble-space` spacer in index.css): their height,
+  // which grows when they wrap to a second row on a phone, plus their offset
+  useEffect(() => {
+    const element = rootRef.current;
+    const root = document.documentElement;
+    if (!visible || !element) return;
+
+    const update = () =>
+      root.style.setProperty(BUBBLE_SPACE_VAR, `${element.offsetHeight + BUBBLE_MARGIN}px`);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      root.style.removeProperty(BUBBLE_SPACE_VAR);
+    };
+  }, [visible]);
+
+  if (!visible) {
     return null;
   }
 
   return (
-    // Newest on the right
+    // Newest first, on the left; a row that doesn't fit wraps upwards
     <div
       ref={rootRef}
-      className="fixed right-4 bottom-4 z-40 flex max-w-[calc(100vw-32px)] animate-toast-in flex-row-reverse flex-wrap-reverse items-center gap-3 sm:right-6"
+      // On phones above the bottom tab bar (MobileNav: 4rem + the home indicator)
+      className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-40 md:bottom-4 flex max-w-[calc(100vw-32px)] animate-toast-in flex-wrap-reverse items-center justify-end gap-3 sm:right-6"
     >
       {shown.map((service) => (
         <ServiceBubble
@@ -70,6 +72,24 @@ export function ServiceStatusToast() {
       ))}
     </div>
   );
+}
+
+const BUBBLE_SPACE_VAR = "--status-bubble-space";
+// The bubbles' bottom offset (bottom-4) and a gap above them
+const BUBBLE_MARGIN = 16 + 16;
+
+// Booking ids are numbered in the order they were made ("TD-039" after "TD-018"),
+// which holds for bookings put back from the list too; when an id has no number
+// the booking's own date decides
+const bookingNumber = (id: string) => Number(id.match(/\d+/g)?.pop() ?? NaN);
+
+function newestFirst(a: ActiveService, b: ActiveService) {
+  const numberA = bookingNumber(a.booking.id);
+  const numberB = bookingNumber(b.booking.id);
+  if (!Number.isNaN(numberA) && !Number.isNaN(numberB) && numberA !== numberB) {
+    return numberB - numberA;
+  }
+  return Date.parse(b.booking.createdAt) - Date.parse(a.booking.createdAt);
 }
 
 interface ServiceBubbleProps {
@@ -122,25 +142,18 @@ function ServiceBubble({ service, open, onOpenChange }: ServiceBubbleProps) {
 
       <button
         type="button"
-        // A mouse click goes straight to tracking (the card is already showing);
-        // a tap or the keyboard opens the card first, which then leads there
-        onClick={(event) => {
-          const { pointerType } = event.nativeEvent as PointerEvent;
-          if (pointerType === "mouse" || open) openTracking();
-          else onOpenChange(true);
-        }}
-        aria-expanded={open}
+        // Straight to tracking, a tap included (no card first on touch screens,
+        // where there's no hover); the card is only a mouse's hover preview
+        onClick={openTracking}
         aria-label={`${vehicleName(vehicle)}, ${display.label}: ${display.message}. Open tracking`}
-        className="relative flex h-16 w-16 items-center justify-center rounded-full border border-gray-100 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition hover:shadow-[0_8px_30px_rgba(0,0,0,0.2)]"
+        // The border is the status colour (border-current takes the text colour), so a
+        // closed bubble still hints where the service stands
+        className={cn(
+          "relative flex h-16 w-16 items-center justify-center rounded-full border-[3px] border-current bg-white shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition hover:shadow-[0_8px_30px_rgba(0,0,0,0.2)]",
+          display.color.text,
+        )}
       >
         <img src={vehicle.image} alt="" className="h-12 w-14 object-contain" />
-        {/* The status colour, so a closed bubble still hints where the service stands */}
-        <span
-          className={cn(
-            "absolute top-1 right-1 h-3 w-3 rounded-full border-2 border-white bg-current",
-            display.color.text,
-          )}
-        />
       </button>
     </div>
   );

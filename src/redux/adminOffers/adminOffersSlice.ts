@@ -1,14 +1,12 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
 import { ADMIN_PAGE_SIZE } from "@/types/admin";
-import type { OfferListParams, OfferSortField } from "@/types/offer";
+import type { OfferListParams } from "@/types/offer";
 
-// Query sent to the admin offers API; any change here triggers a refetch
+// Query sent to offers/list; any change here triggers a refetch
 const initialState: OfferListParams = {
   page: 1,
   pageSize: ADMIN_PAGE_SIZE,
-  sortBy: "vehicle",
-  sortOrder: "asc",
   search: "",
   condition: "all",
   offerType: "all",
@@ -20,16 +18,6 @@ const adminOffersSlice = createSlice({
   reducers: {
     setOffersPage: (state, action: PayloadAction<number>) => {
       state.page = action.payload;
-    },
-    // Clicking the active column flips the order; a new column starts ascending
-    toggleOffersSort: (state, action: PayloadAction<OfferSortField>) => {
-      if (state.sortBy === action.payload) {
-        state.sortOrder = state.sortOrder === "asc" ? "desc" : "asc";
-      } else {
-        state.sortBy = action.payload;
-        state.sortOrder = "asc";
-      }
-      state.page = 1;
     },
     setOffersSearch: (state, action: PayloadAction<string>) => {
       state.search = action.payload;
@@ -49,7 +37,6 @@ const adminOffersSlice = createSlice({
 
 export const {
   setOffersPage,
-  toggleOffersSort,
   setOffersSearch,
   setOfferConditionFilter,
   setOfferTypeFilter,

@@ -1,7 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
 
-// Query for the admin dealerships list; see DEALERSHIP_SEARCH_VIA_API in adminQueries
+// Search on the admin dealerships page; applied in the browser (useAdminDealerships)
 type AdminDealershipsState = {
   search: string;
 };

@@ -1,38 +1,32 @@
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import {
-  selectOfferListParams,
-  setOffersPage,
-  toggleOffersSort,
-} from "@/redux/adminOffers/adminOffersSlice";
+import { selectOfferListParams, setOffersPage } from "@/redux/adminOffers/adminOffersSlice";
 import {
   openDeleteOffer,
   openEditOffer,
   openOfferDetails,
   openOfferUpload,
 } from "@/redux/modals/offersModal/offersModalSlice";
+import { cn, maskedVin } from "@/libs/utils";
 import { useAdminOffers } from "@/services/queries/adminQueries";
-import { SortButton } from "@/components/features/admin/SortButton";
 import { TablePagination } from "@/components/features/admin/TablePagination";
 import { formatCurrency } from "@/components/features/admin/admin.utils";
-import type { OfferSortField } from "@/types/offer";
-import { cn } from "@/libs/utils";
-import { offerVehicle } from "./offer.utils";
 
-const columns: { label: string; sortField?: OfferSortField }[] = [
-  { label: "VIN", sortField: "vin" },
-  { label: "Stock", sortField: "stockNumber" },
-  { label: "Vehicle", sortField: "vehicle" },
-  { label: "Condition" },
-  { label: "Offer Type", sortField: "offerType" },
-  { label: "Payment", sortField: "payment" },
-  { label: "Term", sortField: "term" },
-  { label: "APR", sortField: "apr" },
-  { label: "Lender" },
-  { label: "Actions" },
+// Plain headers: offers/list has no sorting
+const columns = [
+  "VIN",
+  "Stock",
+  "Vehicle",
+  "Condition",
+  "Offer Type",
+  "Payment",
+  "Term",
+  "APR",
+  "Lender",
+  "Actions",
 ];
 
-// The uploaded offers, a page at a time. Search, filters, sorting and paging all
-// happen on the server (see OffersToolbar and the adminOffers slice).
+// The uploaded offers, a page at a time. Search, filters and paging happen on
+// the server (see OffersToolbar and the adminOffers slice); a row opens its details.
 export function OffersTable() {
   const dispatch = useAppDispatch();
   const params = useAppSelector(selectOfferListParams);
@@ -54,23 +48,14 @@ export function OffersTable() {
             <tr>
               {columns.map((column) => (
                 <th
-                  key={column.label}
+                  key={column}
                   className={cn(
                     "whitespace-nowrap px-4 py-2.5",
                     // Sits over the right-aligned Edit / Delete buttons
-                    column.label === "Actions" && "text-right",
+                    column === "Actions" && "text-right",
                   )}
                 >
-                  {column.sortField ? (
-                    <SortButton
-                      label={column.label}
-                      active={params.sortBy === column.sortField}
-                      order={params.sortOrder}
-                      onClick={() => dispatch(toggleOffersSort(column.sortField!))}
-                    />
-                  ) : (
-                    column.label
-                  )}
+                  {column}
                 </th>
               ))}
             </tr>
@@ -129,15 +114,18 @@ export function OffersTable() {
                 className="cursor-pointer transition hover:bg-gray-50"
               >
                 {/* One line per row; the description and disclaimer are in the details modal */}
-                <td className="whitespace-nowrap px-4 py-2 font-mono text-xs font-semibold text-gray-900">
-                  {offer.vin}
+                <td
+                  className="whitespace-nowrap px-4 py-2 font-mono text-xs font-semibold text-gray-900"
+                  title={offer.vin}
+                >
+                  {maskedVin(offer.vin)}
                 </td>
                 <td className="whitespace-nowrap px-4 py-2 text-gray-700">{offer.stockNumber}</td>
                 <td
                   className="max-w-[240px] truncate px-4 py-2 font-medium text-gray-900"
-                  title={offerVehicle(offer)}
+                  title={offer.vehicleName}
                 >
-                  {offerVehicle(offer)}
+                  {offer.vehicleName}
                 </td>
                 <td className="whitespace-nowrap px-4 py-2 text-gray-700">{offer.condition}</td>
                 <td className="max-w-[200px] truncate px-4 py-2 text-gray-700" title={offer.offerType}>

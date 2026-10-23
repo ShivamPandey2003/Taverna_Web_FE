@@ -1,7 +1,6 @@
 import { Add, Trash } from "reicon-react";
-import { INVOICE_TAX_RATE } from "@/types/admin";
 import { formatCurrency } from "@/components/features/admin/admin.utils";
-import { billTotals, newBillLine, type BillLineDraft } from "./bill";
+import { billTotal, newBillLine, type BillLineDraft } from "./bill";
 
 interface BillFormProps {
   lines: BillLineDraft[];
@@ -16,7 +15,7 @@ const PRICE_PATTERN = /^\d*\.?\d{0,2}$/;
 // The bill before it's generated: one row per charge (item + price), as many
 // rows as the advisor needs, laid out like BillCard so it reads as the same bill
 export function BillForm({ lines, onChange, disabled = false }: BillFormProps) {
-  const { tax, total } = billTotals(lines);
+  const total = billTotal(lines);
   const removable = lines.length > 1;
 
   const update = (id: number, patch: Partial<BillLineDraft>) =>
@@ -90,12 +89,7 @@ export function BillForm({ lines, onChange, disabled = false }: BillFormProps) {
         Add Row
       </button>
 
-      <div className="mt-4 flex justify-between gap-4 border-b border-border pb-3 text-sm">
-        <span className="text-text-secondary">Tax ({Math.round(INVOICE_TAX_RATE * 100)}%)</span>
-        <span className="font-medium">{formatCurrency(tax)}</span>
-      </div>
-
-      <div className="flex items-baseline justify-between pt-3">
+      <div className="mt-4 flex items-baseline justify-between border-t border-border pt-3">
         <span className="text-sm font-bold">Total</span>
         <span className="text-xl font-extrabold">{formatCurrency(total)}</span>
       </div>

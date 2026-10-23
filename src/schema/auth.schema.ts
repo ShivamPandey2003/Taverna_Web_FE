@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { phoneDigits } from "@/libs/phone";
+
 export const loginSchema = z.object({
   email: z
     .string()
@@ -20,9 +22,10 @@ export const signupSchema = z.object({
 
   phone: z
     .string()
-    .min(10, "Phone number must be 10 digits")
-    .max(15, "Phone number is too long")
-    .regex(/^[0-9]+$/, "Phone number must contain only digits"),
+    .min(1, "Phone number is required")
+    .refine((value) => phoneDigits(value).length === 10, {
+      message: "Phone number must be 10 digits",
+    }),
 
   notification_preferences: z.boolean(),
 

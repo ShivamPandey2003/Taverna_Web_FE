@@ -1,20 +1,17 @@
 import { toast } from "sonner";
-import { useAssignValet, useUpdateValetProgress } from "@/services/queries/adminQueries";
+import { useAssignValet, useConfirmBooking } from "@/services/queries/adminQueries";
 import {
-  LEG_MILESTONES,
-  TRIP_END,
+  HANDOVER_DELIVERED,
+  HANDOVER_JOURNEY,
+  INTAKE_ARRIVED,
+  INTAKE_CONFIRMED,
+  INTAKE_JOURNEY,
+  journeyReached,
   type AdminBooking,
   type StaffMember,
   type ValetLeg,
 } from "@/types/admin";
-import {
-  isComplete,
-  legTitles,
-  nextMilestone,
-  staffLink,
-  valetMilestoneLabels,
-  valetTrip,
-} from "../admin.utils";
+import { isComplete, legTitles, staffLink, valetTrip } from "../admin.utils";
 import { MilestoneTracker, type Milestone } from "./MilestoneTracker";
 import { ActionButton, AssignmentRow, SectionCard, StepDone } from "./StepParts";
 
@@ -24,21 +21,30 @@ interface ValetStepProps {
   onDone: () => void;
 }
 
-const nextStepLabels: Record<ValetLeg, string> = {
-  pickup: "Next: Assign Advisor",
-  delivery: "Next: Complete Service",
+// Each trip on the API's journey: the steps shown, and the one that ends the step
+const legJourney: Record<ValetLeg, { steps: readonly string[]; end: string; next: string }> = {
+  pickup: { steps: INTAKE_JOURNEY, end: INTAKE_CONFIRMED, next: "Next: Assign Advisor" },
+  delivery: { steps: HANDOVER_JOURNEY, end: HANDOVER_DELIVERED, next: "Next: Complete Service" },
 };
 
-// Assign a valet, share their link, and follow the trip milestone by milestone.
-// The next workflow step stays locked until the vehicle reaches the other end.
+// Assign a valet, share their link, and follow the trip step by step. It's drawn
+// from the API's journey (`booking.journey`): the valet posts the steps from
+// their own page, so the admin only watches. The pickup trip then ends with the
+// admin confirming the vehicle was received at the dealership; the delivery
+// trip ends by itself once the valet has delivered the vehicle. The next
+// workflow step stays locked until then.
 export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
   const assignValet = useAssignValet();
-  const updateProgress = useUpdateValetProgress();
+  const confirmReceived = useConfirmBooking();
 
   const { valet, progress } = valetTrip(booking, leg);
-  const labels = valetMilestoneLabels[leg];
-  const next = valet ? nextMilestone(LEG_MILESTONES[leg], progress) : null;
-  const finished = !!valet && !next;
+  const { journey } = booking;
+  const track = legJourney[leg];
+  const reached = (key: string) => !!journey && journeyReached(journey, key);
+  const stepLabel = (key: string) => journey?.steps.find((step) => step.key === key)?.label;
+  // The pickup valet's trip is over and the vehicle waits for the admin to confirm it
+  const awaitingReceipt = !!valet && leg === "pickup" && journey?.current === INTAKE_ARRIVED;
+  const finished = !!valet && reached(track.end);
 
   const complete = isComplete(booking);
 
@@ -48,15 +54,19 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
       ? "The valet already has the vehicle, so they can't be changed."
       : undefined;
 
-  const milestones: Milestone[] = [
-    { key: "assigned", label: "Valet Assigned", done: !!valet, at: booking.assignedAt?.[leg] },
-    ...LEG_MILESTONES[leg].map((key) => ({
-      key,
-      label: labels[key],
-      done: !!progress[key],
-      at: progress[key],
-    })),
-  ];
+  // The API only says when the current step was reached
+  const milestones: Milestone[] = track.steps.flatMap((key) => {
+    const label = stepLabel(key);
+    if (!label) return [];
+    return [
+      {
+        key,
+        label,
+        done: reached(key),
+        at: key === journey?.current ? (journey.doneAt ?? undefined) : undefined,
+      },
+    ];
+  });
 
   const assign = (member: StaffMember, done: () => void) =>
     assignValet.mutate(
@@ -69,13 +79,10 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
       },
     );
 
-  const markNext = () => {
-    if (!next) return;
-    updateProgress.mutate(
-      { id: booking.id, leg, milestone: next },
-      { onSuccess: () => toast.success(labels[next]) },
-    );
-  };
+  const markReceived = () =>
+    confirmReceived.mutate(booking.id, {
+      onSuccess: () => toast.success("Vehicle received at the dealership"),
+    });
 
   return (
     <div className="space-y-4">
@@ -101,11 +108,6 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
         <SectionCard>
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="text-sm font-bold text-gray-900">Trip Progress</h3>
-            <p className="text-xs text-gray-500">
-              {/* {complete
-                ? "Posted by the valet from their link."
-                : "The valet posts these from their link. You can also mark them here."} */}
-            </p>
           </div>
 
           <MilestoneTracker milestones={milestones} />
@@ -118,16 +120,16 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
         </p>
       )}
 
-      {next && (
-        <ActionButton pending={updateProgress.isPending} onClick={markNext}>
-          Mark “{labels[next]}”
+      {awaitingReceipt && (
+        <ActionButton pending={confirmReceived.isPending} onClick={markReceived}>
+          Confirm Vehicle Received
         </ActionButton>
       )}
 
       {finished && (
         <StepDone
-          text={labels[TRIP_END[leg]]}
-          actionLabel={complete ? undefined : nextStepLabels[leg]}
+          text={stepLabel(track.end) ?? "Trip complete"}
+          actionLabel={complete ? undefined : track.next}
           onAction={onDone}
         />
       )}

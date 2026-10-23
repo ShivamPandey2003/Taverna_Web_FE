@@ -1,9 +1,12 @@
 import { ProfileSummary } from "@/components/features/account/ProfileSummary";
 import { AccountSettings } from "@/components/features/account/AccountSettings";
 import { EditProfile } from "@/components/features/account/EditProfile";
+import { NotificationSettings } from "@/components/features/account/NotificationSettings";
 
 import { AccountAddresses } from "@/components/features/addresses/AccountAddresses";
 import { AddAddressModal } from "@/components/features/addresses/AddAddressModal";
+import { useOverflowing } from "@/hooks/useOverflowing";
+import { cn } from "@/libs/utils";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectActiveSection } from "@/redux/account/accountSlice";
 import {
@@ -15,16 +18,29 @@ import {
 export function Account() {
   const dispatch = useAppDispatch();
   const { addressModalOpen, editingAddressId } = useAppSelector(selectAccountModal);
+  // Room for the status bubbles under the section, only once it scrolls
+  const {
+    containerRef: sectionRef,
+    contentRef: sectionContentRef,
+    overflowing,
+  } = useOverflowing<HTMLDivElement, HTMLDivElement>();
 
   return (
-    <main className="min-h-[calc(100vh-72px)] bg-[#f8f9fa] px-6 py-4 lg:px-10">
-      <div className="mx-auto">
-        {/* Content */}
-        <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+    // The layout clips its content, so the page scrolls itself. Side by side (lg)
+    // each column scrolls on its own: the menu stays put while the section
+    // scrolls. Stacked (phones) the whole page scrolls, ending with the layout's
+    // room for the status bubbles; side by side the root doesn't scroll, so
+    // that spacer is off there.
+    <main className="flex h-full flex-col overflow-y-auto bg-[#f8f9fa] px-4 pb-4 pt-4 sm:px-6 lg:overflow-hidden lg:px-10 lg:after:hidden">
+      <div className="lg:min-h-0 lg:flex-1">
+        {/* Content. Stacked, the one column is the screen's width (minmax(0, 1fr)),
+            not as wide as its widest line, so a long email is cut short instead
+            of pushing the page off the screen */}
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-5 sm:gap-6 lg:h-full lg:grid-cols-[280px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
           {/* Left */}
-          <aside className="space-y-6">
+          <aside className="min-w-0 space-y-5 sm:space-y-6 lg:overflow-y-auto">
             <header>
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+              <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
                 Account
               </h1>
 
@@ -37,8 +53,10 @@ export function Account() {
 
             <AccountSettings />
           </aside>
-        <div>
-          <Content />
+        <div ref={sectionRef} className={cn("min-w-0 lg:overflow-y-auto", overflowing && "pb-24")}>
+          <div ref={sectionContentRef}>
+            <Content />
+          </div>
         </div>
 
         </div>
@@ -61,6 +79,9 @@ const Content = () => {
     }
     case "addresses": {
       return <AccountAddresses />
+    }
+    case "notifications": {
+      return <NotificationSettings />
     }
     default:
       return null;

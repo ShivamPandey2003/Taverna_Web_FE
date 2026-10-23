@@ -6,13 +6,15 @@ import {
   X,
 } from "reicon-react";
 import type { Address, AddressType } from "@/types/address";
+import { SearchLocationRow, type SearchedPlace } from "./SearchLocationRow";
 import { useLocation } from "@/hooks/useLocation";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectAddresses } from "@/redux/address/addressSlice";
+import { useAddresses, useCreateAddress } from "@/services/queries/addressQueries";
 import {
   selectBooking,
   selectBookingAddress,
-  setPickupLocation,
+  changePickupLocation,
 } from "@/redux/booking/bookingSlice";
 
 interface SelectLocationModalProps {
@@ -44,17 +46,27 @@ function SelectLocationContent({
 }: Omit<SelectLocationModalProps, "open">) {
   const dispatch = useAppDispatch();
   const addresses = useAppSelector(selectAddresses);
+  const {
+    isPending: loadingAddresses,
+    isError: addressesFailed,
+    isFetching: fetchingAddresses,
+    refetch: refetchAddresses,
+  } = useAddresses();
   const { pickupLocation } = useAppSelector(selectBooking);
   const bookingAddress = useAppSelector(selectBookingAddress);
   const {
     address: currentAddress,
+    parts: currentParts,
+    coordinates,
     loading: locating,
     error: locationError,
     getLocation,
   } = useLocation();
+  const createAddress = useCreateAddress();
 
+  // "search": a place picked in the search box, saved as an address on confirm
   const [selectedType, setSelectedType] = useState<
-    "current" | "saved"
+    "current" | "search" | "saved"
   >(
     pickupLocation?.type ?? "saved"
   );
@@ -65,6 +77,8 @@ function SelectLocationContent({
         addresses[0]?.id ??
         null
     );
+
+  const [searched, setSearched] = useState<SearchedPlace | null>(null);
 
   const selectedAddress = addresses.find(
     (address) =>
@@ -83,20 +97,54 @@ function SelectLocationContent({
     ? "Getting location..."
     : currentAddress ?? locationError ?? "Use your device location";
 
+  const pickSaved = (addressId: string) => {
+    dispatch(changePickupLocation({ type: "saved", addressId }));
+    onClose();
+  };
+
+  // The current location or a searched place is saved as an address first
+  // (user/addresses): a booking needs a saved address. One already saved with
+  // the same street and ZIP is picked instead, so confirming again doesn't save
+  // it twice.
+  const saveAndPick = (
+    parts: { address: string; city: string; state: string; zip: string },
+    position: { latitude: number; longitude: number } | null,
+  ) => {
+    const saved = addresses.find(
+      (address) =>
+        sameText(address.address, parts.address) && sameText(address.zip, parts.zip),
+    );
+    if (saved) {
+      pickSaved(saved.id);
+      return;
+    }
+
+    createAddress.mutate(
+      {
+        type: "other",
+        address: parts.address,
+        apartment: "",
+        city: parts.city,
+        state: parts.state,
+        zip: parts.zip,
+        latitude: position?.latitude ?? null,
+        longitude: position?.longitude ?? null,
+        // The customer's first address becomes their default
+        isDefault: addresses.length === 0,
+      },
+      // A failed save is toasted by the API layer; the modal stays open
+      { onSuccess: (address) => pickSaved(address.id) },
+    );
+  };
+
   const handleConfirm = () => {
     if (selectedType === "current") {
-      if (!currentAddress) {
-        return;
-      }
+      if (currentAddress && currentParts) saveAndPick(currentParts, coordinates ?? null);
+      return;
+    }
 
-      dispatch(
-        setPickupLocation({
-          type: "current",
-          label: currentAddress,
-        })
-      );
-      onClose();
-
+    if (selectedType === "search") {
+      if (searched) saveAndPick(searched.place, searched.coordinates);
       return;
     }
 
@@ -104,17 +152,14 @@ function SelectLocationContent({
       return;
     }
 
-    dispatch(
-      setPickupLocation({
-        type: "saved",
-        addressId: selectedAddress.id,
-      })
-    );
-    onClose();
+    pickSaved(selectedAddress.id);
   };
 
+  const saving = createAddress.isPending;
+
   return (
-    <div className="absolute inset-0 z-50">
+    // Over the window, not inside the page: the page behind never scrolls
+    <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40"
@@ -122,16 +167,17 @@ function SelectLocationContent({
       />
 
       {/* Modal wrapper */}
-      <div className="relative flex min-h-full items-center justify-center overflow-y-auto p-6">
-        {/* Modal */}
+      <div className="pointer-events-none relative flex h-full items-center justify-center p-4 sm:p-6">
+        {/* Modal: at most the window's height; only the saved addresses scroll,
+            the options above and the buttons below stay in view */}
         <div
-          className="relative w-full max-w-[520px] rounded-2xl bg-white p-6 shadow-2xl"
+          className="pointer-events-auto relative flex max-h-full w-full max-w-[520px] flex-col rounded-2xl bg-white p-5 shadow-2xl"
           onClick={(event) =>
             event.stopPropagation()
           }
         >
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex shrink-0 items-center justify-between">
             <h2 className="text-xl font-bold tracking-tight text-[#111827]">
               Select a Location
             </h2>
@@ -147,7 +193,7 @@ function SelectLocationContent({
           </div>
 
           {/* Location options */}
-          <div className="mt-5 space-y-3">
+          <div className="mt-4 shrink-0 space-y-2.5">
             {/* Current location */}
             <button
               type="button"
@@ -181,6 +227,21 @@ function SelectLocationContent({
               />
             </button>
 
+            {/* Search: type an address and pick one of the suggestions */}
+            <SearchLocationRow
+              selected={selectedType === "search"}
+              picked={searched}
+              near={coordinates ?? (bookingAddress?.latitude != null && bookingAddress.longitude != null
+                ? { latitude: bookingAddress.latitude, longitude: bookingAddress.longitude }
+                : null)}
+              onSelect={() => setSelectedType("search")}
+              onPick={(place) => {
+                setSelectedType("search");
+                setSearched(place);
+              }}
+              disabled={saving}
+            />
+
             {/* Add Address */}
             <button
               type="button"
@@ -198,17 +259,47 @@ function SelectLocationContent({
           </div>
 
           {/* Saved addresses */}
-          <section className="mt-6">
-            <h3 className="text-sm font-bold text-gray-900">
+          <section className="mt-4 flex min-h-0 flex-1 flex-col">
+            <h3 className="shrink-0 text-sm font-bold text-gray-900">
               Saved Addresses
             </h3>
 
-            <div className="mt-3 space-y-3 min-h-0 h-[40vh] overflow-auto">
-              {addresses.length === 0 && (
-                <p className="text-sm text-gray-500">
-                  No saved addresses yet.
-                </p>
-              )}
+            {/* At least two rows tall; grows with the screen up to the list's length */}
+            <div className="-mx-1 mt-2.5 min-h-[150px] flex-1 space-y-2.5 overflow-y-auto px-1 py-0.5">
+              {addresses.length === 0 &&
+                (loadingAddresses ? (
+                  // First load: placeholders the shape of the address rows
+                  <div className="space-y-3" role="status" aria-label="Loading your addresses">
+                    {[0, 1].map((item) => (
+                      <div
+                        key={item}
+                        className="flex animate-pulse items-center gap-4 rounded-xl border border-gray-200 px-3 py-3"
+                      >
+                        <div className="h-10 w-10 shrink-0 rounded-xl bg-gray-200" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3 w-1/2 rounded bg-gray-200" />
+                          <div className="h-3 w-1/3 rounded bg-gray-100" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : addressesFailed ? (
+                  <p className="text-sm text-gray-500">
+                    We couldn't load your addresses.{" "}
+                    <button
+                      type="button"
+                      onClick={() => refetchAddresses()}
+                      disabled={fetchingAddresses}
+                      className="font-semibold text-gray-900 underline underline-offset-4 disabled:opacity-50"
+                    >
+                      {fetchingAddresses ? "Retrying..." : "Try Again"}
+                    </button>
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    No saved addresses yet.
+                  </p>
+                ))}
               {addresses.map((address) => (
                 <SavedAddressCard
                   key={address.id}
@@ -230,10 +321,10 @@ function SelectLocationContent({
           </section>
 
           {/* Divider */}
-          <div className="my-5 h-px bg-gray-200" />
+          <div className="my-4 h-px shrink-0 bg-gray-200" />
 
           {/* Actions */}
-          <div className="flex justify-end gap-3">
+          <div className="flex shrink-0 justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
@@ -245,14 +336,20 @@ function SelectLocationContent({
             <button
               type="button"
               disabled={
-                selectedType === "saved"
+                saving ||
+                (selectedType === "saved"
                   ? !selectedAddress
-                  : !currentAddress
+                  : selectedType === "search"
+                    ? !searched
+                    : !currentAddress || !currentParts)
               }
               onClick={handleConfirm}
-              className="h-10 rounded-lg bg-[#111827] px-5 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-10 items-center gap-2 rounded-lg bg-[#111827] px-5 text-sm font-semibold text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Confirm Selection
+              {saving && (
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              )}
+              {saving ? "Saving Address..." : "Confirm Selection"}
             </button>
           </div>
         </div>
@@ -260,6 +357,9 @@ function SelectLocationContent({
     </div>
   );
 }
+
+const sameText = (a: string, b: string) =>
+  a.trim().toLowerCase() === b.trim().toLowerCase();
 
 interface SavedAddressCardProps {
   address: Address;
@@ -300,11 +400,11 @@ function SavedAddressCard({
           />
         </div>
 
-        <p className="mt-1 text-sm font-bold text-gray-900">
+        <p className="mt-0.5 text-sm font-bold text-gray-900">
           {address.address}
         </p>
 
-        <p className="mt-0.5 text-sm text-gray-500">
+        <p className="text-sm text-gray-500">
           {address.city}, {address.state}{" "}
           {address.zip}
         </p>

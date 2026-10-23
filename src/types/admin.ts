@@ -56,13 +56,15 @@ export const VALET_LEGS: readonly ValetLeg[] = ["pickup", "delivery"];
 export type StaffLinkRole = ValetLeg | "advisor";
 
 // What the valet / advisor pages sign in with. It has nothing to do with the
-// app's own login (AuthSession): it comes from the link's `gear` and `token`
-// search params, or from the staff email + OTP sign-in.
+// app's own login (AuthSession): it comes from the staff email + OTP sign-in.
 export interface StaffAuth {
   // The auth token
   gear: string;
-  // Encrypted staff type ("valet" or "advisor"); only the server can read it
+  // The staff type: "valet" / "advisor"
   token: string;
+  // Who signed in (missing on a sign-in stored before they were kept)
+  email?: string;
+  name?: string;
 }
 
 export type StaffType = "valet" | "advisor";
@@ -104,11 +106,28 @@ export type IntakeMethod = (typeof INTAKE_METHODS)[number];
 // Pickup & Delivery the dealership moves the vehicle (a valet, or a tow truck on
 // the way in); with Loaner Only the customer brings and collects it themselves,
 // which the admin confirms (`pickupProgress.reached` / `deliveryProgress.delivered`).
-// A trip with a single choice needs no picking: see `legMethod` in admin.utils.ts.
+// A trip with a single choice needs no picking: see `defaultLegMethod`.
 export const LEG_METHODS: Record<ServiceId, Record<ValetLeg, readonly IntakeMethod[]>> = {
-  "pickup-delivery": { pickup: ["valet", "towTruck"], delivery: ["valet"] },
+  "pickup-delivery": { pickup: ["valet", "towTruck", "selfDrive"], delivery: ["valet", "selfDrive"] },
   "loaner-only": { pickup: ["selfDrive"], delivery: ["selfDrive"] },
 };
+
+// How a trip is made until the admin picks something else: the only choice the
+// booked service has, or for the way in what the customer booked: a tow truck when
+// they asked for one, a valet for a vehicle that can be driven, and self-drive for
+// one that can't be driven with no tow truck asked for (as requested).
+export function defaultLegMethod(
+  booking: Pick<AdminBooking, "serviceId" | "driveable" | "towTruck">,
+  leg: ValetLeg,
+): IntakeMethod | null {
+  const options = LEG_METHODS[booking.serviceId][leg];
+  if (options.length === 1) return options[0];
+  // The way back: a valet, as booked, unless the admin picks the customer collecting it
+  if (leg !== "pickup") return options.includes("valet") ? "valet" : null;
+  if (booking.towTruck) return "towTruck";
+  if (booking.driveable) return "valet";
+  return options.includes("selfDrive") ? "selfDrive" : null;
+}
 
 // Updates the advisor shares with the customer while the vehicle is serviced, in
 // order. The bill and payment that follow come from `invoice` and `payment`; then
@@ -119,6 +138,177 @@ export type AdvisorMilestone = (typeof ADVISOR_MILESTONES)[number] | typeof ADVI
 
 // When each milestone was reached (ISO strings); missing = not reached yet
 export type MilestoneLog<T extends string> = Partial<Record<T, string>>;
+
+// Where a booking is on the API's journey: the step names of
+// booking/admin/:bmsId/journey-labels and the status of …/status-summary
+export interface BookingJourney {
+  // The steps this booking goes through, in order, with the API's names. A key
+  // is the status code in camel case: VALET_DISPATCHED is "valetDispatched".
+  steps: { key: string; label: string }[];
+  // The step the booking is at; not one of `steps` before the journey starts
+  current: string;
+  // The API's name for the current status, and when it was reached (text ready
+  // to show). Earlier steps' times aren't sent.
+  statusLabel: string;
+  doneAt: string | null;
+}
+
+// The steps come in order, so every step up to the current one has been reached
+export function journeyReached(journey: BookingJourney, key: string) {
+  const keys = journey.steps.map((step) => step.key);
+  const index = keys.indexOf(key);
+  return index !== -1 && index <= keys.indexOf(journey.current);
+}
+
+// The pickup valet's trip on the journey, as the Vehicle Intake step shows it.
+// The API has more steps in between (the customer's confirmations); they're left out.
+export const INTAKE_JOURNEY = [
+  "valetAssigned",
+  "valetDispatched",
+  "valetArrivedAtCustomer",
+  "vehiclePickedUp",
+  "vehicleArrivedAtDealership",
+] as const;
+
+// The valet's last step, and the admin's confirmation that ends the intake
+export const INTAKE_ARRIVED = "vehicleArrivedAtDealership";
+export const INTAKE_CONFIRMED = "vehicleAtDealershipConfirmed";
+
+// The delivery valet's trip on the journey, as the Vehicle Handover step shows
+// it. It ends the step by itself: the customer's receipt comes after it.
+export const HANDOVER_JOURNEY = [
+  "deliveryValetAssigned",
+  "deliveryValetDispatched",
+  "deliveryVehiclePickedUp",
+  "deliveryValetArrivedAtCustomer",
+  "vehicleDelivered",
+] as const;
+
+export const HANDOVER_DELIVERED = "vehicleDelivered";
+
+const TRIP_JOURNEY_STEPS: Record<ValetLeg, Partial<Record<ValetMilestone, string>>> = {
+  pickup: {
+    dispatched: "valetDispatched",
+    arrived: "valetArrivedAtCustomer",
+    pickedUp: "vehiclePickedUp",
+    reached: INTAKE_ARRIVED,
+  },
+  delivery: {
+    dispatched: "deliveryValetDispatched",
+    pickedUp: "deliveryVehiclePickedUp",
+    reached: "deliveryValetArrivedAtCustomer",
+    delivered: HANDOVER_DELIVERED,
+  },
+};
+
+// The vehicle is in at the dealership, by whatever means: the admin confirmed it,
+// or the booking is already further on (the service or the handover). Read off
+// the API alone, so it holds in any browser.
+export function journeyIntakeDone(journey: BookingJourney) {
+  return [INTAKE_CONFIRMED, ...SERVICE_JOURNEY, ...HANDOVER_JOURNEY].some((step) =>
+    journeyReached(journey, step),
+  );
+}
+
+// How the vehicle came in, as the API tells it: a tow truck while the status is
+// TOW_ASSIGNED, Customer Drop In while it's CUSTOMER_IN, and once it's in with no
+// pickup valet one of those two (see below). null when the API doesn't say. The
+// admin's choice is only kept in the browser it was made in, so this is what
+// other browsers go by.
+export function journeyIntakeMethod(
+  booking: Pick<AdminBooking, "serviceId" | "journey" | "valet" | "driveable" | "towTruck">,
+): IntakeMethod | null {
+  const { journey } = booking;
+  if (!journey || !LEG_METHODS[booking.serviceId].pickup.includes("towTruck")) return null;
+  if (journey.current === "towAssigned") return "towTruck";
+  // Customer Drop In (CUSTOMER_IN); the way back's drop off has its own code
+  if (journey.current === "customerIn" && !booking.valet && !journeyIntakeDone(journey)) {
+    return "selfDrive";
+  }
+  // In with no pickup valet: a tow truck or the customer drove it in. The
+  // journey says which when it went through CUSTOMER_IN / TOW_ASSIGNED; else
+  // the booking's own default decides (Customer Drop In for a vehicle that
+  // can't be driven and has no tow truck asked for), as that's what the picker
+  // showed when nobody changed it
+  if (journeyIntakeDone(journey) && !booking.valet) {
+    if (journeyReached(journey, "customerIn")) return "selfDrive";
+    if (journeyReached(journey, "towAssigned")) return "towTruck";
+    return defaultLegMethod(booking, "pickup") === "selfDrive" ? "selfDrive" : "towTruck";
+  }
+  return null;
+}
+
+// The way back, as the API tells it: Customer Drop Off while the status is
+// CUSTOMER_DROP_OFF after the vehicle came in. null when the API doesn't say.
+export function journeyHandoverMethod(
+  booking: Pick<AdminBooking, "journey">,
+): IntakeMethod | null {
+  const { journey } = booking;
+  if (journey?.current === "customerDropOff" && journeyIntakeDone(journey)) return "selfDrive";
+  return null;
+}
+
+// A trip's milestone log as the journey has it. The API doesn't send when each
+// step happened, so a step keeps the time it's `known` by, or gets now.
+export function journeyTripProgress(
+  journey: BookingJourney,
+  leg: ValetLeg,
+  known: MilestoneLog<ValetMilestone> = {},
+): MilestoneLog<ValetMilestone> {
+  const progress: MilestoneLog<ValetMilestone> = {};
+  LEG_MILESTONES[leg].forEach((milestone) => {
+    const step = TRIP_JOURNEY_STEPS[leg][milestone];
+    if (step && journeyReached(journey, step)) {
+      progress[milestone] = known[milestone] ?? new Date().toISOString();
+    }
+  });
+  // A tow truck's intake has no trip: the vehicle is in once the admin confirms it
+  if (leg === "pickup" && !progress.reached && journeyIntakeDone(journey)) {
+    progress.reached = known.reached ?? new Date().toISOString();
+  }
+  return progress;
+}
+
+// The service on the journey, as the Service Details step shows it. The API
+// has more steps in between (inspection completed / approved, service completed);
+// they're left out. The step ends once the payment is confirmed; the API's
+// "ready for dispatch" isn't on it.
+export const SERVICE_JOURNEY = [
+  "advisorAssigned",
+  "vehicleInInspection",
+  "vehicleInService",
+  "invoiceGenerated",
+  "paymentConfirmed",
+] as const;
+
+// The advisor's last step (the bill), then the admin's that ends the service
+export const SERVICE_INVOICED = "invoiceGenerated";
+export const SERVICE_PAID = "paymentConfirmed";
+// Between the two: the customer paid in the app and the admin hasn't confirmed it
+// yet (PAYMENT_VERIFICATION_PENDING). Not on the tracker, as the steps around it are.
+export const SERVICE_VERIFYING = "paymentVerificationPending";
+export const SERVICE_READY = "readyForDispatch";
+
+const SERVICE_JOURNEY_STEPS: Record<AdvisorMilestone, string> = {
+  inspecting: "vehicleInInspection",
+  inService: "vehicleInService",
+  // The handover opens once the payment is confirmed
+  readyForDispatch: SERVICE_PAID,
+};
+
+// The advisor's milestone log as the journey has it (see journeyTripProgress)
+export function journeyAdvisorProgress(
+  journey: BookingJourney,
+  known: MilestoneLog<AdvisorMilestone> = {},
+): MilestoneLog<AdvisorMilestone> {
+  const progress: MilestoneLog<AdvisorMilestone> = {};
+  (Object.keys(SERVICE_JOURNEY_STEPS) as AdvisorMilestone[]).forEach((milestone) => {
+    if (journeyReached(journey, SERVICE_JOURNEY_STEPS[milestone])) {
+      progress[milestone] = known[milestone] ?? new Date().toISOString();
+    }
+  });
+  return progress;
+}
 
 // A booking as the admin API returns it
 export interface AdminBooking {
@@ -141,8 +331,8 @@ export interface AdminBooking {
   pickup: string;
   dealershipName: string;
   driveable: boolean;
-  // Only for a vehicle that isn't driveable: false when the customer took the tow
-  // truck off (they get the vehicle to the dealership themselves)
+  // The customer asked for a tow truck (the API's `towRequested`). false for a
+  // vehicle that isn't driveable means they took the tow truck off.
   towTruck?: boolean;
   concern: string;
   scheduledAt: string | null;
@@ -170,37 +360,90 @@ export interface AdminBooking {
   // step of their progress
   assignedAt?: Partial<Record<StaffLinkRole, string>>;
   completedAt?: string | null;
-  // What goes in each staff link's search params (see staffLink in
-  // admin.utils.ts). Only admin responses carry it; it's what signs the valet /
-  // advisor in without the email + OTP form.
-  staffTokens?: Partial<Record<StaffLinkRole, StaffAuth>>;
+  // Where the booking is on the API's journey; the Vehicle Intake step is drawn from it
+  journey?: BookingJourney;
 }
 
-// A booking as the staff link endpoints return it
-export interface StaffBooking extends AdminBooking {
-  // The pages of this booking the signed-in staff member may use; a valet can't
-  // open the advisor's page, nor the pickup valet the delivery trip
-  linkRoles?: StaffLinkRole[];
-  // The valet's directions fall back to the dealership's name without it
-  dealershipAddress?: string;
+// A step of a staff page's progress timeline, with when it was done (text ready
+// to show)
+export interface StaffStep {
+  key: string;
+  label: string;
+  done: boolean;
+  at?: string;
 }
 
-export type BookingSortField =
-  | "id"
-  | "customer"
-  | "createdAt"
-  | "scheduledAt"
-  | "status";
+// The update a staff member can make now
+export interface StaffNextAction {
+  status: string;
+  label: string;
+}
+
+// A booking's service as its advisor sees it, from staff/advisor/bookings/:bmsId
+export interface AdvisorServiceDetails {
+  id: string;
+  vehicle: { name: string; vin: string };
+  customer: { name: string; phone: string };
+  // "Oct 9, 2026, 7:56 AM"
+  bookingDate: string;
+  // The API's label for the booking's status
+  status: string;
+  steps: StaffStep[];
+  // null when it isn't the advisor's turn, or the bill is what's next
+  nextAction: StaffNextAction | null;
+  // The service is at the point where the advisor sends the bill
+  canGenerateInvoice: boolean;
+  invoice: { items: InvoiceLine[]; total: number; generatedAt?: string } | null;
+}
+
+// One trip of a booking as its valet sees it, from staff/valet/bookings/:bmsId.
+// Everything arrives as text ready to show.
+export interface ValetTripDetails {
+  id: string;
+  leg: ValetLeg;
+  // "Pickup Trip"
+  title: string;
+  vehicle: { name: string; vin: string };
+  // "As soon as possible", or the date and time
+  scheduled: string;
+  // The API's label for the booking's status
+  status: string;
+  // Where the trip starts and ends; the customer's stop carries their number
+  from: { label: string; address: string; phone?: string };
+  to: { label: string; address: string; phone?: string };
+  // The trip's steps in order
+  steps: StaffStep[];
+  // null when it isn't the valet's turn
+  nextAction: StaffNextAction | null;
+}
+
+// A row of the admin bookings table, from booking/admin/list. The API sends the
+// vehicle, service and scheduled time as text ready to show.
+export interface AdminBookingRow {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  // e.g. "2026 RAM 1500"
+  vehicle: string;
+  service: string;
+  // e.g. "Oct 12, 12:30 PM"
+  scheduled: string;
+  // For the badge colour; null when the API's status isn't one the app knows
+  status: BookingStatus | null;
+  // The API's status code ("VALET_ARRIVED_AT_CUSTOMER"), which the badge's colour
+  // is picked from first
+  statusCode: string;
+  statusLabel: string;
+}
 
 export type SortOrder = "asc" | "desc";
 
 export interface BookingListParams {
   page: number;
   pageSize: number;
-  sortBy: BookingSortField;
-  sortOrder: SortOrder;
   search: string;
-  status: BookingStatus | "all";
+  // An API status code ("VALET_DISPATCHED"; see bookingStatusFilters), or "all"
+  status: string;
   serviceId: ServiceId | "all";
 }
 

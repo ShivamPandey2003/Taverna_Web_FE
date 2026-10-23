@@ -1,39 +1,28 @@
 import { Outlet, useMatch } from "react-router";
 import { WifiOff } from "reicon-react";
-import { valetTrip } from "@/components/features/admin/admin.utils";
 import { StaffMenu } from "@/components/features/staffPortal/shared/StaffMenu";
 import { useStaffAuth } from "@/components/features/staffPortal/shared/useStaffAuth";
-import { isValetLeg } from "@/components/features/staffPortal/shared/workflow";
 import { Logo } from "@/components/ui/Logo";
 import { cn } from "@/libs/utils";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { useStaffBooking, useStaffBookings } from "@/services/queries/staffQueries";
-import type { StaffBooking, StaffLinkRole } from "@/types/admin";
+import { useStaffTasks } from "@/services/queries/staffQueries";
 
-// The booking's valet / advisor behind one of its pages
-function staffOn(booking: StaffBooking, role: StaffLinkRole) {
-  return role === "advisor" ? booking.relationshipManager : valetTrip(booking, role).valet;
-}
-
-// Who is signed in, read off what they're assigned to: the open booking's page,
-// or on the task list their first task. Shares the pages' queries, so it costs
-// no extra request. null when there's nothing to read it from.
+// Who is signed in: the sign-in says so itself; one stored before it did is
+// read off the first task of the task list's first page (the page's own query
+// on page 1, and only asked for when the sign-in has no name).
 function useStaffMember() {
-  const valetMatch = useMatch("/valet/:leg/:bookingId");
-  const advisorMatch = useMatch("/advisor/:bookingId");
-  const params = valetMatch?.params ?? advisorMatch?.params;
+  const onAdvisorTasks = !!useMatch("/advisor");
+  const onValetTasks = !!useMatch("/valet");
   const { auth } = useStaffAuth();
-  const { data: booking } = useStaffBooking({ id: params?.bookingId ?? "", ...auth });
-  // Only fetched on the task list
-  const { data: bookings } = useStaffBookings(params ? { gear: "", token: "" } : auth);
+  const needed = !auth.name && (onAdvisorTasks || onValetTasks);
+  const { data } = useStaffTasks(
+    onAdvisorTasks ? "advisor" : "valet",
+    needed ? auth : { gear: "", token: "" },
+    1,
+  );
 
-  if (booking) {
-    if (advisorMatch) return staffOn(booking, "advisor");
-    const leg = valetMatch?.params.leg;
-    return isValetLeg(leg) ? staffOn(booking, leg) : null;
-  }
-  const first = bookings?.find((item) => item.linkRoles?.length);
-  return first?.linkRoles ? staffOn(first, first.linkRoles[0]) : null;
+  if (auth.name) return { name: auth.name, email: auth.email ?? "" };
+  return data?.tasks.find((task) => task.staff)?.staff ?? null;
 }
 
 // Chrome of the valet / advisor pages: brand bar (with the signed-in staff

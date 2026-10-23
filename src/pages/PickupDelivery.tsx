@@ -14,10 +14,17 @@ import { SchedulePickupModal } from "@/components/features/review/SchedulePickup
 import { SelectDealershipModal } from "@/components/features/review/SelectDealershipModal";
 import { DriveableStatus } from "@/components/features/review/DriveableStatus";
 import { ScheduleSummary } from "@/components/features/review/ScheduleSummary";
+import { ServiceTabs } from "@/components/features/review/ServiceTabs";
+import { UserSummary } from "@/components/features/review/UserSummary";
+import { hasUserDetails } from "@/components/features/review/review.utils";
+import { selectAccountUser } from "@/redux/account/accountSlice";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { formatPickupTime, vehicleName } from "@/libs/utils";
 import { SelectVehicleModal } from "@/components/features/booking/SelectVehicleModal";
 import { AddAddressModal } from "@/components/features/addresses/AddAddressModal";
 import { ServiceInProgressNotice } from "@/components/features/booking/ServiceInProgressNotice";
 import { trackingPath, useVehicleService } from "@/components/features/tracking/serviceStatus";
+import { useClosestDealership } from "@/hooks/useClosestDealership";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   selectBooking,
@@ -25,7 +32,7 @@ import {
   selectBookingDealership,
   selectBookingService,
   selectBookingVehicle,
-  setPickupLocation,
+  changePickupLocation,
   setScheduledAt,
 } from "@/redux/booking/bookingSlice";
 import { confirmBooking } from "@/redux/booking/bookingThunks";
@@ -41,6 +48,11 @@ import {
 //   "loaner-only": "Drive in and swap vehicles",
 // };
 
+// Checked when the customer books, not while the page renders
+function hasPassed(time: string) {
+  return new Date(time).getTime() <= Date.now();
+}
+
 export function PickupDelivery() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -51,7 +63,10 @@ export function PickupDelivery() {
   const vehicle = useAppSelector(selectBookingVehicle);
   const address = useAppSelector(selectBookingAddress);
   const dealership = useAppSelector(selectBookingDealership);
+  const user = useAppSelector(selectAccountUser);
   const activeModal = useAppSelector(selectReviewModal);
+  // Selects the dealership closest to the customer when none is chosen yet
+  const { loading: findingDealership } = useClosestDealership();
 
   const hasPickup = !!address || pickupLocation?.type === "current";
   const [booking, setBooking] = useState(false);
@@ -60,9 +75,23 @@ export function PickupDelivery() {
   const vehicleService = useVehicleService(vehicle?.vin);
   const serviceInProgress = !!vehicleService && !booking;
   const canBook = !!vehicle && hasPickup && !!dealership && !serviceInProgress;
-  // Loaner Only customers drive in themselves, so there's no pickup to schedule
-  const canSchedule = service.id !== "loaner-only";
-  const scheduled = canSchedule && !!scheduledAt;
+  // Loaner Only customers drive in themselves: a time for later is when they
+  // drop the vehicle off at the dealership, not a valet's pickup
+  const loanerOnly = service.id === "loaner-only";
+  // The first card (vehicle, my details, address, dealership) still missing
+  // something; highlighted so the customer knows what to fill first. Driveable
+  // always has an answer and the concern is optional, so neither is ever next.
+  // The dealership isn't next while the closest one is still being found.
+  const nextStep = !vehicle
+    ? "vehicle"
+    : !hasUserDetails(user)
+      ? "user"
+      : !hasPickup
+        ? "address"
+        : !dealership && !findingDealership
+          ? "dealership"
+          : null;
+  const scheduled = !!scheduledAt;
 
   const closeModal = () => dispatch(closeReviewModal());
 
@@ -75,20 +104,37 @@ export function PickupDelivery() {
       toast.error("Select a vehicle, pickup address and dealership first.");
       return;
     }
+    // The current location has no saved address for the API to book against
+    if (!address) {
+      toast.error("Booking needs a saved address. Pick one of yours or add a new one.");
+      dispatch(openReviewModal("location"));
+      return;
+    }
 
-    if (scheduled && new Date(scheduledAt!).getTime() <= Date.now()) {
-      toast.error("Your scheduled pickup time has passed. Pick a new time.");
+    if (scheduled && hasPassed(scheduledAt!)) {
+      toast.error(`Your scheduled ${loanerOnly ? "drop-off" : "pickup"} time has passed. Pick a new time.`);
       dispatch(openReviewModal("schedule"));
       return;
     }
 
+    // A booking for later is placed only once the customer confirms it in the modal
+    if (scheduled) {
+      dispatch(openReviewModal("confirmBooking"));
+      return;
+    }
+
+    await placeBooking();
+  };
+
+  const placeBooking = async () => {
     setBooking(true);
     const bookingId = await dispatch(confirmBooking());
 
     // A failed API call has already been reported by the API layer
     if (bookingId) {
       // So the list of open bookings has the new one before its next poll
-      queryClient.invalidateQueries({ queryKey: bookingKeys.open });
+      queryClient.invalidateQueries({ queryKey: bookingKeys.list });
+      closeModal();
       navigate(trackingPath(bookingId), { replace: true });
     } else {
       setBooking(false);
@@ -100,7 +146,7 @@ export function PickupDelivery() {
       <div className="mx-auto max-w-[1400px]">
         {/* Page header: title on the left, booking actions on the right */}
         <header className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex w-full items-center gap-3 sm:w-auto sm:gap-4">
             <button
               type="button"
               onClick={() => navigate(-1)}
@@ -110,10 +156,10 @@ export function PickupDelivery() {
               <ArrowLeft size={20} />
             </button>
 
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-gray-900">
-                {service.title}
-              </h1>
+            <div className="min-w-0 flex-1 sm:flex-none">
+              {/* The page title, and the switch between the services */}
+              <h1 className="sr-only">{service.title}</h1>
+              <ServiceTabs disabled={booking} />
 
               {/* <p className="mt-0.5 text-sm text-gray-500">{serviceSubtitle[service.id]}</p> */}
             </div>
@@ -121,22 +167,28 @@ export function PickupDelivery() {
 
           {/* Actions */}
           <div className="flex w-full gap-3 sm:w-auto">
-            {canSchedule && (
-              <button
-                type="button"
-                disabled={!canBook || booking}
-                onClick={() => dispatch(openReviewModal("schedule"))}
-                className="h-11 flex-1 rounded-lg border border-gray-900 bg-white px-8 text-sm font-semibold text-gray-900 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
-              >
-                {scheduled ? "Reschedule" : "Schedule for Later"}
-              </button>
-            )}
+            <button
+              type="button"
+              disabled={!canBook || booking}
+              onClick={() => dispatch(openReviewModal("schedule"))}
+              className="h-11 flex-1 whitespace-nowrap rounded-lg border border-gray-900 bg-white px-4 text-sm font-semibold text-gray-900 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none sm:px-8"
+            >
+              {/* "Schedule" alone on phones, where the full label wraps */}
+              {scheduled ? (
+                "Reschedule"
+              ) : (
+                <>
+                  <span className="sm:hidden">Schedule</span>
+                  <span className="hidden sm:inline">Schedule for Later</span>
+                </>
+              )}
+            </button>
 
             <button
               type="button"
               disabled={!canBook || booking}
               onClick={() => handleBook()}
-              className="h-11 flex-1 rounded-lg bg-black px-8 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
+              className="h-11 flex-1 whitespace-nowrap rounded-lg bg-black px-4 sm:px-8 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none"
             >
               {booking ? "Booking..." : scheduled ? "Confirm Booking" : "Book Now"}
             </button>
@@ -149,21 +201,29 @@ export function PickupDelivery() {
           </div>
         )}
 
-        {/* Vehicle, pickup address and driveable (with towing) on the left; dealership,
-            scheduled pickup and the concern on the right. Loaner Only customers drive
-            in themselves, so there's no driveable question, tow or pickup time. */}
+        {/* Two columns, each card its own height: vehicle, address, driveable (with
+            towing) and the scheduled pickup on the left; my details, dealership and
+            the concern on the right, read across in pairs (vehicle / my details,
+            address / dealership, driveable / concern). The first card still missing
+            something is highlighted. Loaner Only customers drive in themselves, so
+            there's no driveable question or tow: its third row is the drop-off time
+            (5, when one is set) beside the concern (6, or 5 without a time). */}
         <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
           <div className="space-y-5">
-            <VehicleSummary />
-            <AddressSummary />
-            {service.id !== "loaner-only" && <DriveableStatus />}
+            <VehicleSummary step={1} highlight={nextStep === "vehicle"} />
+            <AddressSummary step={3} highlight={nextStep === "address"} />
+            {!loanerOnly && <DriveableStatus step={5} />}
+            <ScheduleSummary step={loanerOnly ? 5 : 7} />
           </div>
 
-          {/* The concern box stretches so both columns end level */}
           <div className="flex flex-col gap-5">
-            <DealershipSummary />
-            {service.id !== "loaner-only" && <ScheduleSummary />}
-            <ConcernInput />
+            <UserSummary step={2} highlight={nextStep === "user"} />
+            <DealershipSummary
+              step={4}
+              highlight={nextStep === "dealership"}
+              loading={findingDealership}
+            />
+            <ConcernInput step={loanerOnly && !scheduled ? 5 : 6} />
           </div>
         </div>
       </div>
@@ -181,12 +241,12 @@ export function PickupDelivery() {
         open={activeModal === "addAddress"}
         onClose={closeModal}
         onSaved={(saved) => {
-          dispatch(setPickupLocation({ type: "saved", addressId: saved.id }));
+          dispatch(changePickupLocation({ type: "saved", addressId: saved.id }));
           closeModal();
         }}
       />
       <SchedulePickupModal
-        open={canSchedule && activeModal === "schedule"}
+        open={activeModal === "schedule"}
         onClose={closeModal}
         onConfirm={(date) => {
           // Saved for Book; the card on this page shows it
@@ -198,6 +258,65 @@ export function PickupDelivery() {
         open={activeModal === "dealership"}
         onClose={closeModal}
       />
+      {/* Only for a booking scheduled for later; stays open (locked) while it's placed */}
+      {scheduled && activeModal === "confirmBooking" && (
+        <ConfirmModal
+          title="Confirm Your Booking"
+          tone="primary"
+          confirmLabel="Confirm Booking"
+          cancelLabel="Go Back"
+          pendingLabel="Booking..."
+          pending={booking}
+          onConfirm={() => {
+            // The time may have passed while the modal stood open
+            if (hasPassed(scheduledAt!)) {
+              toast.error(`Your scheduled ${loanerOnly ? "drop-off" : "pickup"} time has passed. Pick a new time.`);
+              dispatch(openReviewModal("schedule"));
+              return;
+            }
+            void placeBooking();
+          }}
+          onClose={() => !booking && closeModal()}
+        >
+          {loanerOnly ? (
+            <p>
+              You'll drop off your{" "}
+              <span className="font-semibold text-gray-900">
+                {vehicle ? vehicleName(vehicle) : "vehicle"}
+              </span>
+              {dealership && (
+                <>
+                  {" "}at <span className="font-semibold text-gray-900">{dealership.name}</span>
+                </>
+              )}{" "}
+              on{" "}
+              <span className="font-semibold text-gray-900">{formatPickupTime(scheduledAt!)}</span>{" "}
+              and pick up your loaner there.
+            </p>
+          ) : (
+          <p>
+            Your valet will pick up your{" "}
+            <span className="font-semibold text-gray-900">
+              {vehicle ? vehicleName(vehicle) : "vehicle"}
+            </span>{" "}
+            on{" "}
+            <span className="font-semibold text-gray-900">{formatPickupTime(scheduledAt!)}</span>
+            {address && (
+              <>
+                {" "}from <span className="font-semibold text-gray-900">{address.address}</span>
+              </>
+            )}
+            {dealership && (
+              <>
+                {" "}and take it to{" "}
+                <span className="font-semibold text-gray-900">{dealership.name}</span>
+              </>
+            )}
+            .
+          </p>
+          )}
+        </ConfirmModal>
+      )}
     </main>
   );
 }

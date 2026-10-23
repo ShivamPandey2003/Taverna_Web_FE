@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { OFFER_CONDITIONS } from "@/components/features/offers/offer.utils";
 
 const text = (label: string, max = 120) =>
   z.string().trim().min(1, `${label} is required`).max(max, `${label} is too long`);
@@ -7,7 +8,7 @@ const text = (label: string, max = 120) =>
 const amount = (label: string) =>
   z.number({ error: `Enter the ${label}` }).min(0, `The ${label} can't be negative`);
 
-// An offer as the admin edits it: the same fields as a row of the offers CSV
+// An offer as the admin edits it: the fields offers/update takes
 export const offerSchema = z.object({
   vin: z
     .string()
@@ -22,8 +23,8 @@ export const offerSchema = z.object({
     .max(2100, "Enter a valid year"),
   model: text("Model", 60),
   trim: z.string().trim().max(60, "Trim is too long"),
-  condition: text("Condition", 40),
-  offerType: text("Offer type", 80),
+  condition: z.enum(OFFER_CONDITIONS, { error: "Choose New or Used" }),
+  offerType: text("Offer type", 100),
   payment: amount("payment"),
   paymentNoTax: amount("payment before tax"),
   totalRebate: amount("total rebate"),
@@ -35,8 +36,8 @@ export const offerSchema = z.object({
   dueAtSigning: amount("amount due at signing"),
   apr: amount("APR").max(100, "Enter the APR as a percentage"),
   lender: text("Lender", 80),
-  description: z.string().trim().max(500, "Description is too long"),
-  disclaimer: z.string().trim().max(2000, "Disclaimer is too long"),
+  description: z.string().trim().max(1000, "Description is too long"),
+  disclaimer: z.string().trim().max(3000, "Disclaimer is too long"),
 });
 
 export type OfferFormData = z.infer<typeof offerSchema>;

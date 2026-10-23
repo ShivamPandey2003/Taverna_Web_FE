@@ -1,53 +1,86 @@
-import { X } from "reicon-react";
+import { useRef, useState } from "react";
+import { ArrowLeft, Calendar, X } from "reicon-react";
 import { useNavigate } from "react-router";
 // import { toast } from "sonner";
-import type { Vehicle } from "@/types/vehicle";
+import type { Vehicle, VehicleServiceRecord } from "@/types/vehicle";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { selectVehicleById } from "@/redux/vehicle/vehicleSlice";
-import { setSelectedVehicle } from "@/redux/booking/bookingSlice";
+import { setSelectedService, setSelectedVehicle } from "@/redux/booking/bookingSlice";
 import {
   closeVehicleDetails,
   selectDashboardModal,
 } from "@/redux/modals/dashboardModal/dashboardModalSlice";
 import { VehicleTitle } from "@/components/features/dashboard/VehicleTitle";
-import { maskedVin } from "@/libs/utils";
+import { useVehicleOverview } from "@/services/queries/vehicleQueries";
+import { cn, maskedVin } from "@/libs/utils";
+import {
+  statusIcons,
+  trackingPath,
+  useVehicleService,
+} from "@/components/features/tracking/serviceStatus";
 
-interface ServiceHistory {
-  id: string;
-  date: string;
-  dealership: string;
-  mileage: string;
-  amount: string;
-  status: "COMPLETED" | "CANCELLED";
-}
+// The Vehicle Details view (photo, VIN / miles, last service, Book Pickup) is
+// switched off for now: the card's history icon opens the Service History
+// straight away. Set to true to bring the details back, with "View all" and the
+// back arrow between the two.
+const SHOW_DETAILS = false;
 
-interface SavedVehicleDetailsModalProps {
-  serviceHistory?: ServiceHistory[];
-  onViewHistory?: () => void;
-}
-
-// Details of a vehicle already in the user's list
-export function SavedVehicleDetailsModal({
-  serviceHistory = [],
-  onViewHistory,
-}: SavedVehicleDetailsModalProps) {
+// Details of a vehicle already in the user's list. "View all" swaps the details
+// for the vehicle's whole service history, in the same modal.
+export function SavedVehicleDetailsModal() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { viewVehicleId } = useAppSelector(selectDashboardModal);
-  const vehicle = useAppSelector((state) =>
+  const savedVehicle = useAppSelector((state) =>
     selectVehicleById(state, viewVehicleId)
   );
+  const { data: overview, isLoading } = useVehicleOverview(savedVehicle?.id ?? null);
+  // A vehicle with a running service can't be booked again until it's complete
+  // (as on its card): the modal then offers that service's tracking instead
+  const service = useVehicleService(savedVehicle?.vin);
+  // The vehicle whose full history is showing; another vehicle opens on its details
+  const [historyFor, setHistoryFor] = useState<string | null>(null);
+  // The details view's height, taken as "View all" is clicked: the history view
+  // keeps it, so the modal doesn't jump, and only its list of services scrolls
+  const modalRef = useRef<HTMLDivElement>(null);
+  const [detailsHeight, setDetailsHeight] = useState<number | null>(null);
 
-  if (!vehicle) {
+  if (!savedVehicle) {
     return null;
   }
 
-  const onClose = () => dispatch(closeVehicleDetails());
+  // The list's copy shows straight away; the overview replaces it once loaded.
+  // The list's mileage stands in while the overview has none.
+  const vehicle: Vehicle = overview
+    ? { ...overview.vehicle, miles: overview.vehicle.miles ?? savedVehicle.miles }
+    : savedVehicle;
 
-  const onBookService = () => {
-    dispatch(setSelectedVehicle(vehicle.id));
+  const history = overview?.serviceHistory ?? [];
+  const showingHistory = !SHOW_DETAILS || historyFor === savedVehicle.id;
+
+  const onClose = () => {
+    setHistoryFor(null);
     dispatch(closeVehicleDetails());
-    navigate("/dashboard/book-service");
+  };
+
+  const onTrackService = () => {
+    if (!service) return;
+    dispatch(closeVehicleDetails());
+    navigate(trackingPath(service.booking.id));
+  };
+
+  const StatusIcon = service ? statusIcons[service.status] : null;
+  const statusLabel = service?.display.etaMinutes
+    ? `Arriving in ${service.display.etaMinutes} mins`
+    : service?.display.label;
+
+  // As the card's Book Pickup: skips the service list, straight to review with
+  // Pickup & Delivery
+  const onBookPickup = () => {
+    dispatch(setSelectedVehicle(vehicle.id));
+    dispatch(setSelectedService("pickup-delivery"));
+    dispatch(closeVehicleDetails());
+    navigate("/dashboard/book-service/review");
   };
 
   // const onRemoveVehicle = () => {
@@ -56,7 +89,9 @@ export function SavedVehicleDetailsModal({
   // };
 
   return (
-    <div className="absolute inset-0 z-50">
+    // Over the window, not inside the page: a tall modal never makes the page
+    // behind it scroll
+    <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/40"
@@ -64,17 +99,35 @@ export function SavedVehicleDetailsModal({
       />
 
       {/* Modal wrapper */}
-      <div className="relative flex min-h-full items-center justify-center overflow-y-auto p-6">
-        {/* Modal */}
+      <div className="pointer-events-none relative flex h-full items-center justify-center p-4 sm:p-6">
+        {/* Modal: at most the window's height; only on a very short screen does
+            its own content scroll */}
         <div
-          className="relative w-full max-w-[520px] rounded-2xl bg-white p-6 shadow-2xl"
+          ref={modalRef}
+          className={cn(
+            "pointer-events-auto relative flex max-h-full w-full max-w-[520px] flex-col rounded-2xl bg-white p-6 shadow-2xl",
+            showingHistory ? "overflow-hidden" : "overflow-y-auto",
+          )}
+          style={showingHistory && detailsHeight ? { height: detailsHeight } : undefined}
           onClick={(event) => event.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold tracking-tight text-[#111827]">
-              Vehicle Details
-            </h2>
+          <div className="flex shrink-0 items-center justify-between">
+            <div className="flex items-center gap-2">
+              {SHOW_DETAILS && showingHistory && (
+                <button
+                  type="button"
+                  onClick={() => setHistoryFor(null)}
+                  className="-ml-1 flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
+                  aria-label="Back to vehicle details"
+                >
+                  <ArrowLeft size={18} />
+                </button>
+              )}
+              <h2 className="text-xl font-bold tracking-tight text-[#111827]">
+                {showingHistory ? "Service History" : "Vehicle Details"}
+              </h2>
+            </div>
 
             <button
               type="button"
@@ -86,29 +139,57 @@ export function SavedVehicleDetailsModal({
             </button>
           </div>
 
-          {/* Vehicle image */}
+          {showingHistory ? (
+            <FullServiceHistory vehicle={vehicle} history={history} loading={isLoading} />
+          ) : (
+          // Its full height (it scrolls with the modal on a short screen)
+          <div className="shrink-0">
+          {/* Vehicle image, name, VIN and miles */}
           <VehicleHero vehicle={vehicle} />
 
-          {/* Vehicle information */}
-          <VehicleInformation vehicle={vehicle} />
+          <div className="mt-4 h-px bg-gray-200" />
 
           {/* Service history */}
           <ServiceHistorySection
-            history={serviceHistory}
-            onViewHistory={onViewHistory}
+            history={history}
+            loading={isLoading}
+            onViewHistory={() => {
+              setDetailsHeight(modalRef.current?.offsetHeight ?? null);
+              setHistoryFor(savedVehicle.id);
+            }}
           />
 
           {/* Divider */}
-          <div className="my-5 h-px bg-gray-200" />
+          <div className="my-4 h-px bg-gray-200" />
 
-          {/* Book service */}
-          <button
-            type="button"
-            onClick={onBookService}
-            className="h-12 w-full rounded-xl bg-[#111827] text-sm font-semibold text-white transition hover:bg-black"
-          >
-            Book a New Service
-          </button>
+          {service ? (
+            // Its running service, as the vehicle's card shows it: the status in
+            // its colour, opening the tracking page
+            <button
+              type="button"
+              onClick={onTrackService}
+              aria-label={`${statusLabel}: ${service.display.message}. Open tracking`}
+              title={service.display.message}
+              className={cn(
+                "flex h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition hover:brightness-95",
+                service.display.color.soft,
+              )}
+            >
+              {StatusIcon && <StatusIcon size={18} className="shrink-0" />}
+              <span className="truncate">{statusLabel}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onBookPickup}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#111827] text-sm font-semibold text-white transition hover:bg-black"
+            >
+              <Calendar size={16} />
+              <p className="pt-1">Book Pickup</p>
+            </button>
+          )}
+          </div>
+          )}
 
           {/* Remove Vehicle */}
           {/* <button
@@ -124,68 +205,98 @@ export function SavedVehicleDetailsModal({
   );
 }
 
-interface VehicleHeroProps {
+// "View all": the vehicle on one compact line (photo | name and VIN), then every
+// past service, newest first as the API sends them
+function FullServiceHistory({
+  vehicle,
+  history,
+  loading,
+}: {
   vehicle: Vehicle;
-}
-
-function VehicleHero({ vehicle }: VehicleHeroProps) {
+  history: VehicleServiceRecord[];
+  loading: boolean;
+}) {
   return (
-    <div className="relative mt-5 h-[190px] overflow-hidden rounded-xl bg-white">
-      <img
-        src={vehicle.image}
-        alt={`${vehicle.year} ${vehicle.brand} ${vehicle.model}`}
-        className="h-full w-full object-contain"
-      />
+    // Fills the modal: the vehicle and the count stay put, the list scrolls
+    <div className="mt-4 flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 items-center gap-4">
+        <img
+          src={vehicle.image}
+          alt=""
+          className="h-14 w-20 shrink-0 rounded-lg bg-gray-50 object-contain"
+        />
 
-      {/* Bottom gradient */}
-      <div className="absolute inset-x-0 bottom-0 h-[85px] bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+        <div className="min-w-0">
+          <h3 className="text-base font-bold text-gray-900">
+            <VehicleTitle vehicle={vehicle} singleLine />
+          </h3>
+          <p className="mt-0.5 text-xs text-gray-500" title={vehicle.vin}>
+            VIN: <span className="font-semibold text-gray-700">{maskedVin(vehicle.vin)}</span>
+          </p>
+        </div>
+      </div>
 
-      {/* Vehicle name */}
-      <h3 className="absolute bottom-4 left-4 right-4 text-lg font-bold leading-tight text-white">
-        <VehicleTitle vehicle={vehicle} />
-      </h3>
+      <div className="my-4 h-px shrink-0 bg-gray-200" />
+
+      {history.length === 0 ? (
+        // It can open before the history has loaded, and a vehicle may have none
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <p className="text-sm text-gray-500">
+            {loading ? "Loading service history..." : "No service history available."}
+          </p>
+        </div>
+      ) : (
+        <>
+          <p className="shrink-0 text-xs font-semibold uppercase tracking-wide text-gray-500">
+            {history.length} {history.length === 1 ? "service" : "services"}
+          </p>
+
+          {/* The right padding keeps the cards clear of the scrollbar */}
+          <div className="-mr-2 mt-3 min-h-0 flex-1 space-y-3 overflow-y-auto pr-2">
+            {history.map((record) => (
+              <ServiceHistoryCard key={record.id} service={record} />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
 
-interface VehicleInformationProps {
+interface VehicleHeroProps {
   vehicle: Vehicle;
 }
 
-function VehicleInformation({
-  vehicle,
-}: VehicleInformationProps) {
+// Laid out like the dashboard's VehicleCard (and the Add Vehicle modal): the
+// photo on its own, then the name (year, make, model), then the VIN and miles
+function VehicleHero({ vehicle }: VehicleHeroProps) {
   return (
-    <div className="mt-5 rounded-xl border border-gray-200 bg-gray-50/70 p-4">
-      {/* VIN */}
-      <div>
-        <p className="text-xs text-gray-500">
-          VIN
-        </p>
-
-        <p className="mt-1 text-sm font-bold tracking-wide text-gray-900" title={vehicle.vin}>
-          {maskedVin(vehicle.vin)}
-        </p>
+    <div className="mt-4">
+      <div className="flex h-[150px] items-center justify-center overflow-hidden">
+        <img
+          src={vehicle.image}
+          alt={`${vehicle.year} ${vehicle.brand} ${vehicle.model}`}
+          className="h-full w-full object-contain"
+        />
       </div>
 
-      <div className="my-3 h-px bg-gray-200" />
+      <div className="pt-5">
+        <h3 className="text-xl font-bold leading-tight text-gray-900">
+          <VehicleTitle vehicle={vehicle} singleLine />
+        </h3>
 
-      {/* Vehicle stats */}
-      <div className="grid grid-cols-3">
-        <VehicleStat
-          label="YEAR"
-          value={vehicle.year}
-        />
+        <div className="my-4 h-px bg-gray-200" />
 
-        <VehicleStat
-          label="MILES"
-          value={vehicle.miles || "—"}
-        />
+        {/* As on the card: last 6 of the VIN (full VIN in the tooltip), miles beside it */}
+        <div className="flex gap-12">
+          <VehicleStat
+            label="VIN"
+            value={maskedVin(vehicle.vin)}
+            title={vehicle.vin}
+          />
 
-        {/* <VehicleStat
-          label="MODEL"
-          value={vehicle.color}
-        /> */}
+          <VehicleStat label="Miles" value={vehicle.miles || "—"} />
+        </div>
       </div>
     </div>
   );
@@ -194,17 +305,20 @@ function VehicleInformation({
 function VehicleStat({
   label,
   value,
+  title,
 }: {
   label: string;
   value: string | number;
+  title?: string;
 }) {
   return (
-    <div className="border-r border-gray-200 px-3 first:pl-0 last:border-r-0">
-      <p className="text-[11px] font-medium text-gray-500">
-        {label}
-      </p>
+    <div>
+      <p className="text-xs font-medium text-gray-800">{label}</p>
 
-      <p className="mt-1 text-sm font-bold text-gray-900">
+      <p
+        title={title}
+        className="mt-1 whitespace-nowrap text-sm font-semibold tracking-wide text-gray-900"
+      >
         {value}
       </p>
     </div>
@@ -212,37 +326,43 @@ function VehicleStat({
 }
 
 interface ServiceHistorySectionProps {
-  history: ServiceHistory[];
+  history: VehicleServiceRecord[];
+  loading: boolean;
   onViewHistory?: () => void;
 }
 
 function ServiceHistorySection({
   history,
+  loading,
   onViewHistory,
 }: ServiceHistorySectionProps) {
   return (
-    <section className="mt-5">
+    <section className="mt-4">
       {/* Section header */}
       <div className="flex items-center justify-between">
         <h3 className="text-base font-bold text-gray-900">
           Service History
         </h3>
 
+        {/* Disabled until there's a service history to open */}
         <button
           type="button"
           onClick={onViewHistory}
-          className="text-xs font-medium text-gray-500 transition hover:text-gray-900"
+          disabled={!onViewHistory || history.length === 0}
+          className="text-xs font-medium text-gray-500 transition hover:text-gray-900 disabled:cursor-not-allowed disabled:text-gray-300 disabled:hover:text-gray-300"
         >
           View all &gt;
         </button>
       </div>
 
       {/* History */}
-      <div className="mt-4 space-y-3">
+      <div className="mt-3 space-y-3">
         {history.length === 0 ? (
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
             <p className="text-sm text-gray-500">
-              No service history available.
+              {loading
+                ? "Loading service history..."
+                : "No service history available."}
             </p>
           </div>
         ) : (
@@ -259,7 +379,7 @@ function ServiceHistorySection({
 }
 
 interface ServiceHistoryCardProps {
-  service: ServiceHistory;
+  service: VehicleServiceRecord;
 }
 
 function ServiceHistoryCard({
@@ -295,13 +415,14 @@ function ServiceHistoryCard({
       {/* Divider */}
       <div className="my-3 h-px bg-gray-200" />
 
-      {/* Bottom row */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500">
-          {service.mileage}
+      {/* Bottom row: what was done (and which booking), and what it cost */}
+      <div className="flex items-center justify-between gap-4">
+        <p className="min-w-0 truncate text-xs text-gray-500" title={service.description}>
+          <span className="font-medium text-gray-700">{service.description}</span>
+          {service.bookingId && <> · {service.bookingId}</>}
         </p>
 
-        <p className="text-sm font-bold text-gray-900">
+        <p className="shrink-0 text-sm font-bold text-gray-900">
           {service.amount}
         </p>
       </div>

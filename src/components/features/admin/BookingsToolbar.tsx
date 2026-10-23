@@ -7,7 +7,7 @@ import {
   setStatusFilter,
 } from "@/redux/adminBookings/adminBookingsSlice";
 import type { BookingListParams } from "@/types/admin";
-import { bookingStatuses, serviceLabels } from "./admin.utils";
+import { bookingStatusFilters, serviceLabels } from "./admin.utils";
 import { SearchInput } from "./SearchInput";
 
 export function BookingsToolbar() {
@@ -28,16 +28,20 @@ export function BookingsToolbar() {
       <select
         value={status}
         onChange={(event) =>
-          dispatch(setStatusFilter(event.target.value as BookingListParams["status"]))
+          dispatch(setStatusFilter(event.target.value))
         }
         className="h-9 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-gray-400"
         aria-label="Filter by status"
       >
         <option value="all">All Status</option>
-        {bookingStatuses.map((item) => (
-          <option key={item} value={item}>
-            {item}
-          </option>
+        {bookingStatusFilters.map(({ group, options }) => (
+          <optgroup key={group} label={group}>
+            {options.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.label}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
 

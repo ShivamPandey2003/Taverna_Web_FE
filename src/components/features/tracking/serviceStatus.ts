@@ -1,29 +1,32 @@
 import { useEffect } from "react";
 import {
   CalendarTick,
+  BillCheck,
   Car,
+  CheckCircle,
   Driving,
   Garage,
   Invoice,
+  MapPoint,
   People,
   Routing,
   Setting2,
   TickCircle,
+  UserLaptop,
   UserTick,
+  XCircle2,
 } from "reicon-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import {
   activeBookingsRestored,
+  bookingVehiclesCorrected,
   selectActiveBookings,
-  setBookingStatus,
 } from "@/redux/tracking/trackingSlice";
 import { selectVehicles } from "@/redux/vehicle/vehicleSlice";
-import { useMyOpenBookings } from "@/services/queries/bookingQueries";
-import { dealerships } from "@/components/features/review/dealership.data";
+import { useMyBookings } from "@/services/queries/bookingQueries";
 import defaultVehicleImage from "@/assets/jeep-grand-cherokee.webp";
 import { statusColors, type StatusColor } from "@/libs/statusColors";
-import type { AdminBooking } from "@/types/admin";
-import { BookingStatus, type Booking } from "@/types/booking";
+import { BookingStatus, type Booking, type BookingSummary } from "@/types/booking";
 import type { Vehicle } from "@/types/vehicle";
 
 export const TRACKING_PATH = "/dashboard/book-service/tracking";
@@ -46,6 +49,38 @@ export const statusIcons: Record<BookingStatus, typeof People> = {
   [BookingStatus.SERVICE_COMPLETE]: TickCircle,
 };
 
+// An icon for each of the API's status labels, matched on their letters
+// ("Valet EnRoute" = "valetenroute"); both valet legs share their labels
+const labelIcons: Record<string, typeof People> = {
+  inqueue: People,
+  booked: CalendarTick,
+  valetready: UserTick,
+  valetenroute: Routing,
+  valetarrived: MapPoint,
+  pickupbooked: Car,
+  pickupenroute: Routing,
+  atdealership: Garage,
+  checkedin: Garage,
+  advisorready: UserLaptop,
+  inspecting: UserLaptop,
+  servicing: Setting2,
+  billgenerated: Invoice,
+  verifyingpayment: BillCheck,
+  paymentverified: CheckCircle,
+  ready: Car,
+  vehicledelivered: Car,
+  servicedone: TickCircle,
+  cancelled: XCircle2,
+};
+
+// The icon for a status label, else the stage's own icon
+export function statusLabelIcon(label: string | null | undefined, status: BookingStatus) {
+  const key = label?.toLowerCase().replace(/[^a-z]/g, "") ?? "";
+  // The delivery valet's "Valet Ready" is driving to the customer
+  if (key === "valetready" && status === BookingStatus.VEHICLE_RETURN) return Driving;
+  return labelIcons[key] ?? statusIcons[status];
+}
+
 export interface StatusDisplay {
   // Same colour as the admin's status badge
   color: StatusColor;
@@ -59,9 +94,18 @@ export interface StatusDisplay {
   actionRequired?: boolean;
 }
 
-// How each booking status reads to the customer
-export function getStatusDisplay(status: BookingStatus, etaMinutes?: number | null): StatusDisplay {
-  return { color: statusColors[status], ...getStatusText(status, etaMinutes) };
+// How each stage reads to the customer; what the API says about the status (its
+// name, and on the tracking page its line about it) replaces the label and message
+export function getStatusDisplay(
+  status: BookingStatus,
+  live?: { label: string; heading?: string },
+): StatusDisplay {
+  return {
+    color: statusColors[status],
+    ...getStatusText(status),
+    ...(live && { label: live.label }),
+    ...(live?.heading && { message: live.heading }),
+  };
 }
 
 function getStatusText(status: BookingStatus, etaMinutes?: number | null): Omit<StatusDisplay, "color"> {
@@ -91,22 +135,29 @@ function getStatusText(status: BookingStatus, etaMinutes?: number | null): Omit<
   }
 }
 
-// What the tracking page shows, driven by what the admin has done so far:
-//   waiting  - nothing assigned yet
-//   valet    - pickup valet card + map, until the vehicle reaches the dealership
-//   manager  - advisor card while the vehicle is serviced
-//   payment  - advisor card + bill
-//   delivery - delivery valet card + map + receipt, once the bill is paid
-//   complete - bill only
-export type TrackingStage = "waiting" | "valet" | "manager" | "payment" | "delivery" | "complete";
+// What the tracking page shows besides the header and the journey:
+//   details - what was booked, before anyone is assigned
+//   valet   - the map, while a valet is moving the vehicle
+//   advisor - the advisor's card, while the vehicle is at the dealership
+//   none    - nothing more (the vehicle is on its way back, or the service is done)
+export type TrackingStage = "details" | "valet" | "advisor" | "none";
 
-export function getTrackingStage(booking: AdminBooking, status: BookingStatus): TrackingStage {
-  if (status === BookingStatus.SERVICE_COMPLETE) return "complete";
-  if (booking.deliveryValet) return "delivery";
-  if (booking.payment || booking.invoice) return "payment";
-  if (booking.relationshipManager) return "manager";
-  if (booking.valet) return "valet";
-  return "waiting";
+export function getTrackingStage(status: BookingStatus): TrackingStage {
+  switch (status) {
+    case BookingStatus.IN_QUEUE:
+    case BookingStatus.BOOKED:
+      return "details";
+    case BookingStatus.VALET_ASSIGNED:
+    case BookingStatus.VALET_ON_ROAD:
+    case BookingStatus.VEHICLE_PICKED_UP:
+      return "valet";
+    case BookingStatus.VEHICLE_ARRIVED:
+    case BookingStatus.IN_SERVICE:
+    case BookingStatus.BILL_GENERATED:
+      return "advisor";
+    default:
+      return "none";
+  }
 }
 
 // One of the customer's tracked bookings with its live status
@@ -119,17 +170,28 @@ export interface ActiveService {
 export const isOpenService = (service: ActiveService) =>
   service.status !== BookingStatus.SERVICE_COMPLETE;
 
-// Every booking the customer is tracking (one per vehicle), newest first, with
-// its live status. The Redux snapshots cover the first render and API failures;
-// the open-bookings list (polled) brings admin progress in.
+// Every booking the customer is tracking, newest first, with where it stands.
+// The Redux snapshot says what was booked and covers the first render and API
+// failures; the status is the API's, from the customer's list of bookings. One
+// the list has as over (complete or cancelled) counts as complete, and so does
+// one the list no longer has at all (the snapshot's own status, e.g. In-queue,
+// would otherwise stay up forever). Only a booking made after the list was
+// loaded keeps its snapshot's status until the list catches up.
 export function useActiveServices(): ActiveService[] {
   const bookings = useAppSelector(selectActiveBookings);
-  const { data: open } = useMyOpenBookings();
+  const { data: list, dataUpdatedAt } = useMyBookings();
 
   return bookings.map((booking) => {
-    const live = open?.find((item) => item.id === booking.id);
-    const status = live?.status ?? booking.status;
-    return { booking, status, display: getStatusDisplay(status, live?.etaMinutes) };
+    const live = list?.find((item) => item.id === booking.id);
+    const newerThanList = !list || Date.parse(booking.createdAt) > dataUpdatedAt;
+    const status = !live
+      ? newerThanList
+        ? booking.status
+        : BookingStatus.SERVICE_COMPLETE
+      : live.open
+        ? (live.status ?? booking.status)
+        : BookingStatus.SERVICE_COMPLETE;
+    return { booking, status, display: getStatusDisplay(status, live) };
   });
 }
 
@@ -152,74 +214,86 @@ export function useVehicleService(vin: string | undefined) {
   );
 }
 
-// Tracking data for a booking from the API, using the customer's saved vehicle and the
-// dealership catalog where they match
-function toTrackingBooking(booking: AdminBooking, vehicles: Vehicle[]): Booking {
-  const vehicle: Vehicle = vehicles.find((item) => item.vin === booking.vehicle.vin) ?? {
-    id: booking.vehicle.vin,
-    ...booking.vehicle,
+// "2026 RAM 1500" -> year, brand and model
+function parseVehicle(name: string) {
+  const [first = "", ...rest] = name.trim().split(/\s+/);
+  const year = Number(first);
+  const [brand = "", ...model] = Number.isNaN(year) ? [first, ...rest] : rest;
+  return { year: Number.isNaN(year) ? 0 : year, brand, model: model.join(" ") };
+}
+
+// The same vehicle: by VIN, since two vehicles can share a name
+const sameVin = (a: string, b: string) => !!a && a.toUpperCase() === b.toUpperCase();
+
+// A tracked booking rebuilt from the API's list, which says little about it: the
+// vehicle (matched to the customer's saved ones by VIN), no pickup address and
+// no concern
+function toTrackingBooking(summary: BookingSummary, vehicles: Vehicle[]): Booking {
+  const vehicle: Vehicle = vehicles.find((saved) => sameVin(saved.vin, summary.vin)) ?? {
+    id: summary.id,
+    ...parseVehicle(summary.vehicle),
+    vin: summary.vin,
     miles: "—",
     image: defaultVehicleImage,
   };
-
-  const dealership = dealerships.find((item) => item.name === booking.dealershipName) ?? {
-    id: booking.dealershipName,
-    name: booking.dealershipName,
-    address: "",
-    image: "",
-    valetAvailable: true,
-    loanerAvailable: true,
-  };
+  const scheduled = Date.parse(summary.scheduled);
+  const scheduledAt = Number.isNaN(scheduled) ? null : new Date(scheduled).toISOString();
 
   return {
-    id: booking.id,
-    serviceId: booking.serviceId,
+    id: summary.id,
+    serviceId: "pickup-delivery",
     vehicle,
-    pickup: { label: booking.pickup },
-    dealership,
-    driveable: booking.driveable,
-    towTruck: booking.towTruck,
-    concern: booking.concern,
-    scheduledAt: booking.scheduledAt,
-    createdAt: booking.createdAt,
-    status: booking.status,
+    pickup: { label: "" },
+    dealership: {
+      id: summary.dealershipName,
+      name: summary.dealershipName,
+      address: "",
+      image: "",
+      valetAvailable: true,
+      loanerAvailable: true,
+      latitude: 0,
+      longitude: 0,
+      serviceRadiusMiles: 0,
+      timezone: "",
+      isActive: true,
+    },
+    driveable: true,
+    concern: "",
+    scheduledAt,
+    createdAt: scheduledAt ?? new Date().toISOString(),
+    status: summary.status ?? BookingStatus.IN_QUEUE,
   };
 }
 
-// Keeps the tracked bookings in Redux in step with the customer's open bookings
-// from the API: puts back the ones missing there (after a reload, or made on
-// another device), follows their status, and marks as complete the ones the API
-// no longer lists. Tracking, the toast and the booking pages read them from Redux.
+// Puts back the running bookings that Redux lost (after a reload, or made on
+// another device) from the customer's list of bookings. Tracking, the status
+// bubbles and the booking pages read them from Redux. Waits for the customer's
+// vehicles, which each booking is matched to.
 export function useSyncActiveBookings(enabled: boolean) {
   const dispatch = useAppDispatch();
   const activeBookings = useAppSelector(selectActiveBookings);
   const vehicles = useAppSelector(selectVehicles);
-  const { data: openBookings, dataUpdatedAt } = useMyOpenBookings(enabled);
+  const { data: list } = useMyBookings(enabled);
 
   useEffect(() => {
-    if (!enabled || !openBookings) return;
+    if (!enabled || !list || vehicles.length === 0) return;
 
     const tracked = new Set(activeBookings.map((booking) => booking.id));
-    const missing = openBookings.filter((booking) => !tracked.has(booking.id));
+    const missing = list.filter((booking) => booking.open && !tracked.has(booking.id));
     if (missing.length > 0) {
       dispatch(
         activeBookingsRestored(missing.map((booking) => toTrackingBooking(booking, vehicles))),
       );
     }
 
-    activeBookings.forEach((booking) => {
-      const live = openBookings.find((item) => item.id === booking.id);
-      if (live) {
-        if (live.status !== booking.status) {
-          dispatch(setBookingStatus({ id: booking.id, status: live.status }));
-        }
-        return;
-      }
-      // Not open any more. A booking made after the list was fetched just isn't in it yet.
-      const listedSince = Date.parse(booking.createdAt) < dataUpdatedAt;
-      if (listedSince && booking.status !== BookingStatus.SERVICE_COMPLETE) {
-        dispatch(setBookingStatus({ id: booking.id, status: BookingStatus.SERVICE_COMPLETE }));
-      }
+    // Tracked bookings on a different vehicle than the API says (by VIN) get the
+    // saved vehicle with that VIN
+    const corrections = activeBookings.flatMap((booking) => {
+      const summary = list.find((item) => item.id === booking.id);
+      if (!summary?.vin || sameVin(booking.vehicle.vin, summary.vin)) return [];
+      const vehicle = vehicles.find((saved) => sameVin(saved.vin, summary.vin));
+      return vehicle ? [{ id: booking.id, vehicle }] : [];
     });
-  }, [dispatch, enabled, openBookings, dataUpdatedAt, activeBookings, vehicles]);
+    if (corrections.length > 0) dispatch(bookingVehiclesCorrected(corrections));
+  }, [dispatch, enabled, list, activeBookings, vehicles]);
 }

@@ -9,10 +9,12 @@ interface SearchInputProps {
   // Called once typing pauses
   onSearch: (value: string) => void;
   placeholder: string;
+  // The longest search the API takes
+  maxLength?: number;
 }
 
 // The input updates immediately; the search is applied once typing pauses
-export function SearchInput({ value, onSearch, placeholder }: SearchInputProps) {
+export function SearchInput({ value, onSearch, placeholder, maxLength }: SearchInputProps) {
   const [input, setInput] = useState(value);
   const [appliedValue, setAppliedValue] = useState(value);
 
@@ -41,6 +43,7 @@ export function SearchInput({ value, onSearch, placeholder }: SearchInputProps) 
         value={input}
         onChange={(event) => setInput(event.target.value)}
         placeholder={placeholder}
+        maxLength={maxLength}
         className="h-9 w-full rounded-lg border border-gray-200 bg-white pl-10 pr-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
       />
     </div>

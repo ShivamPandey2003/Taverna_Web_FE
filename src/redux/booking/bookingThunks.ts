@@ -6,6 +6,7 @@ import {
   selectBookingVehicle,
 } from "./bookingSlice";
 import { bookingApi } from "@/services/bookingApi";
+import { pendingBookingStorage } from "@/services/pendingBookingStorage";
 
 // Sends the booking in progress to the API, then snapshots it into the tracking slice.
 // Resolves the new booking's id, or null when a vehicle, pickup location or dealership is
@@ -18,9 +19,8 @@ export const confirmBooking =
     const address = selectBookingAddress(state);
     const dealership = selectBookingDealership(state);
     const location = state.booking.pickupLocation;
-    // Loaner Only has no pickup to schedule
-    const scheduledAt =
-      state.booking.selectedServiceId === "loaner-only" ? null : state.booking.scheduledAt;
+    // The pickup time, or for Loaner Only the drop-off time; null books for now
+    const scheduledAt = state.booking.scheduledAt;
 
     const pickup =
       location?.type === "current"
@@ -32,7 +32,8 @@ export const confirmBooking =
             zip: address.zip,
           };
 
-    if (!vehicle || !pickup || !dealership) {
+    // The API books against a saved address (it checks the distance to the dealership)
+    if (!vehicle || !pickup || !dealership || !address) {
       return null;
     }
 
@@ -44,6 +45,9 @@ export const confirmBooking =
 
     try {
       const created = await bookingApi.create({
+        vehicleId: vehicle.id,
+        dealershipId: dealership.id,
+        addressId: address.id,
         serviceId: state.booking.selectedServiceId,
         vehicle: {
           brand: vehicle.brand,
@@ -65,18 +69,21 @@ export const confirmBooking =
       dispatch(
         bookingCreated({
           id: created.id,
-          serviceId: created.serviceId,
+          serviceId: state.booking.selectedServiceId,
           vehicle,
           pickup,
           dealership,
           driveable,
           towTruck,
-          concern: created.concern,
+          concern: state.booking.concern,
           scheduledAt,
           createdAt: created.createdAt,
           status: created.status,
         }),
       );
+      // The landing page's pickup and dealership have been booked: the next
+      // booking starts from scratch
+      pendingBookingStorage.clear();
 
       return created.id;
     } catch {

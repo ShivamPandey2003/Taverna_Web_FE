@@ -1,10 +1,10 @@
-import { useDealerships } from "@/services/queries/adminQueries";
+import { useAdminDealerships } from "@/services/queries/dealershipQueries";
 import { DealershipCard } from "./DealershipCard";
 import { useDealershipSearch } from "./useDealershipSearch";
 
 export function DealershipGrid() {
   const { search } = useDealershipSearch();
-  const { data, isPending, isError, refetch } = useDealerships(search);
+  const { data, isPending, isError, refetch } = useAdminDealerships(search);
 
   if (isError) {
     return (

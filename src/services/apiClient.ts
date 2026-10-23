@@ -33,26 +33,16 @@ export async function callApi<T>(
   }
 }
 
-type Method = "get" | "post" | "put" | "delete";
+type Method = "get" | "post" | "put" | "delete" | "patch";
 
-// Assumes the backend wraps payloads as { code, message, data }
+// The backend wraps payloads as { code, message, response }
 export async function request<T>(method: Method, url: string, data?: unknown): Promise<T> {
   const body = await apiRequest(method, url, data ?? null);
   return (body?.data ?? body?.response?.data ?? body?.response ?? body) as T;
 }
 
-// Staff page calls: answered by the same mock, or sent with the staff sign-in
-// (null for the sign-in calls themselves). Unlike callApi these never toast
-// (see staffApiRequest).
-export async function callStaffApi<T>(mock: () => T, real: () => Promise<T>): Promise<T> {
-  if (!USE_MOCK_API) {
-    return real();
-  }
-
-  await delay(MOCK_LATENCY_MS);
-  return structuredClone(mock());
-}
-
+// Staff page calls, sent with the staff sign-in (null for the sign-in calls
+// themselves). Unlike `request` these never toast (see staffApiRequest).
 export async function staffRequest<T>(
   auth: StaffAuth | null,
   method: Method,
@@ -60,7 +50,7 @@ export async function staffRequest<T>(
   data?: unknown,
 ): Promise<T> {
   const body = await staffApiRequest(auth, method, url, data ?? null);
-  return (body?.data ?? body) as T;
+  return (body?.data ?? body?.response ?? body) as T;
 }
 
 export function toQueryString(params: Record<string, string | number>) {

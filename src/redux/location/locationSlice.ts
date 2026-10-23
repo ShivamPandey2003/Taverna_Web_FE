@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import type { RootState } from "@/redux/store";
+import { fromNominatimAddress, type AddressPlace } from "@/services/geocodeApi";
 
 type Coordinates = {
   latitude: number;
@@ -7,8 +8,13 @@ type Coordinates = {
   accuracy: number;
 };
 
+// The device location's address in the fields a saved address has, so it can be
+// saved as one (user/addresses)
+export type AddressParts = AddressPlace;
+
 type LocationState = {
   address: string | null;
+  parts: AddressParts | null;
   coordinates: Coordinates | null;
   loading: boolean;
   error: string | null;
@@ -16,6 +22,7 @@ type LocationState = {
 
 const initialState: LocationState = {
   address: null,
+  parts: null,
   coordinates: null,
   loading: false,
   error: null,
@@ -47,7 +54,7 @@ function getPositionErrorMessage(error: GeolocationPositionError) {
 type LocationError = { message: string; coordinates?: Coordinates };
 
 export const fetchCurrentLocation = createAsyncThunk<
-  { address: string | null; coordinates: Coordinates },
+  { address: string | null; parts: AddressParts | null; coordinates: Coordinates },
   void,
   { rejectValue: LocationError }
 >("location/fetchCurrentLocation", async (_, { rejectWithValue }) => {
@@ -78,7 +85,8 @@ export const fetchCurrentLocation = createAsyncThunk<
     }
 
     const data = await response.json();
-    return { address: data.display_name ?? null, coordinates };
+    const address: string | null = data.display_name ?? null;
+    return { address, parts: fromNominatimAddress(data.address, address), coordinates };
   } catch (err) {
     console.error(err);
     return rejectWithValue({ message: "Unable to get your address.", coordinates });
@@ -98,6 +106,7 @@ const locationSlice = createSlice({
       .addCase(fetchCurrentLocation.fulfilled, (state, action) => {
         state.loading = false;
         state.address = action.payload.address;
+        state.parts = action.payload.parts;
         state.coordinates = action.payload.coordinates;
       })
       .addCase(fetchCurrentLocation.rejected, (state, action) => {

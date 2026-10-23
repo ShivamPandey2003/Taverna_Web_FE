@@ -7,17 +7,19 @@ import { selectAccountUser } from "@/redux/account/accountSlice";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { clearActiveBooking } from "@/redux/tracking/trackingSlice";
 import { useCancelBooking } from "@/services/queries/bookingQueries";
-import type { Booking } from "@/types/booking";
+import type { Booking, CustomerBookingDetails } from "@/types/booking";
 import { shareBooking } from "./bookingDetails";
 
 interface BookingActionsProps {
   booking: Booking;
+  // The API's details, once loaded, for what Share sends
+  details?: CustomerBookingDetails | null;
   // Only until the dealership confirms the booking (In-queue)
   canCancel: boolean;
 }
 
 // What the customer can do while waiting: share the booking, cancel it, or head back home
-export function BookingActions({ booking, canCancel }: BookingActionsProps) {
+export function BookingActions({ booking, details, canCancel }: BookingActionsProps) {
   const dispatch = useAppDispatch();
   const user = useAppSelector(selectAccountUser);
   const navigate = useNavigate();
@@ -44,7 +46,7 @@ export function BookingActions({ booking, canCancel }: BookingActionsProps) {
       <div className="flex shrink-0 flex-col-reverse gap-3 sm:flex-row">
         <button
           type="button"
-          onClick={() => shareBooking(booking, user)}
+          onClick={() => shareBooking(booking, user, details)}
           className="flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-5 text-sm font-semibold text-gray-900 transition hover:bg-gray-50"
         >
           <Share size={16} />

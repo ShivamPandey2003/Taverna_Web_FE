@@ -1,12 +1,22 @@
 import type { ReactNode } from "react";
 import { Calendar, Call, Danger } from "reicon-react";
 import defaultVehicleImage from "@/assets/jeep-grand-cherokee.webp";
-import type { StaffBooking } from "@/types/admin";
-import { brandName, telLink } from "@/libs/utils";
+import { telLink } from "@/libs/utils";
+
+// What the card shows of a booking
+export interface HeroBooking {
+  id: string;
+  vehicle: { name: string; vin: string; image?: string };
+  // Only shown with `columns`
+  customer?: { name: string; phone: string };
+  // false adds the "Not driveable" warning; `towTruck` picks its wording
+  driveable?: boolean;
+  towTruck?: boolean;
+}
 
 interface BookingHeroProps {
   title: string;
-  booking: StaffBooking;
+  booking: HeroBooking;
   status: ReactNode;
   // The trip's date and time, e.g. "Scheduled pickup" / "Tue, Oct 6 • 7:32 PM".
   // Leave out on pages where it doesn't apply.
@@ -25,7 +35,7 @@ export function BookingHero({
   when,
   columns,
 }: BookingHeroProps) {
-  const { vehicle, driveable, customer } = booking;
+  const { vehicle, driveable = true, customer } = booking;
   // Staff match the VIN's end against the windshield plate
   const vinStart = vehicle.vin.slice(0, -6);
   const vinEnd = vehicle.vin.slice(-6);
@@ -52,7 +62,7 @@ export function BookingHero({
             />
             <div className="min-w-0">
               <p className="info-value">
-                {vehicle.year} {brandName(vehicle.brand)} {vehicle.model}
+                {vehicle.name}
               </p>
               <p className="mt-0.5 text-sm text-text-secondary">
                 VIN **
@@ -70,6 +80,7 @@ export function BookingHero({
             </div>
           )}
 
+          {customer && (
           <div className="flex min-w-0 items-center gap-3 sm:pl-4">
             <div className="min-w-0 flex-1">
               <p className="info-label">Customer</p>
@@ -84,6 +95,7 @@ export function BookingHero({
               <Call size={20} />
             </a>
           </div>
+          )}
         </div>
       ) : (
         <div className="info-list mt-4 border-t border-border pt-4">
@@ -96,7 +108,7 @@ export function BookingHero({
             />
             <div className="min-w-0">
               <p className="info-value">
-                {vehicle.year} {brandName(vehicle.brand)} {vehicle.model}
+                {vehicle.name}
               </p>
               <p className="mt-0.5 break-all font-mono text-sm tracking-wide text-text-secondary">
                 VIN {vinStart}

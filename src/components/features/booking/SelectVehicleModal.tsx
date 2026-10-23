@@ -59,10 +59,10 @@ function SelectVehicleContent({ onClose }: { onClose: () => void }) {
       />
 
       {/* Modal wrapper */}
-      <div className="relative flex min-h-full items-center justify-center overflow-y-auto p-6">
+      <div className="relative flex min-h-full items-center justify-center overflow-y-auto p-4 sm:p-6">
         {/* Modal */}
         <div
-          className="relative w-full max-w-[520px] rounded-2xl bg-white p-6 shadow-2xl"
+          className="relative w-full max-w-[520px] rounded-2xl bg-white p-5 shadow-2xl sm:p-6"
           onClick={(event) => event.stopPropagation()}
         >
           {/* Header */}
@@ -82,13 +82,13 @@ function SelectVehicleContent({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Description */}
-          <p className="mt-6 max-w-[430px] text-sm leading-5 text-gray-500">
+          <p className="mt-3 max-w-[430px] text-sm leading-5 text-gray-500 sm:mt-6">
             Choose which vehicle you want to configure,
             request service for, or review maintenance logs.
           </p>
 
-          {/* Vehicle list */}
-          <div className="mt-5 space-y-3 min-h-0 h-[50vh] overflow-auto">
+          {/* Vehicle list: as tall as it needs, scrolling past half the screen */}
+          <div className="mt-5 max-h-[50dvh] min-h-0 space-y-3 overflow-auto">
             {vehicles.map((vehicle) => (
               <VehicleOption
                 key={vehicle.id}
@@ -100,14 +100,14 @@ function SelectVehicleContent({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* Divider */}
-          <div className="my-5 h-px bg-gray-200" />
+          <div className="my-4 h-px bg-gray-200 sm:my-5" />
 
-          {/* Actions */}
+          {/* Actions: sharing the width on phones */}
           <div className="flex justify-end gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="h-10 rounded-lg border border-gray-200 bg-white px-5 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
+              className="h-10 flex-1 whitespace-nowrap rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 sm:flex-none sm:px-5"
             >
               Cancel
             </button>
@@ -116,9 +116,10 @@ function SelectVehicleContent({ onClose }: { onClose: () => void }) {
               type="button"
               disabled={!selected}
               onClick={handleConfirm}
-              className="h-10 rounded-lg bg-black px-5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+              className="h-10 flex-1 whitespace-nowrap rounded-lg bg-black px-4 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none sm:px-5"
             >
-              Confirm Selection
+              <span className="sm:hidden">Confirm</span>
+              <span className="hidden sm:inline">Confirm Selection</span>
             </button>
           </div>
         </div>
@@ -143,15 +144,15 @@ function VehicleOption({
       type="button"
       onClick={onSelect}
       className={[
-        "flex w-full items-center gap-4 rounded-xl border p-3 text-left",
+        "flex w-full items-center gap-3 rounded-xl border p-3 text-left sm:gap-4",
         "transition duration-150",
         selected
           ? "border-2 border-black bg-white"
           : "border-gray-200 bg-white hover:border-gray-400",
       ].join(" ")}
     >
-      {/* Image */}
-      <div className="flex h-[78px] w-[100px] shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-50">
+      {/* Image; smaller on phones so the name has room */}
+      <div className="flex h-14 w-18 shrink-0 sm:h-[78px] sm:w-[100px] items-center justify-center overflow-hidden rounded-lg bg-gray-50">
         <img
           src={vehicle.image}
           alt={`${vehicle.brand} ${vehicle.model}`}
@@ -161,17 +162,17 @@ function VehicleOption({
 
       {/* Details */}
       <div className="min-w-0 flex-1">
-        <h3 className="text-base font-bold leading-tight text-gray-900">
+        <h3 className="text-sm font-bold leading-tight text-gray-900 sm:text-base">
           <VehicleTitle vehicle={vehicle} />
         </h3>
 
-        <div className="mt-1 flex items-center gap-4 text-sm text-gray-500">
+        <div className="mt-1 flex items-center gap-4 whitespace-nowrap text-xs text-gray-500 sm:text-sm">
           <span>
             VIN: {maskedVin(vehicle.vin)}
           </span>
         </div>
 
-        <p className="mt-1 text-sm font-medium text-black">
+        <p className="mt-1 whitespace-nowrap text-xs font-medium text-black sm:text-sm">
           Miles: {vehicle.miles || "—"}
         </p>
       </div>

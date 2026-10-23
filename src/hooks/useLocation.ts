@@ -5,7 +5,7 @@ import { fetchCurrentLocation, selectLocation } from "@/redux/location/locationS
 // Current device location, shared app-wide through the location slice
 export function useLocation() {
     const dispatch = useAppDispatch();
-    const { address, coordinates, loading, error } = useAppSelector(selectLocation);
+    const { address, parts, coordinates, loading, error } = useAppSelector(selectLocation);
 
     const getLocation = useCallback(() => {
         dispatch(fetchCurrentLocation());
@@ -13,6 +13,7 @@ export function useLocation() {
 
     return {
         address,
+        parts,
         coordinates,
         loading,
         error,

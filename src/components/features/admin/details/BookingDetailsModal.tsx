@@ -8,7 +8,7 @@ import {
 import { useAdminBooking } from "@/services/queries/adminQueries";
 import type { AdminBooking, StaffMember } from "@/types/admin";
 import { BookingStatusBadge } from "../BookingStatusBadge";
-import { formatCurrency, formatDateTime, intakeMethodLabels, legMethod } from "../admin.utils";
+import { formatCurrency, formatDateTime, isConfirmed, methodLabel, legMethod } from "../admin.utils";
 import { BookingOverview } from "./BookingOverview";
 
 // Read-only view of a booking; the workflow steps live in BookingWorkflowDrawer
@@ -28,7 +28,7 @@ export function BookingDetailsModal() {
       title={
         <>
           <h2>Booking {detailsBookingId}</h2>
-          {booking && <BookingStatusBadge status={booking.status} />}
+          {booking && <BookingStatusBadge status={booking.status} code={booking.journey?.current} label={booking.journey?.statusLabel} />}
         </>
       }
       onClose={onClose}
@@ -84,14 +84,18 @@ function BookingHandling({ booking }: { booking: AdminBooking }) {
   const rows: { label: string; value: string }[] = [
     {
       label: "Confirmed",
-      value: booking.confirmedAt ? formatDateTime(booking.confirmedAt) : "Not confirmed yet",
+      value: booking.confirmedAt
+        ? formatDateTime(booking.confirmedAt)
+        : isConfirmed(booking)
+          ? "Confirmed"
+          : "Not confirmed yet",
     },
     method && method !== "valet"
-      ? { label: "Vehicle intake", value: intakeMethodLabels[method] }
+      ? { label: "Vehicle intake", value: methodLabel("pickup", method) }
       : { label: "Pickup valet", value: staffLine(booking.valet) },
     { label: "Advisor", value: staffLine(booking.relationshipManager) },
     handover && handover !== "valet"
-      ? { label: "Vehicle handover", value: intakeMethodLabels[handover] }
+      ? { label: "Vehicle handover", value: methodLabel("delivery", handover) }
       : { label: "Delivery valet", value: staffLine(booking.deliveryValet ?? null) },
     {
       label: "Payment",

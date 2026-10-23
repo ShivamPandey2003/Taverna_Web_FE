@@ -8,8 +8,9 @@ import {
   setOfferTypeFilter,
 } from "@/redux/adminOffers/adminOffersSlice";
 import { openOfferUpload } from "@/redux/modals/offersModal/offersModalSlice";
-import { useAdminOffers } from "@/services/queries/adminQueries";
+import { OFFER_SEARCH_MAX } from "@/services/adminApi";
 import { SearchInput } from "@/components/features/admin/SearchInput";
+import { OFFER_CONDITIONS, OFFER_TYPES } from "./offer.utils";
 
 const selectClass =
   "h-9 max-w-[220px] rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 outline-none focus:border-gray-400";
@@ -17,10 +18,7 @@ const selectClass =
 // Search and filters for the offers table, with the bulk upload button next to them
 export function OffersToolbar() {
   const dispatch = useAppDispatch();
-  const params = useAppSelector(selectOfferListParams);
-  // Shares the table's query: the filter choices come back with the list
-  const { data } = useAdminOffers(params);
-  const { search, condition, offerType } = params;
+  const { search, condition, offerType } = useAppSelector(selectOfferListParams);
 
   const hasFilters = search !== "" || condition !== "all" || offerType !== "all";
 
@@ -30,6 +28,7 @@ export function OffersToolbar() {
         value={search}
         onSearch={(value) => dispatch(setOffersSearch(value))}
         placeholder="Search by VIN, stock number, vehicle or lender"
+        maxLength={OFFER_SEARCH_MAX}
       />
 
       <select
@@ -39,7 +38,7 @@ export function OffersToolbar() {
         aria-label="Filter by condition"
       >
         <option value="all">All Conditions</option>
-        {data?.conditions.map((item) => (
+        {OFFER_CONDITIONS.map((item) => (
           <option key={item} value={item}>
             {item}
           </option>
@@ -53,7 +52,7 @@ export function OffersToolbar() {
         aria-label="Filter by offer type"
       >
         <option value="all">All Offer Types</option>
-        {data?.offerTypes.map((item) => (
+        {OFFER_TYPES.map((item) => (
           <option key={item} value={item}>
             {item}
           </option>

@@ -1,44 +1,34 @@
+import { cn } from "@/libs/utils";
 import type { Notification } from "@/types/notification";
 import { NotificationIcon } from "./NotificationIcon";
 
 interface NotificationItemProps {
   notification: Notification;
+  // "9:12 AM", or with the date for older ones
+  time: string;
   onRead: () => void;
 }
 
-export function NotificationItem({
-  notification,
-  onRead,
-}: NotificationItemProps) {
+export function NotificationItem({ notification, time, onRead }: NotificationItemProps) {
   return (
     <button
       type="button"
       onClick={onRead}
-      className={[
-        "relative flex w-full gap-3 rounded-xl p-3 text-left",
-        "transition hover:bg-gray-100",
-        notification.read
-          ? "border border-gray-200 bg-white"
-          : "bg-gray-100",
-      ].join(" ")}
+      className={cn(
+        "relative flex w-full gap-3 rounded-xl p-3 text-left transition hover:bg-gray-100",
+        notification.read ? "border border-gray-200 bg-white" : "bg-gray-100",
+      )}
     >
-      {/* Icon */}
-      <NotificationIcon
-        type={notification.type}
-      />
+      <NotificationIcon bookingStatus={notification.bookingStatus} />
 
-      {/* Content */}
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-bold text-[#111827]">
-          {notification.title}
-        </p>
+        <p className="text-sm font-bold text-[#111827]">{notification.title}</p>
 
-        <p className="mt-0.5 text-sm leading-[18px] text-gray-500">
-          {notification.description}
-        </p>
+        <p className="mt-0.5 text-sm leading-4.5 text-gray-500">{notification.message}</p>
 
         <p className="mt-1 text-xs text-gray-400">
-          {notification.time}
+          {notification.bookingId && <>#{notification.bookingId} · </>}
+          {time}
         </p>
       </div>
 
