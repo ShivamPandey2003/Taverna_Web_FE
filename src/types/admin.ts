@@ -470,3 +470,32 @@ export interface Paginated<T> {
   pageSize: number;
   totalPages: number;
 }
+
+// Who did something on a booking, as booking/admin/:bmsId/history names them
+export type HistoryActor = "USER" | "ADMIN" | "VALET_OPERATOR" | "ADVISOR" | (string & {});
+
+// One change of status, oldest first
+export interface BookingHistoryEvent {
+  // BOOKING_STATUS_UPDATED, CUSTOMER_CONFIRMATION_APPROVED, PAYMENT_RECEIVED, …
+  eventType: string;
+  fromStatus: string | null;
+  toStatus: string;
+  occurredAt: string;
+  performedByRole: HistoryActor | null;
+  // Not sent for the admin
+  performedByName: string | null;
+  // Set when the change assigned someone (VALET_OPERATOR / ADVISOR)
+  assignedStaffRole: HistoryActor | null;
+  assignedStaffName: string | null;
+}
+
+export interface BookingHistory {
+  id: string;
+  currentStatus: string;
+  bookedAt: string;
+  appointmentAt: string | null;
+  // IANA name, e.g. America/New_York: the times are shown in it
+  timezone: string | null;
+  isClosed: boolean;
+  events: BookingHistoryEvent[];
+}

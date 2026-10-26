@@ -8,6 +8,8 @@ import { journeyAdvisorProgress, journeyTripProgress } from "@/types/admin";
 import type {
   AdminBooking,
   AdminBookingRow,
+  BookingHistory,
+  BookingHistoryEvent,
   BookingJourney,
   BookingListParams,
   IntakeMethod,
@@ -339,6 +341,18 @@ async function getJourney(id: string): Promise<{ journey: BookingJourney; status
   };
 }
 
+// GET booking/admin/:bmsId/history (it also repeats the booking's details,
+// which aren't read: the drawer has them)
+interface BookingHistoryResponse {
+  bmsId: string;
+  currentStatus: string;
+  bookedAt: string;
+  appointmentAt: string | null;
+  dealershipTimezone: string | null;
+  isClosed: boolean;
+  history: BookingHistoryEvent[] | null;
+}
+
 // Who booking/staff/assign can put on a booking. One call assigns one person:
 // the API wants every field in the body, so the others go as empty text.
 type StaffAssignment = "advisorId" | "valetOperatorId" | "deliveryValetOperatorId";
@@ -412,6 +426,22 @@ export const adminApi = {
       journey,
       status: toBookingStatus(status) ?? copy.status,
       invoice: booking.invoice,
+    };
+  },
+
+  // Real API: every change of status the booking has been through, oldest first
+  getHistory: async (id: string): Promise<BookingHistory> => {
+    const response = await request<BookingHistoryResponse>("get", `booking/admin/${id}/history`);
+    return {
+      id: response.bmsId,
+      currentStatus: response.currentStatus,
+      bookedAt: response.bookedAt,
+      appointmentAt: response.appointmentAt,
+      timezone: response.dealershipTimezone || null,
+      isClosed: response.isClosed,
+      events: [...(response.history ?? [])].sort(
+        (a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt),
+      ),
     };
   },
 

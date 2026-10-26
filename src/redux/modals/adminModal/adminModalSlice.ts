@@ -14,6 +14,8 @@ type AdminModalState = {
   workflowBookingId: string | null;
   // null = open on the first step that isn't done yet
   activeStep: WorkflowStep | null;
+  // The workflow booking's status history, over the drawer
+  historyOpen: boolean;
   // "Add valet / advisor" modal, opened from a workflow step over the drawer
   addStaff: { role: StaffRole; name: string } | null;
 };
@@ -22,6 +24,7 @@ const initialState: AdminModalState = {
   detailsBookingId: null,
   workflowBookingId: null,
   activeStep: null,
+  historyOpen: false,
   addStaff: null,
 };
 
@@ -40,11 +43,18 @@ const adminModalSlice = createSlice({
       state.detailsBookingId = null;
       state.workflowBookingId = action.payload;
       state.activeStep = null;
+      state.historyOpen = false;
     },
     setWorkflowStep: (state, action: PayloadAction<WorkflowStep>) => {
       state.activeStep = action.payload;
     },
     closeBookingWorkflow: () => initialState,
+    openBookingHistory: (state) => {
+      state.historyOpen = true;
+    },
+    closeBookingHistory: (state) => {
+      state.historyOpen = false;
+    },
     // name pre-fills the form, e.g. with what the admin searched for
     openAddStaff: (state, action: PayloadAction<{ role: StaffRole; name?: string }>) => {
       state.addStaff = { role: action.payload.role, name: action.payload.name ?? "" };
@@ -61,6 +71,8 @@ export const {
   openBookingWorkflow,
   setWorkflowStep,
   closeBookingWorkflow,
+  openBookingHistory,
+  closeBookingHistory,
   openAddStaff,
   closeAddStaff,
 } = adminModalSlice.actions;

@@ -78,6 +78,15 @@ export const bookingStatusFilters: { group: string; options: { code: string; lab
   },
 ];
 
+// What's left to do on each step (the workflow stepper; the history's sections)
+export const stepLabels: Record<WorkflowStep, string> = {
+  confirm: "Booking Details",
+  pickup: "Vehicle Intake",
+  advisor: "Service Details",
+  delivery: "Vehicle Handover",
+  complete: "Service Complete",
+};
+
 export function formatDateTime(value: string | null) {
   if (!value) return "—";
   return new Date(value).toLocaleString("en-US", {

@@ -2,16 +2,7 @@ import { Check, Lock } from "reicon-react";
 import { cn } from "@/libs/utils";
 import { WORKFLOW_STEPS, type WorkflowStep } from "@/redux/modals/adminModal/adminModalSlice";
 import type { AdminBooking } from "@/types/admin";
-import { isStepDone, isStepUnlocked } from "../admin.utils";
-
-// What's left to do on each step
-const stepLabels: Record<WorkflowStep, string> = {
-  confirm: "Booking Details",
-  pickup: "Vehicle Intake",
-  advisor: "Service Details",
-  delivery: "Vehicle Handover",
-  complete: "Service Complete",
-};
+import { isStepDone, isStepUnlocked, stepLabels } from "../admin.utils";
 
 // What a finished step holds once there's nothing left to do on it
 const doneLabels: Record<WorkflowStep, string> = {

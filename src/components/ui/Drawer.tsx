@@ -7,12 +7,14 @@ interface DrawerProps {
   subtitle?: ReactNode;
   onClose: () => void;
   children: ReactNode;
+  // Buttons next to the close button
+  actions?: ReactNode;
 }
 
 // Side panel that slides in from the right and sits next to the page content: the
 // parent is a flex row, so the content shrinks to the other half while it's open
 // and takes the full width again once it closes. Covers the whole screen on phones.
-export function Drawer({ title, subtitle, onClose, children }: DrawerProps) {
+export function Drawer({ title, subtitle, onClose, children, actions }: DrawerProps) {
   return (
     <aside className="fixed inset-0 z-40 flex animate-drawer-in flex-col bg-white md:relative md:z-auto md:w-1/2 md:min-w-130 md:shrink-0 md:border-l md:border-gray-200 md:shadow-[-8px_0_24px_rgba(0,0,0,0.04)]">
       {/* Header */}
@@ -28,14 +30,17 @@ export function Drawer({ title, subtitle, onClose, children }: DrawerProps) {
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 hover:text-gray-900"
-          aria-label="Close"
-        >
-          <X size={17} />
-        </button>
+        <div className="flex shrink-0 items-center gap-2">
+          {actions}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 hover:text-gray-900"
+            aria-label="Close"
+          >
+            <X size={17} />
+          </button>
+        </div>
       </div>
 
       {/* Body. Keeps room for the scrollbar, so the content is as wide on a short
