@@ -6,7 +6,9 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useState } from "react";
-import { liveRefetch } from "@/libs/polling";
+import { liveRefetch, refetchEvery } from "@/libs/polling";
+import { useAppSelector } from "@/redux/hooks";
+import { selectBookingsRefresh } from "@/redux/adminRefresh/adminRefreshSlice";
 import { adminApi, type OfferUploadStep, type StaffInput } from "@/services/adminApi";
 import type {
   BookingListParams,
@@ -31,13 +33,15 @@ export const adminKeys = {
 };
 
 export function useAdminBookings(params: BookingListParams) {
+  // The page header's auto refresh: every 5 / 10 / 15 / 20s, or stopped
+  const seconds = useAppSelector(selectBookingsRefresh);
+
   return useQuery({
     queryKey: adminKeys.bookingList(params),
     queryFn: () => adminApi.listBookings(params),
     // Keep the current page on screen while the next one loads
     placeholderData: keepPreviousData,
-    // Loads again by itself every 5s
-    refetchInterval: liveRefetch,
+    refetchInterval: refetchEvery(seconds ? seconds * 1000 : false),
   });
 }
 

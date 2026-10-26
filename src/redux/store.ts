@@ -13,6 +13,7 @@ import adminBookings from "./adminBookings/adminBookingsSlice";
 import adminOffers from "./adminOffers/adminOffersSlice";
 import adminDealerships from "./adminDealerships/adminDealershipsSlice";
 import adminStaff from "./adminStaff/adminStaffSlice";
+import adminRefresh from "./adminRefresh/adminRefreshSlice";
 import specials from "./specials/specialsSlice";
 import { authStorage } from "@/services/authStorage";
 
@@ -41,6 +42,7 @@ const rootReducer = combineReducers({
   adminOffers,
   adminDealerships,
   adminStaff,
+  adminRefresh,
   specials,
 
   homeModal,
