@@ -9,7 +9,10 @@ import {
   selectAdminModal,
   type WorkflowStep,
 } from "@/redux/modals/adminModal/adminModalSlice";
-import { useAdminBooking, useBookingHistory } from "@/services/queries/adminQueries";
+import {
+  useAdminBooking,
+  useBookingHistory,
+} from "@/services/queries/adminQueries";
 import { statusName } from "@/services/bookingApi";
 import type {
   BookingHistory,
@@ -30,7 +33,8 @@ const actorLabels: Record<string, string> = {
   TOW_OPERATOR: "Tow operator",
 };
 
-const actorLabel = (role: HistoryActor) => actorLabels[role] ?? statusName(role);
+const actorLabel = (role: HistoryActor) =>
+  actorLabels[role] ?? statusName(role);
 
 // What the event adds to the status change itself
 const eventTags: Record<string, string> = {
@@ -41,9 +45,16 @@ const eventTags: Record<string, string> = {
 
 // Times are the dealership's, like the appointment. An unknown time zone falls
 // back to the browser's.
-function formatIn(value: string, timeZone: string | null, options: Intl.DateTimeFormatOptions) {
+function formatIn(
+  value: string,
+  timeZone: string | null,
+  options: Intl.DateTimeFormatOptions,
+) {
   try {
-    return new Date(value).toLocaleString("en-US", { ...options, timeZone: timeZone ?? undefined });
+    return new Date(value).toLocaleString("en-US", {
+      ...options,
+      timeZone: timeZone ?? undefined,
+    });
   } catch {
     return new Date(value).toLocaleString("en-US", options);
   }
@@ -56,7 +67,12 @@ const dayOf = (value: string, zone: string | null) =>
   formatIn(value, zone, { weekday: "short", month: "short", day: "numeric" });
 
 const dateTimeOf = (value: string, zone: string | null) =>
-  formatIn(value, zone, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  formatIn(value, zone, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 
 // "ET", "PT", …
 function zoneName(zone: string | null) {
@@ -79,7 +95,8 @@ function formatDuration(ms: number) {
   if (minutes < 1) return "<1 min";
   if (minutes < 60) return `${minutes} min`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return minutes % 60 ? `${hours} h ${minutes % 60} min` : `${hours} h`;
+  if (hours < 24)
+    return minutes % 60 ? `${hours} h ${minutes % 60} min` : `${hours} h`;
   const days = Math.floor(hours / 24);
   return hours % 24 ? `${days} d ${hours % 24} h` : `${days} d`;
 }
@@ -102,7 +119,9 @@ const bookingTypeLabels: Record<string, string> = {
 
 // "VALET_DISPATCHED" -> "valetDispatched", the journey's name for its label
 const toStepKey = (status: string) =>
-  status.toLowerCase().replace(/_([a-z0-9])/g, (_, letter: string) => letter.toUpperCase());
+  status
+    .toLowerCase()
+    .replace(/_([a-z0-9])/g, (_, letter: string) => letter.toUpperCase());
 
 // ---- Grouping ----
 
@@ -110,8 +129,13 @@ const toStepKey = (status: string) =>
 // stepper. Anything not named here happens on the way in.
 function stepOf(code: string): WorkflowStep {
   if (code === "SERVICE_COMPLETE") return "complete";
-  if (code === "IN_QUEUE" || code === "BOOKED" || code.includes("CANCEL")) return "confirm";
-  if (code.startsWith("DELIVERY_") || code === "VEHICLE_DELIVERED" || code === "CUSTOMER_DROP_OFF")
+  if (code === "IN_QUEUE" || code === "BOOKED" || code.includes("CANCEL"))
+    return "confirm";
+  if (
+    code.startsWith("DELIVERY_") ||
+    code === "VEHICLE_DELIVERED" ||
+    code === "CUSTOMER_DROP_OFF"
+  )
     return "delivery";
   if (
     /^(ADVISOR_|VEHICLE_IN_|INSPECTION_|INVOICE_|PAYMENT_)/.test(code) ||
@@ -158,11 +182,15 @@ function Summary({ history }: { history: BookingHistory }) {
     { label: "Booked", value: dateTimeOf(history.bookedAt, zone) },
     {
       label: "Appointment",
-      value: history.appointmentAt ? dateTimeOf(history.appointmentAt, zone) : "As soon as possible",
+      value: history.appointmentAt
+        ? dateTimeOf(history.appointmentAt, zone)
+        : "As soon as possible",
     },
     {
       label: history.isClosed ? "Total time" : "Running for",
-      value: last ? formatDuration(between(history.bookedAt, last.occurredAt)) : "—",
+      value: last
+        ? formatDuration(between(history.bookedAt, last.occurredAt))
+        : "—",
     },
   ];
 
@@ -173,7 +201,9 @@ function Summary({ history }: { history: BookingHistory }) {
           <dt className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
             {tile.label}
           </dt>
-          <dd className="mt-0.5 text-sm font-semibold text-gray-900">{tile.value}</dd>
+          <dd className="mt-0.5 text-sm font-semibold text-gray-900">
+            {tile.value}
+          </dd>
         </div>
       ))}
     </dl>
@@ -189,14 +219,36 @@ interface EventRowProps {
   // Last of its section: no line down from it
   last: boolean;
   zone: string | null;
+  // What the row opens to (eventDetails); null for a row that doesn't open
+  details: ReactNode;
+  open: boolean;
+  onToggle: () => void;
+  testId: string;
 }
 
 // One status change: a circle on a line like the trip trackers, the step's name,
-// who did it, and when (the day on a new day, else the time since the one before)
-function EventRow({ event, previous, label, current, last, zone }: EventRowProps) {
+// who did it, and when (the day on a new day, else the time since the one before).
+// A row with details (the bill, the payment, …) opens to them on a click.
+function EventRow({
+  event,
+  previous,
+  label,
+  current,
+  last,
+  zone,
+  details,
+  open,
+  onToggle,
+  testId,
+}: EventRowProps) {
   const tag = eventTags[event.eventType];
-  const newDay = !previous || dayOf(previous.occurredAt, zone) !== dayOf(event.occurredAt, zone);
-  const actor = [event.performedByName, event.performedByRole && actorLabel(event.performedByRole)]
+  const newDay =
+    !previous ||
+    dayOf(previous.occurredAt, zone) !== dayOf(event.occurredAt, zone);
+  const actor = [
+    event.performedByName,
+    event.performedByRole && actorLabel(event.performedByRole),
+  ]
     .filter(Boolean)
     .join(" · ");
 
@@ -222,40 +274,73 @@ function EventRow({ event, previous, label, current, last, zone }: EventRowProps
         )}
       </span>
 
-      <div className="flex min-w-0 flex-1 items-start justify-between gap-3 pt-1">
-        <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-gray-900">
-            {label}
-            {current && (
-              <span className="rounded-full bg-status-pending/12 px-2 py-0.5 text-[11px] font-semibold text-[#c2410c]">
-                Now
-              </span>
-            )}
-            {tag && (
-              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">
-                {tag}
-              </span>
-            )}
-          </p>
-          {actor && <p className="mt-0.5 text-xs text-gray-500">by {actor}</p>}
-          {event.assignedStaffName && (
-            <p className="mt-0.5 text-xs text-gray-500">
-              Assigned <span className="font-medium text-gray-700">{event.assignedStaffName}</span>
-              {event.assignedStaffRole && ` as ${actorLabel(event.assignedStaffRole)}`}
+      <div className="min-w-0 flex-1 pt-1">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-semibold text-gray-900">
+              {details ? (
+                <button
+                  data-test-id={testId}
+                  type="button"
+                  onClick={onToggle}
+                  aria-expanded={open}
+                  className="flex items-center gap-1 text-left hover:text-primary"
+                >
+                  {label}
+                  <ArrowDown2
+                    size={14}
+                    className={cn(
+                      "text-gray-400 transition-transform",
+                      open && "rotate-180",
+                    )}
+                  />
+                </button>
+              ) : (
+                label
+              )}
+              {current && (
+                <span className="rounded-full bg-status-pending/12 px-2 py-0.5 text-[11px] font-semibold text-[#c2410c]">
+                  Now
+                </span>
+              )}
+              {tag && (
+                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">
+                  {tag}
+                </span>
+              )}
             </p>
-          )}
+            {actor && (
+              <p className="mt-0.5 text-xs text-gray-500">by {actor}</p>
+            )}
+            {event.assignedStaffName && (
+              <p className="mt-0.5 text-xs text-gray-500">
+                Assigned{" "}
+                <span className="font-medium text-gray-700">
+                  {event.assignedStaffName}
+                </span>
+                {event.assignedStaffRole &&
+                  ` as ${actorLabel(event.assignedStaffRole)}`}
+              </p>
+            )}
+          </div>
+
+          <div className="shrink-0 text-right">
+            <p className="text-sm font-medium tabular-nums text-gray-900">
+              {timeOf(event.occurredAt, zone)}
+            </p>
+            <p className="text-[11px] text-gray-500">
+              {newDay || !previous
+                ? dayOf(event.occurredAt, zone)
+                : `+${formatDuration(between(previous.occurredAt, event.occurredAt))}`}
+            </p>
+          </div>
         </div>
 
-        <div className="shrink-0 text-right">
-          <p className="text-sm font-medium tabular-nums text-gray-900">
-            {timeOf(event.occurredAt, zone)}
-          </p>
-          <p className="text-[11px] text-gray-500">
-            {newDay || !previous
-              ? dayOf(event.occurredAt, zone)
-              : `+${formatDuration(between(previous.occurredAt, event.occurredAt))}`}
-          </p>
-        </div>
+        {details && open && (
+          <div className="mt-2.5 space-y-3 rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-3">
+            {details}
+          </div>
+        )}
       </div>
     </li>
   );
@@ -276,9 +361,14 @@ function DetailGroup({ title, rows }: { title: string; rows: Row[] }) {
       </p>
       <dl className="space-y-1">
         {shown.map(([label, value]) => (
-          <div key={label} className="flex items-start justify-between gap-4 text-[13px]">
+          <div
+            key={label}
+            className="flex items-start justify-between gap-4 text-[13px]"
+          >
             <dt className="shrink-0 text-gray-500">{label}</dt>
-            <dd className="min-w-0 wrap-break-word text-right font-medium text-gray-900">{value}</dd>
+            <dd className="min-w-0 wrap-break-word text-right font-medium text-gray-900">
+              {value}
+            </dd>
           </div>
         ))}
       </dl>
@@ -286,97 +376,123 @@ function DetailGroup({ title, rows }: { title: string; rows: Row[] }) {
   );
 }
 
-const contactRows = (person: HistoryContact | null, none: string): Row[] =>
-  person
-    ? [
-        ["Name", person.name],
-        ["Phone", person.phone],
-        ["Email", person.email],
-      ]
-    : [["Name", none]];
+const contactRows = (person: HistoryContact): Row[] => [
+  ["Name", person.name],
+  ["Phone", person.phone],
+  ["Email", person.email],
+];
 
-// What the history's details say about one step's part of the booking. null
-// for a step with nothing more to show.
-function phaseDetails(
-  step: WorkflowStep,
+// The person an assignment event put on the booking, as the details name them
+// (the one on it now: a swapped valet's predecessor isn't sent)
+function assignedPerson(
+  event: BookingHistoryEvent,
+  details: BookingHistoryDetails,
+) {
+  const code = event.toStatus;
+  if (code === "ADVISOR_ASSIGNED" || event.assignedStaffRole === "ADVISOR") {
+    return { title: "Advisor", person: details.advisor };
+  }
+  if (code === "DELIVERY_VALET_ASSIGNED") {
+    return { title: "Delivery valet", person: details.deliveryValet };
+  }
+  if (
+    code === "VALET_ASSIGNED" ||
+    event.assignedStaffRole === "VALET_OPERATOR"
+  ) {
+    return { title: "Pickup valet", person: details.pickupValet };
+  }
+  return null;
+}
+
+// What an event opens to, from the history's details: the booking at its start,
+// the person an assignment put on it, the bill and the payment. null for an
+// event with nothing more to show.
+function eventDetails(
+  event: BookingHistoryEvent,
   details: BookingHistoryDetails,
   zone: string | null,
 ): ReactNode {
-  const when = (value: string | null) => (value ? dateTimeOf(value, zone) : null);
+  const when = (value: string | null) =>
+    value ? dateTimeOf(value, zone) : null;
+  const code = event.toStatus;
+  const { invoice, payment } = details;
 
-  switch (step) {
-    case "confirm":
-      return (
-        <>
-          <DetailGroup
-            title="Customer"
-            rows={contactRows(details.customer, "—")}
-          />
-          <DetailGroup
-            title="Vehicle"
-            rows={[
-              ["Vehicle", details.vehicle.name],
-              ["VIN", details.vehicle.vin],
-              ["Color", details.vehicle.color],
-              ["Mileage", details.vehicle.miles],
-            ]}
-          />
-          <DetailGroup
-            title="Service"
-            rows={[
-              ["Type", bookingTypeLabels[details.bookingType] ?? statusName(details.bookingType)],
-              ["Concern", details.serviceDescription],
-            ]}
-          />
-        </>
-      );
-    case "pickup":
-      return <DetailGroup title="Pickup valet" rows={contactRows(details.pickupValet, "No valet")} />;
-    case "delivery":
-      return (
-        <DetailGroup title="Delivery valet" rows={contactRows(details.deliveryValet, "No valet")} />
-      );
-    case "advisor": {
-      const { invoice, payment } = details;
-      return (
-        <>
-          <DetailGroup title="Advisor" rows={contactRows(details.advisor, "Not assigned")} />
-          {invoice && (
-            <DetailGroup
-              title="Invoice"
-              rows={[
-                ...invoice.items.map(
-                  (item, index): Row => [
-                    item.description || `Item ${index + 1}`,
-                    formatMoney(item.amount, invoice.currency),
-                  ],
-                ),
-                ["Total", formatMoney(invoice.total, invoice.currency)],
-                ["Generated", when(invoice.generatedAt)],
-                ["By", invoice.advisorName],
-              ]}
-            />
-          )}
-          {payment && (
-            <DetailGroup
-              title="Payment"
-              rows={[
-                ["Status", statusName(payment.status)],
-                ["Amount", formatMoney(payment.amount, payment.currency)],
-                ["Method", payment.method && statusName(payment.method)],
-                ["Started", when(payment.createdAt)],
-                ["Paid", when(payment.paidAt)],
-                ["Payment ID", payment.providerPaymentId],
-                ["Failure", payment.failureReason],
-              ]}
-            />
-          )}
-        </>
-      );
-    }
-    case "complete":
-      return null;
+  if (code === "IN_QUEUE") {
+    return (
+      <>
+        {details.customer && (
+          <DetailGroup title="Customer" rows={contactRows(details.customer)} />
+        )}
+        <DetailGroup
+          title="Vehicle"
+          rows={[
+            ["Vehicle", details.vehicle.name],
+            ["VIN", details.vehicle.vin],
+            ["Color", details.vehicle.color],
+            ["Mileage", details.vehicle.miles],
+          ]}
+        />
+        <DetailGroup
+          title="Service"
+          rows={[
+            [
+              "Type",
+              bookingTypeLabels[details.bookingType] ??
+                statusName(details.bookingType),
+            ],
+            ["Concern", details.serviceDescription],
+          ]}
+        />
+      </>
+    );
   }
+
+  if (code === "INVOICE_GENERATED" && invoice) {
+    return (
+      <DetailGroup
+        title="Invoice"
+        rows={[
+          ...invoice.items.map((item, index): Row => [
+            item.description || `Item ${index + 1}`,
+            formatMoney(item.amount, invoice.currency),
+          ]),
+          ["Total", formatMoney(invoice.total, invoice.currency)],
+          ["Generated", when(invoice.generatedAt)],
+          ["By", invoice.advisorName],
+        ]}
+      />
+    );
+  }
+
+  const paymentEvent =
+    event.eventType === "PAYMENT_RECEIVED" ||
+    code === "PAYMENT_VERIFICATION_PENDING" ||
+    code === "PAYMENT_CONFIRMED";
+  if (paymentEvent && payment) {
+    return (
+      <DetailGroup
+        title="Payment"
+        rows={[
+          ["Status", statusName(payment.status)],
+          ["Amount", formatMoney(payment.amount, payment.currency)],
+          ["Method", payment.method && statusName(payment.method)],
+          ["Started", when(payment.createdAt)],
+          ["Paid", when(payment.paidAt)],
+          ["Payment ID", payment.providerPaymentId],
+          ["Failure", payment.failureReason],
+        ]}
+      />
+    );
+  }
+
+  const assigned = assignedPerson(event, details);
+  if (assigned?.person) {
+    return (
+      <DetailGroup title={assigned.title} rows={contactRows(assigned.person)} />
+    );
+  }
+
+  return null;
 }
 
 function HistorySkeleton() {
@@ -424,18 +540,23 @@ export function BookingHistoryModal() {
   const { data: history, isPending, isError, refetch } = useBookingHistory(id);
   // Already loaded by the drawer: its journey has the API's name for each status
   const { data: booking } = useAdminBooking(workflowBookingId);
-  // The sections whose details are open, by where they start
+  // The events whose details are open, by their place in the whole list
   const [expanded, setExpanded] = useState<number[]>([]);
 
   if (!id) return null;
 
-  const toggle = (start: number) =>
+  const toggle = (index: number) =>
     setExpanded((open) =>
-      open.includes(start) ? open.filter((item) => item !== start) : [...open, start],
+      open.includes(index)
+        ? open.filter((item) => item !== index)
+        : [...open, index],
     );
 
-  const labels = new Map(booking?.journey?.steps.map((step) => [step.key, step.label]));
-  const labelOf = (code: string) => labels.get(toStepKey(code)) ?? statusName(code);
+  const labels = new Map(
+    booking?.journey?.steps.map((step) => [step.key, step.label]),
+  );
+  const labelOf = (code: string) =>
+    labels.get(toStepKey(code)) ?? statusName(code);
 
   const zone = history?.timezone ?? null;
   const events = history?.events ?? [];
@@ -481,55 +602,24 @@ export function BookingHistoryModal() {
 
           {phases.map((phase, phaseIndex) => {
             const done = history.isClosed || phaseIndex < phases.length - 1;
-            const extra = phaseDetails(phase.step, history.details, zone);
-            const open = expanded.includes(phase.start);
-            const duration = (
-              <span
-                className={cn(
-                  "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                  done
-                    ? "bg-status-active/12 text-[#047a42]"
-                    : "bg-status-pending/12 text-[#c2410c]",
-                )}
-              >
-                {!done && "In progress · "}
-                {formatDuration(phaseDuration(phase, events))}
-              </span>
-            );
             return (
               <section key={phase.start}>
-                {/* The title opens the step's details, when it has any */}
-                {extra ? (
-                  <button
-                    data-test-id={`booking-history-section-${phase.step}-${phase.start}`}
-                    type="button"
-                    onClick={() => toggle(phase.start)}
-                    aria-expanded={open}
-                    className="group mb-3 flex w-full items-center justify-between gap-3 rounded-lg text-left"
+                <header className="mb-3 flex items-center justify-between gap-3">
+                  <h3 className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                    {stepLabels[phase.step]}
+                  </h3>
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                      done
+                        ? "bg-status-active/12 text-[#047a42]"
+                        : "bg-status-pending/12 text-[#c2410c]",
+                    )}
                   >
-                    <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-500 transition group-hover:text-gray-900">
-                      {stepLabels[phase.step]}
-                      <ArrowDown2
-                        size={14}
-                        className={cn("transition-transform", open && "rotate-180")}
-                      />
-                    </h3>
-                    {duration}
-                  </button>
-                ) : (
-                  <header className="mb-3 flex items-center justify-between gap-3">
-                    <h3 className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                      {stepLabels[phase.step]}
-                    </h3>
-                    {duration}
-                  </header>
-                )}
-
-                {extra && open && (
-                  <div className="mb-4 space-y-3 rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-3">
-                    {extra}
-                  </div>
-                )}
+                    {!done && "In progress · "}
+                    {formatDuration(phaseDuration(phase, events))}
+                  </span>
+                </header>
 
                 <ol>
                   {phase.events.map((event, index) => {
@@ -540,9 +630,15 @@ export function BookingHistoryModal() {
                         event={event}
                         previous={events[overall - 1]}
                         label={labelOf(event.toStatus)}
-                        current={!history.isClosed && overall === events.length - 1}
+                        current={
+                          !history.isClosed && overall === events.length - 1
+                        }
                         last={index === phase.events.length - 1}
                         zone={zone}
+                        details={eventDetails(event, history.details, zone)}
+                        open={expanded.includes(overall)}
+                        onToggle={() => toggle(overall)}
+                        testId={`booking-history-event-${overall}`}
                       />
                     );
                   })}
