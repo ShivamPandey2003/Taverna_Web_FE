@@ -43,6 +43,7 @@ export function EmptyVehicleState({
 
         {/* CTA */}
         <button
+          data-test-id="empty-vehicle-add-button"
           type="button"
           onClick={onAddVehicle}
           className="mt-4 flex h-14 w-full items-center justify-center gap-3 rounded-xl bg-black text-base font-semibold text-white transition hover:bg-[#171717] active:scale-[0.99]"

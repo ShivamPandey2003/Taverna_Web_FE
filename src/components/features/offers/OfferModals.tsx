@@ -23,6 +23,7 @@ export function OfferUploadModal() {
 
   return (
     <Modal
+      testId="offer-upload-modal"
       title={<h2>Bulk Upload Offers</h2>}
       subtitle="Upload the dealership's vehicle offers from a CSV file."
       onClose={onClose}
@@ -42,12 +43,14 @@ export function OfferDetailsModal() {
 
   return (
     <Modal
+      testId="offer-details-modal"
       title={<h2>{viewing.vehicleName}</h2>}
       subtitle={`VIN ${maskedVin(viewing.vin)} · Stock ${viewing.stockNumber}`}
       onClose={() => dispatch(closeOfferDetails())}
       footer={
         <>
           <button
+            data-test-id="offer-details-delete"
             type="button"
             onClick={() => dispatch(openDeleteOffer(viewing))}
             className="h-10 rounded-lg border border-red-200 bg-white px-5 text-sm font-semibold text-red-600 transition hover:bg-red-50"
@@ -55,6 +58,7 @@ export function OfferDetailsModal() {
             Delete
           </button>
           <button
+            data-test-id="offer-details-edit"
             type="button"
             onClick={() => dispatch(openEditOffer(viewing))}
             className="h-10 rounded-lg bg-black px-5 text-sm font-semibold text-white transition hover:bg-gray-800"

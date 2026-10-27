@@ -15,6 +15,7 @@ export function DealershipsToolbar() {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <SearchInput
+        testId="dealership-search"
         value={search}
         onSearch={(value) => dispatch(setDealershipSearch(value))}
         placeholder="Search dealerships by name or address"

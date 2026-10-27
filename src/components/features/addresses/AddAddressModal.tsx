@@ -315,6 +315,7 @@ function AddressFormModal({
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
+        data-test-id="address-modal-backdrop"
         className="absolute inset-0 bg-black/40"
         onClick={close}
       />
@@ -334,6 +335,7 @@ function AddressFormModal({
             </h2>
 
             <button
+              data-test-id="address-modal-close"
               type="button"
               onClick={close}
               disabled={saving}
@@ -372,6 +374,7 @@ function AddressFormModal({
               <div className="mt-3 flex gap-2">
                 {addressTypes.map((type) => (
                   <button
+                    data-test-id={`address-type-${type}`}
                     key={type}
                     type="button"
                     onClick={() => setValue("type", type)}
@@ -462,6 +465,7 @@ function AddressFormModal({
             {/* Clear (40%) and Save (60%); always in view */}
             <div className="flex shrink-0 gap-2.5 px-5 pb-5 pt-3">
             <button
+              data-test-id="address-modal-clear"
               type="button"
               onClick={clearAddress}
               disabled={saving || !hasSomething}
@@ -471,6 +475,7 @@ function AddressFormModal({
             </button>
 
             <button
+              data-test-id="address-modal-save"
               type="submit"
               // Only a picked, complete address; not while it's still being filled in
               disabled={saving || finding || !complete}
@@ -528,6 +533,7 @@ function AddressField({
         </span>
 
         <input
+          data-test-id={`address-field-${id}`}
           id={id}
           {...registration}
           placeholder={placeholder}

@@ -53,6 +53,7 @@ export function AccountSettings() {
 
           return (
             <button
+              data-test-id={`account-setting-${setting.id}`}
               key={setting.id}
               type="button"
               onClick={() =>

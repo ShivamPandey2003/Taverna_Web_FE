@@ -71,6 +71,7 @@ export function AddressList() {
         <p className="mt-1 text-[11px] text-gray-500">Check your connection and try again.</p>
 
         <button
+          data-test-id="address-list-retry"
           type="button"
           onClick={() => refetch()}
           disabled={isFetching}
@@ -109,6 +110,7 @@ export function AddressList() {
 
       {deleting && (
         <ConfirmModal
+          testId="delete-address-modal"
           title="Delete Address"
           confirmLabel="Delete Address"
           pending={deleteAddress.isPending}

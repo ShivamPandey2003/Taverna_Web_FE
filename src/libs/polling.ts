@@ -10,5 +10,10 @@ export const LIVE_REFRESH_MS = 5_000;
 // load (a manual refresh, a mutation's invalidation, coming back to the page)
 // starts it again.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const liveRefetch = <TData>(query: Query<TData, Error, TData, any>) =>
-  query.state.status === "error" ? false : LIVE_REFRESH_MS;
+type AnyQuery = Query<any, Error, any, any>;
+
+// The same at another pace; false never polls (the admin stopped it)
+export const refetchEvery = (ms: number | false) => (query: AnyQuery) =>
+  ms === false || query.state.status === "error" ? false : ms;
+
+export const liveRefetch = refetchEvery(LIVE_REFRESH_MS);

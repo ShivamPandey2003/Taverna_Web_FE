@@ -19,6 +19,7 @@ import { TransferStep } from "./TransferStep";
 import { AdvisorStep } from "./AdvisorStep";
 import { CompleteStep } from "./CompleteStep";
 import { CopyButton } from "./StepParts";
+import { BookingHistoryButton, BookingHistoryModal } from "./BookingHistoryModal";
 import { StaffFormModal } from "@/components/features/staff/StaffFormModal";
 
 // Confirm → pickup valet → advisor → delivery valet → complete, in a drawer from
@@ -48,6 +49,7 @@ export function BookingWorkflowDrawer() {
 
   return (
     <Drawer
+      testId="workflow-drawer"
       title={
         <>
           <h2>Manage Booking</h2>
@@ -72,6 +74,7 @@ export function BookingWorkflowDrawer() {
         </>
       }
       onClose={onClose}
+      actions={booking && <BookingHistoryButton />}
     >
       {isPending && (
         <div className="space-y-3">
@@ -123,6 +126,8 @@ export function BookingWorkflowDrawer() {
           </div>
         </>
       )}
+
+      <BookingHistoryModal />
 
       {/* Opened from the assign steps' dropdown. Over the drawer only, like the
           assign confirmation, so the bookings table stays visible. */}

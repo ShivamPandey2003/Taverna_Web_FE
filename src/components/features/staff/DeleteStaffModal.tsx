@@ -32,6 +32,7 @@ export function DeleteStaffModal({ role }: { role: StaffRole }) {
 
   return (
     <ConfirmModal
+      testId={`delete-${role}-modal`}
       title={<span className="capitalize">Delete {staffRoleLabels[role]}</span>}
       onClose={onClose}
       onConfirm={handleDelete}

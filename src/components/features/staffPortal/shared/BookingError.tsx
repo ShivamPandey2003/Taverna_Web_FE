@@ -23,11 +23,11 @@ export function BookingError({
         title={title}
         action={
           <div className="space-y-2">
-            <button type="button" onClick={onRetry} className="btn btn-secondary btn-block">
+            <button data-test-id="booking-error-retry" type="button" onClick={onRetry} className="btn btn-secondary btn-block">
               <Refresh2 size={18} />
               Try Again
             </button>
-            <button type="button" onClick={onSignIn} className="btn btn-secondary btn-block">
+            <button data-test-id="booking-error-sign-in" type="button" onClick={onSignIn} className="btn btn-secondary btn-block">
               Sign In Again
             </button>
           </div>

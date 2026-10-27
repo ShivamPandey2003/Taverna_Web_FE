@@ -75,6 +75,7 @@ export function SpecialOfferCard({ offer, onViewOffer }: SpecialOfferCardProps) 
 
       <div className="mt-auto pt-5 sm:pt-6">
         <button
+          data-test-id={`special-view-offer-${offer.id}`}
           type="button"
           onClick={() => onViewOffer(offer)}
           className="flex h-12 w-full items-center justify-center gap-2 rounded-lg bg-[#111827] text-sm font-semibold text-white transition-colors hover:bg-black"

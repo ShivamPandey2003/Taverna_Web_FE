@@ -71,6 +71,7 @@ export function BookingsTable() {
                 <td colSpan={columns.length} className="px-5 py-12 text-center">
                   <p className="text-sm text-gray-500">Couldn't load bookings.</p>
                   <button
+                    data-test-id="bookings-retry"
                     type="button"
                     onClick={() => refetch()}
                     className="mt-3 text-sm font-semibold text-gray-900 underline underline-offset-4 hover:text-black"
@@ -91,6 +92,7 @@ export function BookingsTable() {
 
             {data?.items.map((booking) => (
               <tr
+                data-test-id={`booking-row-${booking.id}`}
                 key={booking.id}
                 // While the drawer is open, a row click switches it to that booking
                 onClick={() =>
@@ -142,6 +144,7 @@ export function BookingsTable() {
 
                 <td className="px-4 py-2 text-center">
                   <button
+                    data-test-id={`booking-manage-${booking.id}`}
                     type="button"
                     onClick={(event) => {
                       // Don't also open the details modal
@@ -161,6 +164,7 @@ export function BookingsTable() {
 
       {data && (
         <TablePagination
+          testId="bookings-pagination"
           page={data.page}
           pageSize={data.pageSize}
           total={data.total}

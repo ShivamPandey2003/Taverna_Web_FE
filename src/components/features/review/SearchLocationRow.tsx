@@ -109,6 +109,7 @@ export function SearchLocationRow({
   return (
     <div className="relative">
       <div
+        data-test-id="location-search-row"
         onClick={() => {
           onSelect();
           inputRef.current?.focus();
@@ -127,6 +128,7 @@ export function SearchLocationRow({
             Search for an Address
           </label>
           <input
+            data-test-id="location-search-input"
             id="location-search"
             ref={inputRef}
             type="text"
@@ -150,6 +152,7 @@ export function SearchLocationRow({
 
         {text && !picking && (
           <button
+            data-test-id="location-search-clear"
             type="button"
             aria-label="Clear"
             // Keeps the box focused
@@ -182,6 +185,7 @@ export function SearchLocationRow({
         >
           {suggestions.map((suggestion, index) => (
             <li
+              data-test-id={`location-suggestion-${suggestion.id}`}
               key={suggestion.id}
               role="option"
               aria-selected={highlighted === index}

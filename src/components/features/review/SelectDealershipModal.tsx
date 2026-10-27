@@ -51,6 +51,7 @@ function SelectDealershipContent({ onClose }: { onClose: () => void }) {
     <div className="absolute inset-0 z-50">
       {/* Backdrop */}
       <div
+        data-test-id="select-dealership-backdrop"
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
       />
@@ -69,6 +70,7 @@ function SelectDealershipContent({ onClose }: { onClose: () => void }) {
             </h2>
 
             <button
+              data-test-id="select-dealership-close"
               type="button"
               onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
@@ -108,6 +110,7 @@ function SelectDealershipContent({ onClose }: { onClose: () => void }) {
           {/* Actions */}
           <div className="flex justify-end gap-3">
             <button
+              data-test-id="select-dealership-cancel"
               type="button"
               onClick={onClose}
               className="h-10 rounded-lg border border-gray-200 bg-white px-5 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
@@ -116,6 +119,7 @@ function SelectDealershipContent({ onClose }: { onClose: () => void }) {
             </button>
 
             <button
+              data-test-id="select-dealership-confirm"
               type="button"
               disabled={!selectedDealershipData}
               onClick={handleConfirm}
@@ -143,6 +147,7 @@ function DealershipCard({
 }: DealershipCardProps) {
   return (
     <button
+      data-test-id={`select-dealership-option-${dealership.id}`}
       type="button"
       onClick={onSelect}
       className={[

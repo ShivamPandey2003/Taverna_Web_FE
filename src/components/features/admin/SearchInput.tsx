@@ -11,10 +11,17 @@ interface SearchInputProps {
   placeholder: string;
   // The longest search the API takes
   maxLength?: number;
+  testId?: string;
 }
 
 // The input updates immediately; the search is applied once typing pauses
-export function SearchInput({ value, onSearch, placeholder, maxLength }: SearchInputProps) {
+export function SearchInput({
+  value,
+  onSearch,
+  placeholder,
+  maxLength,
+  testId = "search-input",
+}: SearchInputProps) {
   const [input, setInput] = useState(value);
   const [appliedValue, setAppliedValue] = useState(value);
 
@@ -40,6 +47,7 @@ export function SearchInput({ value, onSearch, placeholder, maxLength }: SearchI
 
       <input
         type="search"
+        data-test-id={testId}
         value={input}
         onChange={(event) => setInput(event.target.value)}
         placeholder={placeholder}

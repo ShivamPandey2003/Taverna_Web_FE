@@ -75,6 +75,7 @@ export function AddressCard({
       {/* Actions */}
       <div className="mt-3 flex items-center gap-4">
         <button
+          data-test-id={`address-edit-${address.id}`}
           type="button"
           onClick={() => onEdit?.(address)}
           disabled={disabled}
@@ -85,6 +86,7 @@ export function AddressCard({
         </button>
 
         <button
+          data-test-id={`address-delete-${address.id}`}
           type="button"
           onClick={() => onDelete?.(address)}
           disabled={disabled}
@@ -102,6 +104,7 @@ export function AddressCard({
         ) : (
           !address.isDefault && (
             <button
+              data-test-id={`address-set-default-${address.id}`}
               type="button"
               onClick={() => onSetDefault?.(address)}
               disabled={disabled}

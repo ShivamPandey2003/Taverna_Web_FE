@@ -76,6 +76,7 @@ export function DealershipPicker({ dealerships, selected, pickup, onSelect }: De
   return (
     <div ref={rootRef} className="min-w-0 flex-1">
       <button
+        data-test-id="dealership-picker-button"
         type="button"
         onClick={single ? undefined : toggle}
         onKeyDown={single ? undefined : onKeyDown}
@@ -122,6 +123,7 @@ export function DealershipPicker({ dealerships, selected, pickup, onSelect }: De
 
             return (
               <li
+                data-test-id={`dealership-picker-option-${dealership.id}`}
                 key={dealership.id}
                 role="option"
                 aria-selected={isSelected}

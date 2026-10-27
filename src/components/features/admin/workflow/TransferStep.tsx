@@ -164,6 +164,7 @@ export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
 
             return (
               <button
+                data-test-id={`${leg}-method-${option}`}
                 key={option}
                 type="button"
                 role="radio"
@@ -226,12 +227,13 @@ export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
 
           <div className="mt-5 w-full max-w-xs">
             {!doneAt && (
-              <ActionButton pending={confirming} onClick={markDone}>
+              <ActionButton testId={`${leg}-confirm-done`} pending={confirming} onClick={markDone}>
                 {text.confirm}
               </ActionButton>
             )}
             {doneAt && !complete && (
               <button
+                data-test-id={`${leg}-next-step`}
                 type="button"
                 onClick={onDone}
                 className="h-11 w-full rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-900 transition hover:bg-gray-50"
@@ -245,6 +247,7 @@ export function TransferStep({ booking, leg, onDone }: TransferStepProps) {
 
       {picked && (
         <ConfirmModal
+          testId={`${leg}-method-modal`}
           title={`${text.step}: ${methodLabel(leg, picked)}`}
           subtitle={`${booking.id} · ${booking.customer.name}`}
           confirmLabel="Confirm"

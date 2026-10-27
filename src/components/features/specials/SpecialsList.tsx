@@ -34,6 +34,7 @@ export function SpecialsList() {
       <div className="rounded-2xl border border-gray-200 bg-white px-6 py-12 text-center">
         <p className="text-sm text-gray-500">We couldn't load the offers.</p>
         <button
+          data-test-id="specials-retry"
           type="button"
           onClick={() => refetch()}
           disabled={isFetching}
@@ -83,6 +84,7 @@ export function SpecialsList() {
       {data.totalPages > 1 && (
         <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
           <TablePagination
+            testId="specials-pagination"
             page={data.page}
             pageSize={data.pageSize}
             total={data.total}
@@ -106,6 +108,7 @@ function SpecialOfferModal() {
 
   return (
     <Modal
+      testId="special-offer-modal"
       title={<h2>{viewing.vehicleName}</h2>}
       subtitle={`${viewing.offerType} · Stock ${viewing.stockNumber}`}
       onClose={() => dispatch(closeSpecialOffer())}

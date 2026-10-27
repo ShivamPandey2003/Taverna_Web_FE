@@ -38,6 +38,7 @@ export function VehicleDetailsModal() {
     <div className="absolute inset-0 z-50">
       {/* Backdrop */}
       <div
+        data-test-id="verified-vehicle-backdrop"
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
       />
@@ -56,6 +57,7 @@ export function VehicleDetailsModal() {
             </h2>
 
             <button
+              data-test-id="verified-vehicle-close"
               type="button"
               onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 hover:text-gray-900"
@@ -99,6 +101,7 @@ export function VehicleDetailsModal() {
 
           {/* Add vehicle */}
           <button
+            data-test-id="verified-vehicle-add-button"
             type="button"
             onClick={onAddVehicle}
             disabled={saveVehicle.isPending}
@@ -109,6 +112,7 @@ export function VehicleDetailsModal() {
 
           {/* Not your vehicle */}
           <button
+            data-test-id="verified-vehicle-not-mine"
             type="button"
             onClick={onNotMyVehicle}
             disabled={saveVehicle.isPending}

@@ -36,6 +36,7 @@ export function DealershipCard({ dealership }: { dealership: Dealership }) {
 
         <div className="mt-auto flex justify-end gap-2 pt-4">
           <button
+            data-test-id={`dealership-edit-${dealership.id}`}
             type="button"
             onClick={() => dispatch(openEditDealership(dealership))}
             className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-900 transition hover:bg-gray-100"
@@ -43,6 +44,7 @@ export function DealershipCard({ dealership }: { dealership: Dealership }) {
             Edit
           </button>
           <button
+            data-test-id={`dealership-delete-${dealership.id}`}
             type="button"
             onClick={() => dispatch(openDeleteDealership(dealership))}
             className="rounded-md border border-red-200 bg-white px-2.5 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50"

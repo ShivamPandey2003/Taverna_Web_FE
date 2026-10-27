@@ -78,6 +78,7 @@ function RouteStop({
           </div>
 
           <a
+            data-test-id={`route-directions-${stop.label.toLowerCase().replace(/\s+/g, "-")}`}
             href={directionsLink(stop.address)}
             target="_blank"
             rel="noreferrer"
@@ -91,6 +92,7 @@ function RouteStop({
         {phone && (
           <div className="mt-3 flex items-center gap-3">
             <button
+              data-test-id={`route-copy-phone-${stop.label.toLowerCase().replace(/\s+/g, "-")}`}
               type="button"
               onClick={copyPhone}
               className="btn btn-secondary min-w-0 flex-1 justify-between rounded-full"
@@ -100,6 +102,7 @@ function RouteStop({
               <Copy size={18} className="shrink-0 text-text-secondary" />
             </button>
             <a
+              data-test-id={`route-call-${stop.label.toLowerCase().replace(/\s+/g, "-")}`}
               href={telLink(phone)}
               className="icon-btn icon-btn-primary"
               aria-label={`Call ${stop.label}`}

@@ -12,6 +12,7 @@ interface HoldToConfirmProps {
   pendingLabel?: string;
   disabled?: boolean;
   onConfirm: () => void;
+  testId?: string;
 }
 
 // Status updates can't be undone, so they fire on press-and-hold instead of a tap:
@@ -23,6 +24,7 @@ export function HoldToConfirm({
   pendingLabel = "Saving...",
   disabled = false,
   onConfirm,
+  testId = "hold-to-confirm",
 }: HoldToConfirmProps) {
   const [progress, setProgress] = useState(0);
   const [holding, setHolding] = useState(false);
@@ -92,6 +94,7 @@ export function HoldToConfirm({
       <button
         type="button"
         disabled={inactive}
+        data-test-id={testId}
         aria-label={pending ? pendingLabel : `${label}. Press and hold to confirm.`}
         onPointerDown={handlePointerDown}
         onPointerUp={release}

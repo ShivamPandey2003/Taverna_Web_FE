@@ -103,6 +103,7 @@ export function ConfirmationCard({ status }: { status: ServiceStatus }) {
         </div>
 
         <button
+          data-test-id="tracking-confirm-step-button"
           type="button"
           onClick={approve}
           disabled={confirmStep.isPending}

@@ -236,7 +236,7 @@ export function staffNeeded(code: string): StaffNeed | null {
 }
 
 // "ADVISOR_ASSIGNED" -> "Advisor Assigned"
-const statusName =(code: string) =>
+export const statusName = (code: string) =>
   code
     .toLowerCase()
     .split("_")

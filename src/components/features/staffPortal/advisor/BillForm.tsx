@@ -36,6 +36,7 @@ export function BillForm({ lines, onChange, disabled = false }: BillFormProps) {
         {lines.map((line, index) => (
           <li key={line.id} className="flex items-center gap-2">
             <input
+              data-test-id={`bill-item-label-${index}`}
               type="text"
               value={line.label}
               onChange={(event) => update(line.id, { label: event.target.value })}
@@ -50,6 +51,7 @@ export function BillForm({ lines, onChange, disabled = false }: BillFormProps) {
                 $
               </span>
               <input
+                data-test-id={`bill-item-amount-${index}`}
                 type="text"
                 inputMode="decimal"
                 value={line.amount}
@@ -66,6 +68,7 @@ export function BillForm({ lines, onChange, disabled = false }: BillFormProps) {
             </div>
             {removable && (
               <button
+                data-test-id={`bill-item-remove-${index}`}
                 type="button"
                 onClick={() => onChange(lines.filter((item) => item.id !== line.id))}
                 disabled={disabled}
@@ -80,6 +83,7 @@ export function BillForm({ lines, onChange, disabled = false }: BillFormProps) {
       </ul>
 
       <button
+        data-test-id="bill-add-item"
         type="button"
         onClick={() => onChange([...lines, newBillLine()])}
         disabled={disabled}

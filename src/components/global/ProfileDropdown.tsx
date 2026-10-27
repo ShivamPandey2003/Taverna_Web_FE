@@ -61,6 +61,7 @@ export function ProfileDropdown() {
   return (
     <div ref={containerRef} className="relative">
       <button
+        data-test-id="profile-menu-button"
         type="button"
         onClick={() => setOpen((value) => !value)}
         className="flex items-center gap-1.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-gray-100"
@@ -94,6 +95,7 @@ export function ProfileDropdown() {
             {/* Admins have no profile page */}
             {!isAdmin && (
               <button
+                data-test-id="profile-menu-profile"
                 type="button"
                 role="menuitem"
                 onClick={openProfile}
@@ -105,6 +107,7 @@ export function ProfileDropdown() {
             )}
 
             <button
+              data-test-id="profile-menu-logout"
               type="button"
               role="menuitem"
               onClick={handleLogout}

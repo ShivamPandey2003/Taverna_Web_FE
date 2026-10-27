@@ -19,6 +19,7 @@ export function BookingsToolbar() {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <SearchInput
+        testId="bookings-search"
         value={search}
         onSearch={(value) => dispatch(setSearch(value))}
         placeholder="Search by booking id, customer name and phone no"
@@ -26,6 +27,7 @@ export function BookingsToolbar() {
 
       {/* Status */}
       <select
+        data-test-id="bookings-status-filter"
         value={status}
         onChange={(event) =>
           dispatch(setStatusFilter(event.target.value))
@@ -47,6 +49,7 @@ export function BookingsToolbar() {
 
       {/* Service */}
       <select
+        data-test-id="bookings-service-filter"
         value={serviceId}
         onChange={(event) =>
           dispatch(setServiceFilter(event.target.value as BookingListParams["serviceId"]))
@@ -64,6 +67,7 @@ export function BookingsToolbar() {
 
       {hasFilters && (
         <button
+          data-test-id="bookings-clear-filters"
           type="button"
           onClick={() => dispatch(resetFilters())}
           className="h-9 rounded-lg px-3 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"

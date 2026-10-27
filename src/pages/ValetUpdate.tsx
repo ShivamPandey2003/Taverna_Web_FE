@@ -91,6 +91,7 @@ function ValetTrip({ trip, link }: { trip: ValetTripDetails; link: StaffLinkPara
         <div className="action-bar">
           <div className="action-bar-inner">
             <HoldToConfirm
+              testId="valet-next-status"
               key={nextAction.status}
               label={nextAction.label}
               pending={advance.isPending}

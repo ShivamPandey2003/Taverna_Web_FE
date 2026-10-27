@@ -25,6 +25,7 @@ export function BookingDetailsModal() {
 
   return (
     <Modal
+      testId="booking-details-modal"
       title={
         <>
           <h2>Booking {detailsBookingId}</h2>
@@ -35,6 +36,7 @@ export function BookingDetailsModal() {
       footer={
         <>
           <button
+            data-test-id="booking-details-close-button"
             type="button"
             onClick={onClose}
             className="h-10 rounded-lg border border-gray-200 bg-white px-5 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
@@ -43,6 +45,7 @@ export function BookingDetailsModal() {
           </button>
 
           <button
+            data-test-id="booking-details-manage"
             type="button"
             disabled={!booking}
             onClick={() => dispatch(openBookingWorkflow(detailsBookingId))}

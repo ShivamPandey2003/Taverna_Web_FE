@@ -76,6 +76,7 @@ export function OffersTable() {
                 <td colSpan={columns.length} className="px-5 py-12 text-center">
                   <p className="text-sm text-gray-500">Couldn't load offers.</p>
                   <button
+                    data-test-id="offers-retry"
                     type="button"
                     onClick={() => refetch()}
                     className="mt-3 text-sm font-semibold text-gray-900 underline underline-offset-4 hover:text-black"
@@ -96,6 +97,7 @@ export function OffersTable() {
                   </p>
                   {!filtered && (
                     <button
+                      data-test-id="offers-empty-bulk-upload"
                       type="button"
                       onClick={() => dispatch(openOfferUpload())}
                       className="mt-3 text-sm font-semibold text-gray-900 underline underline-offset-4 hover:text-black"
@@ -109,6 +111,7 @@ export function OffersTable() {
 
             {data?.items.map((offer) => (
               <tr
+                data-test-id={`offer-row-${offer.id}`}
                 key={offer.id}
                 onClick={() => dispatch(openOfferDetails(offer))}
                 className="cursor-pointer transition hover:bg-gray-50"
@@ -143,6 +146,7 @@ export function OffersTable() {
                 <td className="px-4 py-2" onClick={(event) => event.stopPropagation()}>
                   <div className="flex justify-end gap-2">
                     <button
+                      data-test-id={`offer-edit-${offer.id}`}
                       type="button"
                       onClick={() => dispatch(openEditOffer(offer))}
                       className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-900 transition hover:bg-gray-100"
@@ -150,6 +154,7 @@ export function OffersTable() {
                       Edit
                     </button>
                     <button
+                      data-test-id={`offer-delete-${offer.id}`}
                       type="button"
                       onClick={() => dispatch(openDeleteOffer(offer))}
                       className="rounded-md border border-red-200 bg-white px-2.5 py-1 text-xs font-semibold text-red-600 transition hover:bg-red-50"
@@ -166,6 +171,7 @@ export function OffersTable() {
 
       {data && (
         <TablePagination
+          testId="offers-pagination"
           page={data.page}
           pageSize={data.pageSize}
           total={data.total}

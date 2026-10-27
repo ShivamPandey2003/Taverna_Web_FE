@@ -6,7 +6,9 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useState } from "react";
-import { liveRefetch } from "@/libs/polling";
+import { liveRefetch, refetchEvery } from "@/libs/polling";
+import { useAppSelector } from "@/redux/hooks";
+import { selectBookingsRefresh } from "@/redux/adminRefresh/adminRefreshSlice";
 import { adminApi, type OfferUploadStep, type StaffInput } from "@/services/adminApi";
 import type {
   BookingListParams,
@@ -22,6 +24,8 @@ export const adminKeys = {
   bookings: ["admin", "bookings"] as const,
   bookingList: (params: BookingListParams) => ["admin", "bookings", "list", params] as const,
   booking: (id: string) => ["admin", "bookings", "detail", id] as const,
+  // Under bookings, so the refresh button and every booking update reload it too
+  history: (id: string) => ["admin", "bookings", "history", id] as const,
   staff: (role: StaffRole) => ["admin", "staff", role] as const,
   staffList: (role: StaffRole) => ["admin", "staff", role, "list"] as const,
   offers: ["admin", "offers"] as const,
@@ -29,13 +33,15 @@ export const adminKeys = {
 };
 
 export function useAdminBookings(params: BookingListParams) {
+  // The page header's auto refresh: every 5 / 10 / 15 / 20s, or stopped
+  const seconds = useAppSelector(selectBookingsRefresh);
+
   return useQuery({
     queryKey: adminKeys.bookingList(params),
     queryFn: () => adminApi.listBookings(params),
     // Keep the current page on screen while the next one loads
     placeholderData: keepPreviousData,
-    // Loads again by itself every 5s
-    refetchInterval: liveRefetch,
+    refetchInterval: refetchEvery(seconds ? seconds * 1000 : false),
   });
 }
 
@@ -57,6 +63,17 @@ export function useAdminBooking(id: string | null) {
     enabled: !!id,
     // Loads again every 5s while open, so what valets, advisors and customers do
     // shows in the drawer
+    refetchInterval: liveRefetch,
+  });
+}
+
+// Only while the history modal is open; polled like the drawer, so a step the
+// valet or advisor posts shows up in it
+export function useBookingHistory(id: string | null) {
+  return useQuery({
+    queryKey: adminKeys.history(id ?? ""),
+    queryFn: () => adminApi.getHistory(id!),
+    enabled: !!id,
     refetchInterval: liveRefetch,
   });
 }

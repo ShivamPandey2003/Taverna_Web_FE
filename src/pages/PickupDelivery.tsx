@@ -148,6 +148,7 @@ export function PickupDelivery() {
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex w-full items-center gap-3 sm:w-auto sm:gap-4">
             <button
+              data-test-id="review-back-button"
               type="button"
               onClick={() => navigate(-1)}
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-900 transition hover:bg-gray-50"
@@ -168,6 +169,7 @@ export function PickupDelivery() {
           {/* Actions */}
           <div className="flex w-full gap-3 sm:w-auto">
             <button
+              data-test-id="review-schedule-later"
               type="button"
               disabled={!canBook || booking}
               onClick={() => dispatch(openReviewModal("schedule"))}
@@ -185,6 +187,7 @@ export function PickupDelivery() {
             </button>
 
             <button
+              data-test-id="review-book-now"
               type="button"
               disabled={!canBook || booking}
               onClick={() => handleBook()}
@@ -261,6 +264,7 @@ export function PickupDelivery() {
       {/* Only for a booking scheduled for later; stays open (locked) while it's placed */}
       {scheduled && activeModal === "confirmBooking" && (
         <ConfirmModal
+          testId="confirm-booking-modal"
           title="Confirm Your Booking"
           tone="primary"
           confirmLabel="Confirm Booking"

@@ -40,6 +40,7 @@ export function SignupForm({
       className="space-y-4"
     >
       <AuthInput
+        data-test-id="signup-fullname-input"
         label="Full name"
         placeholder="John Smith"
         autoComplete="name"
@@ -48,6 +49,7 @@ export function SignupForm({
       />
 
       <AuthInput
+        data-test-id="signup-email-input"
         label="Email address"
         type="email"
         placeholder="you@example.com"
@@ -57,6 +59,7 @@ export function SignupForm({
       />
 
       <AuthInput
+        data-test-id="signup-phone-input"
         label="Phone number"
         type="tel"
         inputMode="numeric"
@@ -74,6 +77,7 @@ export function SignupForm({
       {/* Notifications */}
       <label className="flex cursor-pointer items-start gap-3">
         <input
+          data-test-id="signup-notifications-checkbox"
           type="checkbox"
           {...register("notification_preferences")}
           className="mt-0.5 h-4 w-4 accent-primary"
@@ -89,6 +93,7 @@ export function SignupForm({
       <div>
         <label className="flex cursor-pointer items-start gap-3">
           <input
+            data-test-id="signup-privacy-checkbox"
             type="checkbox"
             {...register("privacy_policy")}
             className="mt-0.5 h-4 w-4 accent-primary"
@@ -97,6 +102,7 @@ export function SignupForm({
           <span className="text-xs leading-5 text-gray-600">
             I agree to Taverna's{" "}
             <a
+              data-test-id="signup-privacy-link"
               href="/privacy"
               target="_blank"
               className="font-semibold text-gray-900 underline"
@@ -115,6 +121,7 @@ export function SignupForm({
       </div>
 
       <button
+        data-test-id="signup-submit-button"
         type="submit"
         disabled={isSubmitting}
         className="h-11 w-full rounded-lg bg-black text-sm font-semibold text-white transition hover:bg-gray-800 disabled:opacity-50"

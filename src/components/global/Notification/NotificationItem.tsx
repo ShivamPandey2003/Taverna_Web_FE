@@ -12,6 +12,7 @@ interface NotificationItemProps {
 export function NotificationItem({ notification, time, onRead }: NotificationItemProps) {
   return (
     <button
+      data-test-id={`notification-item-${notification.id}`}
       type="button"
       onClick={onRead}
       className={cn(

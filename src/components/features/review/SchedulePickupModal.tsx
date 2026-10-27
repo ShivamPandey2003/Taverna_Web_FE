@@ -100,6 +100,7 @@ function SchedulePickupContent({
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
+        data-test-id="schedule-backdrop"
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
       />
@@ -118,6 +119,7 @@ function SchedulePickupContent({
             </h2>
 
             <button
+              data-test-id="schedule-close"
               type="button"
               onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
@@ -175,6 +177,7 @@ function SchedulePickupContent({
 
                     return (
                       <button
+                        data-test-id={`schedule-day-${day.toISOString().slice(0, 10)}`}
                         key={day.toISOString()}
                         type="button"
                         // aria-disabled, not disabled: a disabled button gets no hover, so no hint
@@ -217,6 +220,7 @@ function SchedulePickupContent({
 
               return (
                 <button
+                  data-test-id={`schedule-slot-${slot.toISOString()}`}
                   key={slot.toISOString()}
                   type="button"
                   // aria-disabled, not disabled: a disabled button gets no hover, so no hint
@@ -257,6 +261,7 @@ function SchedulePickupContent({
           {/* Actions: Cancel 40%, Confirm 60% */}
           <div className="mt-5 grid grid-cols-5 gap-3">
             <button
+              data-test-id="schedule-cancel"
               type="button"
               onClick={onClose}
               className="col-span-2 h-12 rounded-lg border border-gray-300 bg-white text-sm font-semibold text-gray-900 transition hover:bg-gray-50"
@@ -265,6 +270,7 @@ function SchedulePickupContent({
             </button>
 
             <button
+              data-test-id="schedule-confirm"
               type="button"
               disabled={!selected}
               onClick={() => selected && onConfirm(selected)}
@@ -319,6 +325,7 @@ function PageButton({
 }) {
   return (
     <button
+      data-test-id={`schedule-${label.toLowerCase().replace(/\s+/g, "-")}`}
       type="button"
       aria-label={label}
       disabled={disabled}

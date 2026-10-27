@@ -33,6 +33,7 @@ export function ProfileSummary() {
 
         {/* Edit */}
         <button
+          data-test-id="profile-edit-button"
           type="button"
           onClick={onEdit}
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"

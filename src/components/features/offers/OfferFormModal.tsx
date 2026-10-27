@@ -91,6 +91,7 @@ function OfferForm({ offer }: { offer: Offer }) {
 
   return (
     <Modal
+      testId="offer-form-modal"
       title={<h2>Edit Offer</h2>}
       subtitle={`${vehicleName} · Stock ${offer.stockNumber}`}
       onClose={onClose}
@@ -98,6 +99,7 @@ function OfferForm({ offer }: { offer: Offer }) {
       footer={
         <>
           <button
+            data-test-id="offer-form-cancel"
             type="button"
             onClick={onClose}
             className="h-10 rounded-lg border border-gray-200 bg-white px-5 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
@@ -106,6 +108,7 @@ function OfferForm({ offer }: { offer: Offer }) {
           </button>
 
           <button
+            data-test-id="offer-form-save"
             type="submit"
             form="offer-form"
             disabled={saving || !isDirty}
@@ -125,7 +128,7 @@ function OfferForm({ offer }: { offer: Offer }) {
               htmlFor="offer-condition"
               error={errors.condition?.message}
             >
-              <select id="offer-condition" {...register("condition")} className="form-input">
+              <select data-test-id="offer-condition-select" id="offer-condition" {...register("condition")} className="form-input">
                 <option value="">Choose...</option>
                 {OFFER_CONDITIONS.map((condition) => (
                   <option key={condition} value={condition}>
@@ -143,6 +146,7 @@ function OfferForm({ offer }: { offer: Offer }) {
                 error={errors[field.name]?.message}
               >
                 <input
+                  data-test-id={`offer-${field.name}-input`}
                   id={`offer-${field.name}`}
                   type={field.number ? "number" : "text"}
                   step={field.step}
@@ -160,6 +164,7 @@ function OfferForm({ offer }: { offer: Offer }) {
             error={errors.description?.message}
           >
             <textarea
+              data-test-id="offer-description-input"
               id="offer-description"
               rows={2}
               {...register("description")}
@@ -173,6 +178,7 @@ function OfferForm({ offer }: { offer: Offer }) {
             error={errors.disclaimer?.message}
           >
             <textarea
+              data-test-id="offer-disclaimer-input"
               id="offer-disclaimer"
               rows={4}
               {...register("disclaimer")}
@@ -208,6 +214,7 @@ export function DeleteOfferModal() {
 
   return (
     <ConfirmModal
+      testId="delete-offer-modal"
       title="Delete Offer"
       subtitle={`VIN ${maskedVin(deleting.vin)} · Stock ${deleting.stockNumber}`}
       onClose={onClose}

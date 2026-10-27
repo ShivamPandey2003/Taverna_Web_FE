@@ -71,6 +71,7 @@ function NavLinks({ items, dotPaths }: { items: NavItem[]; dotPaths: string[] })
     <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 md:flex">
       {items.map(({ label, path, icon: Icon }) => (
         <NavLink
+          data-test-id={`nav-link-${label.toLowerCase().replace(/\s+/g, "-")}`}
           key={path}
           to={path}
           end={exactPaths.includes(path)}
@@ -103,6 +104,7 @@ export function MobileNav() {
     <nav className="flex shrink-0 border-t border-gray-200 bg-white pb-[env(safe-area-inset-bottom)] md:hidden">
       {items.map(({ label, path, icon: Icon }) => (
         <NavLink
+          data-test-id={`mobile-nav-link-${label.toLowerCase().replace(/\s+/g, "-")}`}
           key={path}
           to={path}
           end={exactPaths.includes(path)}

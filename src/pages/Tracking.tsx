@@ -74,6 +74,7 @@ export function ServiceTracking() {
         </p>
 
         <button
+          data-test-id="tracking-book-service"
           type="button"
           onClick={() => navigate("/dashboard/book-service")}
           className="mt-5 rounded-lg bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"

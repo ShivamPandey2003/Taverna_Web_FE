@@ -110,6 +110,7 @@ function AdvisorService({
           <div className="action-bar-inner">
             {canGenerateInvoice ? (
               <HoldToConfirm
+                testId="advisor-generate-invoice"
                 key="bill"
                 label="Generate Invoice"
                 pendingLabel="Generating..."
@@ -120,6 +121,7 @@ function AdvisorService({
             ) : (
               nextAction && (
                 <HoldToConfirm
+                  testId="advisor-next-status"
                   key={nextAction.status}
                   label={nextAction.label}
                   pending={advance.isPending}

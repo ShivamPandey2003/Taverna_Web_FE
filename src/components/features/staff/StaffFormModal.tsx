@@ -82,6 +82,7 @@ function StaffForm({
 
   return (
     <Modal
+      testId={`${role}-form-modal`}
       title={
         <h2 className="capitalize">
           {member ? "Edit" : "Add"} {roleLabel}
@@ -95,6 +96,7 @@ function StaffForm({
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <FormField label="Full name" htmlFor="staff-name" error={errors.name?.message}>
           <input
+            data-test-id={`${role}-name-input`}
             id="staff-name"
             autoFocus
             placeholder="Jane Doe"
@@ -105,6 +107,7 @@ function StaffForm({
 
         <FormField label="Email" htmlFor="staff-email" error={errors.email?.message}>
           <input
+            data-test-id={`${role}-email-input`}
             id="staff-email"
             type="email"
             placeholder="jane.doe@taverna.com"
@@ -115,6 +118,7 @@ function StaffForm({
 
         <FormField label="Phone number" htmlFor="staff-phone" error={errors.phone?.message}>
           <input
+            data-test-id={`${role}-phone-input`}
             id="staff-phone"
             type="tel"
             placeholder="(954) 555-0100"
@@ -124,12 +128,13 @@ function StaffForm({
         </FormField>
 
         <label className="flex h-11 cursor-pointer items-center gap-3 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-900 transition hover:bg-gray-50">
-          <input type="checkbox" {...register("available")} className="h-4 w-4 accent-black" />
+          <input data-test-id={`${role}-available-checkbox`} type="checkbox" {...register("available")} className="h-4 w-4 accent-black" />
           Available for new bookings
         </label>
 
         <div className="flex justify-end gap-3 pt-1">
           <button
+            data-test-id={`${role}-form-cancel`}
             type="button"
             onClick={onClose}
             className="h-10 rounded-lg border border-gray-200 bg-white px-5 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
@@ -138,6 +143,7 @@ function StaffForm({
           </button>
 
           <button
+            data-test-id={`${role}-form-save`}
             type="submit"
             disabled={saving}
             className="h-10 rounded-lg bg-black px-5 text-sm font-semibold capitalize text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"

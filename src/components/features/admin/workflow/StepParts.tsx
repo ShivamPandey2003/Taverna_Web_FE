@@ -44,6 +44,7 @@ export function StepDone({
         <button
           type="button"
           onClick={onAction}
+          data-test-id="step-done-action"
           className="shrink-0 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-gray-900 shadow-sm transition hover:bg-gray-50"
         >
           {actionLabel}
@@ -60,17 +61,20 @@ export function ActionButton({
   pendingLabel = "Saving...",
   onClick,
   tone = "dark",
+  testId,
 }: {
   children: ReactNode;
   pending: boolean;
   pendingLabel?: string;
   onClick: () => void;
   tone?: "dark" | "success";
+  testId: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      data-test-id={testId}
       disabled={pending}
       className={cn(
         "h-11 w-full rounded-lg text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50",
@@ -145,6 +149,7 @@ export function AssignmentRow({
 
       {picked && (
         <ConfirmModal
+          testId={`assign-${role}-modal`}
           title={`${assigned ? "Change" : "Assign"} ${title}`}
           subtitle={`${booking.id} · ${booking.customer.name}`}
           confirmLabel={`${assigned ? "Change" : "Assign"} ${roleTitle}`}
@@ -237,6 +242,7 @@ export function CopyButton({
     <button
       type="button"
       onClick={handleCopy}
+      data-test-id={`copy-${label.toLowerCase().replace(/\s+/g, "-")}`}
       title={`Copy ${label}`}
       aria-label={`Copy ${label}`}
       className={cn(
@@ -325,7 +331,12 @@ function StaffLinkCard({
           <CopyButton value={link} label="link" className={linkButtonClass}>
             Copy
           </CopyButton>
-          <button type="button" onClick={handleShare} className={linkButtonClass}>
+          <button
+            type="button"
+            onClick={handleShare}
+            data-test-id={`${role}-link-share`}
+            className={linkButtonClass}
+          >
             <Share size={15} className="text-gray-500" />
             Share
           </button>
@@ -434,6 +445,7 @@ function StaffSelect({
       >
         {/* The whole box opens the list; the copy buttons sit above this button */}
         <button
+          data-test-id={`${role}-select-button`}
           type="button"
           disabled={saving}
           onClick={() => setOpen((current) => !current)}
@@ -461,6 +473,7 @@ function StaffSelect({
           <div className="relative border-b border-gray-100 p-2">
             <Search size={15} className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
+              data-test-id={`${role}-select-search`}
               autoFocus
               type="search"
               value={search}
@@ -489,6 +502,7 @@ function StaffSelect({
               return (
                 <li key={member.id}>
                   <button
+                    data-test-id={`${role}-option-${member.id}`}
                     type="button"
                     role="option"
                     aria-selected={current}
@@ -530,6 +544,7 @@ function StaffSelect({
           </ul>
 
           <button
+            data-test-id={`${role}-add-new`}
             type="button"
             onClick={handleAdd}
             className="flex w-full items-center gap-2 border-t border-gray-100 px-4 py-2.5 text-sm font-semibold capitalize text-gray-900 transition hover:bg-gray-50"

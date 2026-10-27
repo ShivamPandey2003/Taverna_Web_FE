@@ -55,6 +55,7 @@ export function NotificationList() {
       <div className="py-8 text-center">
         <p className="text-sm text-gray-500">We couldn't load your notifications.</p>
         <button
+          data-test-id="notifications-retry-button"
           type="button"
           onClick={() => refetch()}
           disabled={isFetching}

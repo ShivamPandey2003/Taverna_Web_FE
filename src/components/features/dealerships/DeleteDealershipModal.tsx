@@ -30,6 +30,7 @@ export function DeleteDealershipModal() {
 
   return (
     <ConfirmModal
+      testId="delete-dealership-modal"
       title="Delete Dealership"
       subtitle={deleting.address}
       pending={deleteDealership.isPending}

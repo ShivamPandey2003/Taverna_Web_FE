@@ -123,6 +123,7 @@ export function SuggestField<T extends FieldSuggestion>({
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{icon}</span>
 
         <input
+          data-test-id={`address-field-${id}`}
           id={id}
           {...registration}
           role="combobox"
@@ -164,6 +165,7 @@ export function SuggestField<T extends FieldSuggestion>({
           >
             {items.map((item, index) => (
               <li
+                data-test-id={`address-suggestion-${item.id}`}
                 key={item.id}
                 role="option"
                 aria-selected={highlighted === index}

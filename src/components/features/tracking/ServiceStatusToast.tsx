@@ -120,6 +120,7 @@ function ServiceBubble({ service, open, onOpenChange }: ServiceBubbleProps) {
         // The padding bridges the gap to the bubble, so the mouse can cross it
         <div className="absolute right-0 bottom-full w-[340px] max-w-[calc(100vw-32px)] pb-3">
           <button
+            data-test-id={`status-card-${booking.id}`}
             type="button"
             onClick={openTracking}
             className="flex w-full animate-toast-in items-center gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-3 text-left shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition hover:bg-gray-50"
@@ -141,6 +142,7 @@ function ServiceBubble({ service, open, onOpenChange }: ServiceBubbleProps) {
       )}
 
       <button
+        data-test-id={`status-bubble-${booking.id}`}
         type="button"
         // Straight to tracking, a tap included (no card first on touch screens,
         // where there's no hover); the card is only a mouse's hover preview

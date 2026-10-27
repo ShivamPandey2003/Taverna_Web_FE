@@ -121,7 +121,7 @@ export function ValetStep({ booking, leg, onDone }: ValetStepProps) {
       )}
 
       {awaitingReceipt && (
-        <ActionButton pending={confirmReceived.isPending} onClick={markReceived}>
+        <ActionButton testId="workflow-confirm-vehicle-received" pending={confirmReceived.isPending} onClick={markReceived}>
           Confirm Vehicle Received
         </ActionButton>
       )}

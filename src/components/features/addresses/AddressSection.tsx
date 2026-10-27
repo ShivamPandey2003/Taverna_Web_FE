@@ -33,6 +33,7 @@ export function AddressSection() {
 
       {/* Add address */}
       <button
+        data-test-id="address-add-button"
         type="button"
         onClick={() => dispatch(openAddAddress())}
         className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-dashed border-gray-200 bg-white text-xs font-semibold text-gray-900 transition hover:border-gray-400 hover:bg-gray-50"

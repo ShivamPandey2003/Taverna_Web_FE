@@ -69,6 +69,7 @@ export function DriveableStatus({ step }: { step?: number }) {
 
       {confirmingRemoval && (
         <ConfirmModal
+          testId="remove-tow-truck-modal"
           title="Remove Tow Truck?"
           confirmLabel="Remove Tow Truck"
           cancelLabel="Keep Tow Truck"
@@ -99,6 +100,7 @@ function RadioOption({
 }: RadioOptionProps) {
   return (
     <button
+      data-test-id={`driveable-${label.toLowerCase()}`}
       type="button"
       onClick={onClick}
       className="flex items-center gap-2 text-sm text-gray-900"

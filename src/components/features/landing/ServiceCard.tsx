@@ -82,6 +82,7 @@ export function ServiceCard({
 
       {/* Footer */}
       <button
+        data-test-id={`landing-book-${title.toLowerCase().replace(/\s+/g, "-")}`}
         type="button"
         onClick={startBooking}
         className="mt-5 flex w-full cursor-pointer items-center justify-between border-t border-border pt-4"
