@@ -11,6 +11,8 @@ import { AdvisorUpdate } from "@/pages/AdvisorUpdate";
 import { BookService } from "@/pages/BookService";
 import { Dashboard } from "@/pages/Dashboard";
 import Home from "@/pages/Home";
+import { PaymentCancelled } from "@/pages/PaymentCancelled";
+import { PaymentSuccess } from "@/pages/PaymentSuccess";
 import { PickupDelivery } from "@/pages/PickupDelivery";
 import { Specials } from "@/pages/Specials";
 import { ServiceTracking } from "@/pages/Tracking";
@@ -56,6 +58,25 @@ const Router = createBrowserRouter([
       {
         path:"account",
         element:<Account/>
+      },
+    ],
+  },
+  {
+    // Where Stripe's checkout sends the customer back: paid or cancelled
+    path: "payments/stripe",
+    element: (
+      <RequireAuth role="user">
+        <DashboardLayout />
+      </RequireAuth>
+    ),
+    children: [
+      {
+        path: "success",
+        element: <PaymentSuccess />,
+      },
+      {
+        path: "cancel",
+        element: <PaymentCancelled />,
       },
     ],
   },

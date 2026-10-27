@@ -97,17 +97,26 @@ export function useConfirmStep() {
   });
 }
 
-// Pays the bill; the admin then confirms it, which moves the status on (polled)
+// Opens the bill's Stripe checkout and sends the browser there. Back in the
+// app, the polled status shows the payment once the API has it.
 export function usePayInvoice() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (id: string) => bookingApi.pay(id),
-    onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: bookingKeys.status(id) });
-      queryClient.invalidateQueries({ queryKey: bookingKeys.list });
-    },
+  const mutation = useMutation({
+    mutationFn: (id: string) => bookingApi.checkout(id),
+    onSuccess: ({ checkoutUrl }) => window.location.assign(checkoutUrl),
   });
+  const { reset } = mutation;
+
+  // The browser's Back button from Stripe restores this page from its cache as
+  // it was left, still "Opening Checkout...", so the button is freed again
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) reset();
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, [reset]);
+
+  return mutation;
 }
 
 // Cancelling removes the booking, so its cached copies go too. Anything still

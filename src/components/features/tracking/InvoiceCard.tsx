@@ -1,8 +1,4 @@
-import { useState } from "react";
 import { CheckCircle } from "reicon-react";
-import { toast } from "sonner";
-import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { isPaidLocally } from "@/services/bookingApi";
 import { usePayInvoice } from "@/services/queries/bookingQueries";
 import type { CustomerBookingDetails } from "@/types/booking";
 
@@ -20,22 +16,16 @@ const formatMoney = (amount: number, currency: string) => {
   }
 };
 
-// The bill the advisor sent, from the booking's details, with Pay Now (after a
-// confirmation). Once paid it says so until the dealership confirms the payment;
-// the tracking page then drops it. The API layer toasts a failed payment.
+// The bill the advisor sent, from the booking's details, with Pay Now, which goes
+// straight to Stripe's checkout. Once paid it says so until the dealership
+// confirms the payment; the tracking page then drops it. The API layer toasts a
+// failed checkout.
 export function InvoiceCard({ bookingId, invoice }: InvoiceCardProps) {
   const money = (amount: number) => formatMoney(amount, invoice.currency);
   const payInvoice = usePayInvoice();
-  const [confirming, setConfirming] = useState(false);
-  const paid = invoice.paid || payInvoice.isSuccess || isPaidLocally(bookingId);
-
-  const handlePay = () =>
-    payInvoice.mutate(bookingId, {
-      onSuccess: () => {
-        setConfirming(false);
-        toast.success("Payment received. The dealership will confirm it shortly.");
-      },
-    });
+  const paid = invoice.paid;
+  // Still locked once the checkout is ready, while the browser leaves for it
+  const redirecting = payInvoice.isPending || payInvoice.isSuccess;
 
   return (
     <section className="space-y-2">
@@ -82,30 +72,15 @@ export function InvoiceCard({ bookingId, invoice }: InvoiceCardProps) {
           <button
             data-test-id="invoice-pay-now"
             type="button"
-            onClick={() => setConfirming(true)}
-            disabled={payInvoice.isPending}
+            onClick={() => payInvoice.mutate(bookingId)}
+            disabled={redirecting}
             className="h-9 w-full rounded-lg bg-status-active text-sm font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {payInvoice.isPending ? "Processing..." : `Pay Now · ${money(invoice.total)}`}
+            {redirecting ? "Opening Checkout..." : `Pay Now · ${money(invoice.total)}`}
           </button>
         )}
       </div>
 
-      {confirming && (
-        <ConfirmModal
-          testId="pay-invoice-modal"
-          title="Pay Invoice?"
-          confirmLabel={`Pay ${money(invoice.total)}`}
-          cancelLabel="Not Now"
-          pendingLabel="Processing..."
-          pending={payInvoice.isPending}
-          onConfirm={handlePay}
-          onClose={() => setConfirming(false)}
-        >
-          You'll pay {money(invoice.total)} for booking #{bookingId}. A valet can then bring
-          your vehicle back.
-        </ConfirmModal>
-      )}
     </section>
   );
 }

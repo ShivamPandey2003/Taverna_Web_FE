@@ -400,45 +400,15 @@ export const bookingApi = {
   confirm: (id: string, confirmation: ConfirmationAnswer) =>
     request<unknown>("post", `booking/confirmation/${id}`, { confirmation }),
 
-  // The customer pays the bill the advisor sent (a stand-in for a real payment
-  // provider). The status stays INVOICE_GENERATED until the admin confirms the
-  // payment, so the booking is remembered as paid in this browser.
-  pay: async (id: string) => {
-    const payment = await request<PaymentResponse>("post", `booking/payment/mock-success/${id}`);
-    if (payment.paymentStatus === "PAID") rememberPaid(id);
-    return payment;
-  },
+  // Real API: opens a Stripe checkout for the bill the advisor sent. The customer
+  // pays on Stripe's page; the API then moves the status on (polled).
+  checkout: (id: string) =>
+    request<CheckoutResponse>("post", `booking/${id}/checkout`),
 };
 
-// POST booking/payment/mock-success/:bmsId
-interface PaymentResponse {
+// POST booking/:bmsId/checkout
+interface CheckoutResponse {
   bmsId: string;
-  currentStatus: string;
-  paymentStatus: string;
-  paidAt: string | null;
-  pendingFrom: string | null;
+  checkoutUrl: string;
+  expiresAt: string;
 }
-
-// Bookings the customer has paid that the admin hasn't confirmed yet. Kept in
-// localStorage because the API's details don't say the bill is paid until then,
-// and a reload must not offer Pay Now again.
-const PAID_KEY = "taverna_paid_bookings";
-
-function paidBookings(): string[] {
-  try {
-    const stored = JSON.parse(localStorage.getItem(PAID_KEY) ?? "[]");
-    return Array.isArray(stored) ? stored : [];
-  } catch {
-    return [];
-  }
-}
-
-function rememberPaid(id: string) {
-  try {
-    localStorage.setItem(PAID_KEY, JSON.stringify([...new Set([...paidBookings(), id])]));
-  } catch {
-    // Storage unavailable: the card still shows paid until the page is reloaded
-  }
-}
-
-export const isPaidLocally = (id: string) => paidBookings().includes(id);
