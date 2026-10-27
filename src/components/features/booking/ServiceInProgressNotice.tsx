@@ -38,6 +38,7 @@ export function ServiceInProgressNotice({ service }: { service: ActiveService })
       </div>
 
       <button
+        data-test-id="service-in-progress-track"
         type="button"
         onClick={() => navigate(trackingPath(service.booking.id))}
         className="w-full shrink-0 rounded-lg bg-black px-5 py-2.5 sm:w-auto text-sm font-semibold text-white transition hover:bg-gray-800"

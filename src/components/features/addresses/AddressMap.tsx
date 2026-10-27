@@ -82,6 +82,7 @@ export function AddressMap({
 
       {!readOnly && (
       <button
+        data-test-id="address-map-current-location"
         type="button"
         onClick={onUseCurrentLocation}
         disabled={locked}

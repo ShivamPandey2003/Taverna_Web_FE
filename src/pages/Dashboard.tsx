@@ -34,6 +34,7 @@ export function Dashboard() {
         <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center">
           <p className="text-sm text-gray-500">We couldn't load your vehicles.</p>
           <button
+            data-test-id="dashboard-vehicles-retry"
             type="button"
             onClick={() => vehiclesQuery.refetch()}
             className="rounded-lg bg-black px-4 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"
@@ -63,6 +64,7 @@ export function Dashboard() {
             </div>
 
             <button
+              data-test-id="dashboard-add-vehicle"
               onClick={() => dispatch(openRegisterVehicle())}
               aria-label="Add New Vehicle"
               className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg bg-black px-3 py-2 text-sm font-semibold text-white transition hover:bg-gray-800"

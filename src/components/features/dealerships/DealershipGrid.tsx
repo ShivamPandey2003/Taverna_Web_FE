@@ -11,6 +11,7 @@ export function DealershipGrid() {
       <div className="rounded-2xl border border-gray-200 bg-white px-5 py-12 text-center">
         <p className="text-sm text-gray-500">Couldn't load dealerships.</p>
         <button
+          data-test-id="dealerships-retry"
           type="button"
           onClick={() => refetch()}
           className="mt-3 text-sm font-semibold text-gray-900 underline underline-offset-4 hover:text-black"

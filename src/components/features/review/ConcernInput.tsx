@@ -30,6 +30,7 @@ export function ConcernInput({ step }: { step?: number }) {
         /> */}
 
         <textarea
+          data-test-id="concern-input"
           id="service-concern"
           value={value}
           onChange={(event) =>

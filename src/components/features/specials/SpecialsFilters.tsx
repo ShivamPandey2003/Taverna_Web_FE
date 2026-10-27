@@ -59,6 +59,7 @@ export function SpecialsFilters() {
       </select> */}
 
       <select
+        data-test-id="specials-offer-type-filter"
         value={params.offerType}
         onChange={(event) => dispatch(setSpecialsOfferType(event.target.value))}
         className={cn(selectClass, "w-full sm:w-56")}

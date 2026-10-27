@@ -25,6 +25,7 @@ export function AdminDealerships() {
           </div>
 
           <button
+            data-test-id="dealership-add-button"
             type="button"
             onClick={() => dispatch(openAddDealership())}
             className="flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-black px-4 text-sm font-semibold text-white transition hover:bg-gray-800"

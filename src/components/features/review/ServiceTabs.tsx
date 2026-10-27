@@ -28,6 +28,7 @@ export function ServiceTabs({ disabled = false }: { disabled?: boolean }) {
 
           return (
             <button
+              data-test-id={`service-tab-${service.id}`}
               key={service.id}
               type="button"
               role="tab"
@@ -95,6 +96,7 @@ function ServiceMenu({
   return (
     <div ref={rootRef} className="relative sm:hidden">
       <button
+        data-test-id="service-menu-button"
         ref={buttonRef}
         type="button"
         disabled={disabled}
@@ -132,6 +134,7 @@ function ServiceMenu({
             return (
               <li key={service.id}>
                 <button
+                  data-test-id={`service-menu-option-${service.id}`}
                   type="button"
                   role="option"
                   aria-selected={active}

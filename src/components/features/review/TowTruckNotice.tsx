@@ -21,6 +21,7 @@ export function TowTruckNotice({ price = 49, included, onToggle }: TowTruckNotic
     >
       <div className="flex items-center justify-between gap-3">
         <button
+          data-test-id="tow-truck-toggle"
           type="button"
           role="checkbox"
           aria-checked={included}

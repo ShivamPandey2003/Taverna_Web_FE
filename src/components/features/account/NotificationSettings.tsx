@@ -87,6 +87,7 @@ export function NotificationSettings() {
           <p className="text-xs text-amber-900">We couldn't load your notification settings.</p>
 
           <button
+            data-test-id="notification-settings-retry"
             type="button"
             onClick={() => refetch()}
             disabled={isFetching}
@@ -113,6 +114,7 @@ export function NotificationSettings() {
               </div>
 
               <Switch
+                testId={`notification-switch-${key}`}
                 checked={preferences[key]}
                 onChange={(enabled) => handleToggle(key, enabled)}
                 // One save at a time, so each sends the latest of all three
@@ -185,6 +187,7 @@ function PushDeviceStatus({ push }: { push: ReturnType<typeof usePushDevice> }) 
       </span>
       {action && (
         <button
+          data-test-id={`push-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
           type="button"
           onClick={action.onClick}
           disabled={push.busy}

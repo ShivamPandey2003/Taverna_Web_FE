@@ -80,6 +80,7 @@ export function StaffTable({ role }: { role: StaffRole }) {
                     Couldn't load {staffRoleLabels[role]}s.
                   </p>
                   <button
+                    data-test-id="staff-retry"
                     type="button"
                     onClick={() => refetch()}
                     className="mt-3 text-sm font-semibold text-gray-900 underline underline-offset-4 hover:text-black"
@@ -144,6 +145,7 @@ export function StaffTable({ role }: { role: StaffRole }) {
                   <td className="px-4 py-2">
                     <div className="flex justify-end gap-2">
                       <button
+                        data-test-id={`staff-edit-${member.id}`}
                         type="button"
                         onClick={() => dispatch(openEditStaffMember(member))}
                         className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-semibold text-gray-900 transition hover:bg-gray-100"
@@ -151,6 +153,7 @@ export function StaffTable({ role }: { role: StaffRole }) {
                         Edit
                       </button>
                       <button
+                        data-test-id={`staff-delete-${member.id}`}
                         type="button"
                         disabled={assigned}
                         onClick={() => dispatch(openDeleteStaffMember(member))}
@@ -174,6 +177,7 @@ export function StaffTable({ role }: { role: StaffRole }) {
 
       {data && (
         <TablePagination
+          testId={`${role}-pagination`}
           page={data.page}
           pageSize={data.pageSize}
           total={data.total}

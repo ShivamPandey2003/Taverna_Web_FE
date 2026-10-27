@@ -81,6 +81,7 @@ export function BookService() {
               </p>
 
               <button
+                data-test-id="book-service-add-vehicle"
                 type="button"
                 onClick={handleAddVehicle}
                 className="shrink-0 rounded-lg bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"

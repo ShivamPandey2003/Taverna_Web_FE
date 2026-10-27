@@ -22,6 +22,7 @@ export function StaffToolbar({ role }: { role: StaffRole }) {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <SearchInput
+        testId={`${role}-search`}
         value={search}
         onSearch={(value) => dispatch(setStaffSearch({ role, value }))}
         placeholder={`Search ${roleLabel}s by name, email or phone`}
@@ -30,6 +31,7 @@ export function StaffToolbar({ role }: { role: StaffRole }) {
 
       {/* Availability */}
       <select
+        data-test-id={`${role}-availability-filter`}
         value={availability}
         onChange={(event) =>
           dispatch(
@@ -48,6 +50,7 @@ export function StaffToolbar({ role }: { role: StaffRole }) {
 
       {hasFilters && (
         <button
+          data-test-id={`${role}-clear-filters`}
           type="button"
           onClick={() => dispatch(resetStaffFilters(role))}
           className="h-9 rounded-lg px-3 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
@@ -57,6 +60,7 @@ export function StaffToolbar({ role }: { role: StaffRole }) {
       )}
 
       <button
+        data-test-id={`${role}-add-button`}
         type="button"
         onClick={() => dispatch(openAddStaffMember())}
         className="flex h-9 items-center gap-1.5 rounded-lg bg-black px-4 text-sm font-semibold capitalize text-white transition hover:bg-gray-800"

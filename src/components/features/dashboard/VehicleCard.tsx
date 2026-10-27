@@ -53,6 +53,7 @@ export function VehicleCard({
 
           {onSelect && (
             <button
+              data-test-id={`vehicle-card-details-${vehicle.id}`}
               type="button"
               onClick={onSelect}
               aria-label={`Details for ${brandName(vehicle.brand)} ${vehicle.model}`}
@@ -84,6 +85,7 @@ export function VehicleCard({
 
           {service ? (
             <button
+              data-test-id={`vehicle-card-track-${vehicle.id}`}
               type="button"
               onClick={onTrack}
               aria-label={`${brandName(vehicle.brand)} ${vehicle.model}, ${statusLabel}: ${service.display.message}. Open tracking`}
@@ -98,6 +100,7 @@ export function VehicleCard({
             </button>
           ) : onBook && (
             <button
+              data-test-id={`vehicle-card-book-${vehicle.id}`}
               type="button"
               onClick={(event) => {
                 // Don't also open the vehicle details

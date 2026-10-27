@@ -110,6 +110,7 @@ export function AuthModal() {
 
         {/* Close */}
         <button
+          data-test-id="auth-modal-close"
           onClick={onClose}
           className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-600 transition hover:bg-white hover:text-black"
           aria-label="Close"
@@ -181,6 +182,7 @@ export function AuthModal() {
                 {/* Tabs */}
                 <div className="mb-7 grid grid-cols-2 rounded-lg bg-gray-100 p-1">
                   <button
+                    data-test-id="auth-modal-login-tab"
                     type="button"
                     onClick={() => switchMode("login")}
                     className={`rounded-md py-2 text-sm font-semibold transition ${
@@ -193,6 +195,7 @@ export function AuthModal() {
                   </button>
 
                   <button
+                    data-test-id="auth-modal-signup-tab"
                     type="button"
                     onClick={() => switchMode("signup")}
                     className={`rounded-md py-2 text-sm font-semibold transition ${

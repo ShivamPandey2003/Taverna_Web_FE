@@ -94,6 +94,7 @@ function RegisterVehicleForm() {
     <div className="absolute inset-0 z-50">
       {/* Backdrop */}
       <div
+        data-test-id="register-vehicle-backdrop"
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
       />
@@ -112,6 +113,7 @@ function RegisterVehicleForm() {
             </h2>
 
             <button
+              data-test-id="register-vehicle-close"
               type="button"
               onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 hover:text-gray-900"
@@ -147,6 +149,7 @@ function RegisterVehicleForm() {
                   />
 
                   <input
+                    data-test-id="register-vehicle-vin-input"
                     id="vin"
                     {...register("vin")}
                     maxLength={17}
@@ -194,6 +197,7 @@ function RegisterVehicleForm() {
                     />
 
                     <input
+                      data-test-id="register-vehicle-phone-input"
                       id="phone"
                       {...register("phone")}
                       type="tel"
@@ -236,6 +240,7 @@ function RegisterVehicleForm() {
                     />
 
                     <input
+                      data-test-id="register-vehicle-email-input"
                       id="email"
                       {...register("email")}
                       type="email"
@@ -266,6 +271,7 @@ function RegisterVehicleForm() {
 
             {/* Submit */}
             <button
+              data-test-id="register-vehicle-verify-button"
               type="submit"
               disabled={isSubmitting}
               className="h-12 w-full rounded-xl bg-black text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"

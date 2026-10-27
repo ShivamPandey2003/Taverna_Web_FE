@@ -159,6 +159,7 @@ export function BookingWidget() {
       {/* Buttons */}
       <div className="grid grid-cols-2 gap-2">
         <button
+          data-test-id="widget-schedule-later"
           onClick={startBooking}
           disabled={!hasPickup}
           className="cursor-pointer rounded-button border border-gray-400 px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
@@ -167,6 +168,7 @@ export function BookingWidget() {
         </button>
 
         <button
+          data-test-id="widget-confirm-booking"
           onClick={startBooking}
           disabled={!hasPickup}
           className="cursor-pointer rounded-button bg-black px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"

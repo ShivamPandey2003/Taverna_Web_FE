@@ -21,7 +21,7 @@ export function Navbar() {
       <Container>
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <a href="/" aria-label={`${siteConfig.name} home`}>
+          <a data-test-id="landing-logo-link" href="/" aria-label={`${siteConfig.name} home`}>
             <Logo />
           </a>
 
@@ -29,6 +29,7 @@ export function Navbar() {
           <div className="hidden items-center gap-8 md:flex">
             {siteConfig.navigation.map((item) => (
               <a
+                data-test-id={`landing-nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
                 key={item.href}
                 href={item.href}
                 className="text-sm font-medium text-gray-500 transition hover:text-gray-900"
@@ -42,6 +43,7 @@ export function Navbar() {
           <div className="flex items-center gap-5">
             {session ? (
               <button
+                data-test-id="landing-go-to-dashboard"
                 onClick={() => navigate(session.user.role === "admin" ? "/admin" : "/dashboard")}
                 className="rounded-button cursor-pointer bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
               >
@@ -49,11 +51,12 @@ export function Navbar() {
               </button>
             ) : (
               <>
-                <button onClick={() => openAuth("login")} className="text-sm font-semibold cursor-pointer">
+                <button data-test-id="landing-login-button" onClick={() => openAuth("login")} className="text-sm font-semibold cursor-pointer">
                   Log In
                 </button>
 
                 <button
+                  data-test-id="landing-signup-button"
                   onClick={() => openAuth("signup")}
                   className="rounded-button cursor-pointer bg-black px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800"
                 >

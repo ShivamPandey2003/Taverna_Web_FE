@@ -162,6 +162,7 @@ function SelectLocationContent({
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
+        data-test-id="select-location-backdrop"
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
       />
@@ -183,6 +184,7 @@ function SelectLocationContent({
             </h2>
 
             <button
+              data-test-id="select-location-close"
               type="button"
               onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
@@ -196,6 +198,7 @@ function SelectLocationContent({
           <div className="mt-4 shrink-0 space-y-2.5">
             {/* Current location */}
             <button
+              data-test-id="select-location-current"
               type="button"
               onClick={selectCurrentLocation}
               className={[
@@ -244,6 +247,7 @@ function SelectLocationContent({
 
             {/* Add Address */}
             <button
+              data-test-id="select-location-add-address"
               type="button"
               onClick={onAddAddress}
               className="flex w-full items-center gap-4 rounded-xl border border-gray-200 px-3 py-2  text-left transition hover:border-gray-300 hover:bg-gray-50"
@@ -287,6 +291,7 @@ function SelectLocationContent({
                   <p className="text-sm text-gray-500">
                     We couldn't load your addresses.{" "}
                     <button
+                      data-test-id="select-location-retry"
                       type="button"
                       onClick={() => refetchAddresses()}
                       disabled={fetchingAddresses}
@@ -326,6 +331,7 @@ function SelectLocationContent({
           {/* Actions */}
           <div className="flex shrink-0 justify-end gap-3">
             <button
+              data-test-id="select-location-cancel"
               type="button"
               onClick={onClose}
               className="h-10 rounded-lg border border-gray-200 bg-white px-5 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
@@ -334,6 +340,7 @@ function SelectLocationContent({
             </button>
 
             <button
+              data-test-id="select-location-confirm"
               type="button"
               disabled={
                 saving ||
@@ -374,6 +381,7 @@ function SavedAddressCard({
 }: SavedAddressCardProps) {
   return (
     <button
+      data-test-id={`select-location-address-${address.id}`}
       type="button"
       onClick={onSelect}
       className={[

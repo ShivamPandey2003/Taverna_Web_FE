@@ -21,6 +21,8 @@ interface ConfirmModalProps {
   contained?: boolean;
   // "danger" (red) for deletes and resets, "primary" (black) for a plain double-check
   tone?: "danger" | "primary";
+  // data-test-id of the dialog; its buttons get "<testId>-confirm" / "<testId>-cancel"
+  testId?: string;
 }
 
 // Asks before an action that's destructive or easy to get wrong
@@ -37,6 +39,7 @@ export function ConfirmModal({
   stacked,
   contained,
   tone = "danger",
+  testId = "confirm-modal",
 }: ConfirmModalProps) {
   return (
     <Modal
@@ -46,11 +49,13 @@ export function ConfirmModal({
       width="max-w-[440px]"
       stacked={stacked}
       contained={contained}
+      testId={testId}
       footer={
         <>
           <button
             type="button"
             onClick={onClose}
+            data-test-id={`${testId}-cancel`}
             className="h-10 rounded-lg border border-gray-200 bg-white px-5 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
           >
             {cancelLabel}
@@ -59,6 +64,7 @@ export function ConfirmModal({
           <button
             type="button"
             onClick={onConfirm}
+            data-test-id={`${testId}-confirm`}
             disabled={pending}
             // Enter confirms a plain double-check; a destructive one needs a deliberate click
             autoFocus={tone === "primary"}

@@ -26,6 +26,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
       className="space-y-5"
     >
       <AuthInput
+        data-test-id="login-email-input"
         label="Email address"
         type="email"
         placeholder="you@example.com"
@@ -35,6 +36,7 @@ export function LoginForm({ onSubmit }: LoginFormProps) {
       />
 
       <button
+        data-test-id="login-submit-button"
         type="submit"
         disabled={isSubmitting}
         className="h-11 w-full rounded-lg bg-black text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"

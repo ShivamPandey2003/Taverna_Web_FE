@@ -69,6 +69,8 @@ interface BookingSummaryCardProps {
   // Shows a "Clear" link next to "Change"
   onClear?: () => void;
   className?: string;
+  // Prefix of the links' data-test-id ("<testId>-change" / "<testId>-clear"); by default from the title
+  testId?: string;
 }
 
 export function BookingSummaryCard({
@@ -81,9 +83,11 @@ export function BookingSummaryCard({
   changeLabel = status && !status.valid ? "Select" : "Change",
   onClear,
   className,
+  testId = `summary-${title.toLowerCase().replace(/\s+/g, "-")}`,
 }: BookingSummaryCardProps) {
   return (
     <section
+      data-test-id={testId}
       className={cn(
         "rounded-2xl border border-gray-200 bg-white p-4 transition sm:p-5",
         highlight && highlightClass,
@@ -101,8 +105,8 @@ export function BookingSummaryCard({
         </div>
 
         <div className="flex shrink-0 items-center gap-4">
-          {onChange && <CardLink label={changeLabel} onClick={onChange} />}
-          {onClear && <CardLink label="Clear" onClick={onClear} />}
+          {onChange && <CardLink label={changeLabel} onClick={onChange} testId={`${testId}-change`} />}
+          {onClear && <CardLink label="Clear" onClick={onClear} testId={`${testId}-clear`} />}
         </div>
       </div>
 
@@ -112,11 +116,20 @@ export function BookingSummaryCard({
     </section>
   );
 }
-function CardLink({ label, onClick }: { label: string; onClick: () => void }) {
+function CardLink({
+  label,
+  onClick,
+  testId,
+}: {
+  label: string;
+  onClick: () => void;
+  testId: string;
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
+      data-test-id={testId}
       className="text-xs font-semibold text-gray-900 underline underline-offset-4 transition hover:text-black"
     >
       {label}

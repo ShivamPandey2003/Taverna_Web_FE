@@ -88,6 +88,7 @@ export function BookingHero({
               <p className="muted">{customer.phone}</p>
             </div>
             <a
+              data-test-id="booking-hero-call-customer"
               href={telLink(customer.phone)}
               className="icon-btn icon-btn-primary"
               aria-label={`Call ${customer.name}`}

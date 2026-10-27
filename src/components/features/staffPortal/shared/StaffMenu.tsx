@@ -45,6 +45,7 @@ export function StaffMenu({
   return (
     <div ref={containerRef} className="relative shrink-0">
       <button
+        data-test-id="staff-menu-button"
         type="button"
         onClick={() => setOpen((value) => !value)}
         className="flex items-center gap-1.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-gray-100"
@@ -77,6 +78,7 @@ export function StaffMenu({
           <div className="pt-1.5">
             {tasksPath && (
               <Link
+                data-test-id="staff-menu-tasks"
                 to={tasksPath}
                 role="menuitem"
                 onClick={() => setOpen(false)}
@@ -88,6 +90,7 @@ export function StaffMenu({
             )}
 
             <button
+              data-test-id="staff-menu-sign-out"
               type="button"
               role="menuitem"
               onClick={() => {

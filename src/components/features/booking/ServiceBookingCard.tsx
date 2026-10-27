@@ -66,6 +66,7 @@ export function ServiceBookingCard({
       {/* Pinned to the bottom so both cards' buttons line up */}
       <div className="mt-auto pt-5">
         <button
+          data-test-id={`service-book-${service.id}`}
           type="button"
           onClick={() => onSelect?.(service)}
           disabled={disabled}

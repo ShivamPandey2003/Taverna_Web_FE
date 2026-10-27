@@ -43,6 +43,7 @@ export function OtpForm({
     >
       <div>
         <button
+          data-test-id="otp-back-button"
           type="button"
           onClick={onBack}
           className="mb-5 text-sm font-medium text-gray-500 hover:text-gray-900"
@@ -65,6 +66,7 @@ export function OtpForm({
 
       <div>
         <input
+          data-test-id="otp-input"
           {...register("otp")}
           ref={(element) => {
             register("otp").ref(element);
@@ -84,6 +86,7 @@ export function OtpForm({
       </div>
 
       <button
+        data-test-id="otp-verify-button"
         type="submit"
         disabled={isSubmitting}
         className="h-11 w-full rounded-lg bg-black text-sm font-semibold text-white hover:bg-gray-800 disabled:opacity-50"
@@ -94,6 +97,7 @@ export function OtpForm({
       </button>
 
       <button
+        data-test-id="otp-resend-button"
         type="button"
         onClick={onResend}
         disabled={resending}

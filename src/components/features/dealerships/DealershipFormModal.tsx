@@ -135,6 +135,7 @@ function DealershipForm({ dealership }: { dealership: Dealership | null }) {
 
   return (
     <Modal
+      testId="dealership-form-modal"
       title={<h2>{dealership ? "Edit Dealership" : "Add Dealership"}</h2>}
       onClose={onClose}
       width="max-w-[520px]"
@@ -146,6 +147,7 @@ function DealershipForm({ dealership }: { dealership: Dealership | null }) {
           {!dealership && (
             <FormField label="Dealer ID" htmlFor="dealership-dealer-id" error={errors.dealerId?.message}>
               <input
+                data-test-id="dealership-dealer-id-input"
                 id="dealership-dealer-id"
                 autoFocus
                 placeholder="The dealer's own ID"
@@ -157,6 +159,7 @@ function DealershipForm({ dealership }: { dealership: Dealership | null }) {
 
           <FormField label="Dealership name" htmlFor="dealership-name" error={errors.name?.message}>
             <input
+              data-test-id="dealership-name-input"
               id="dealership-name"
               autoFocus={!!dealership}
               placeholder="Taverna CDJR Miami"
@@ -167,6 +170,7 @@ function DealershipForm({ dealership }: { dealership: Dealership | null }) {
 
           <FormField label="Address" htmlFor="dealership-address" error={errors.address?.message}>
             <input
+              data-test-id="dealership-address-input"
               id="dealership-address"
               placeholder="123 Biscayne Blvd, Miami, FL 33132"
               {...register("address")}
@@ -181,6 +185,7 @@ function DealershipForm({ dealership }: { dealership: Dealership | null }) {
               error={errors.serviceRadiusMiles?.message}
             >
               <input
+                data-test-id="dealership-radius-input"
                 id="dealership-radius"
                 type="number"
                 min={1}
@@ -191,7 +196,7 @@ function DealershipForm({ dealership }: { dealership: Dealership | null }) {
             </FormField>
 
             <FormField label="Timezone" htmlFor="dealership-timezone" error={errors.timezone?.message}>
-              <select id="dealership-timezone" {...register("timezone")} className="form-input">
+              <select data-test-id="dealership-timezone-select" id="dealership-timezone" {...register("timezone")} className="form-input">
                 {timezoneOptions.map((zone) => (
                   <option key={zone.value} value={zone.value}>
                     {zone.label}
@@ -202,13 +207,14 @@ function DealershipForm({ dealership }: { dealership: Dealership | null }) {
           </div>
 
           <label className="flex h-11 cursor-pointer items-center gap-3 rounded-lg border border-gray-200 px-3 text-sm font-medium text-gray-900 transition hover:bg-gray-50">
-            <input type="checkbox" {...register("isActive")} className="h-4 w-4 accent-black" />
+            <input data-test-id="dealership-active-checkbox" type="checkbox" {...register("isActive")} className="h-4 w-4 accent-black" />
             Active (customers can choose it for new bookings)
           </label>
         </fieldset>
 
         <div className="flex justify-end gap-3 pt-5">
           <button
+            data-test-id="dealership-form-cancel"
             type="button"
             onClick={onClose}
             disabled={saving}
@@ -218,6 +224,7 @@ function DealershipForm({ dealership }: { dealership: Dealership | null }) {
           </button>
 
           <button
+            data-test-id="dealership-form-save"
             type="submit"
             disabled={saving}
             className="flex h-10 items-center gap-2 rounded-lg bg-black px-5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-80"

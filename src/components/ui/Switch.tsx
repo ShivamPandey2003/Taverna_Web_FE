@@ -6,10 +6,11 @@ interface SwitchProps {
   disabled?: boolean;
   // Read out by screen readers; the visible label sits next to the switch
   label: string;
+  testId?: string;
 }
 
 // An on / off toggle
-export function Switch({ checked, onChange, disabled, label }: SwitchProps) {
+export function Switch({ checked, onChange, disabled, label, testId }: SwitchProps) {
   return (
     <button
       type="button"
@@ -18,6 +19,7 @@ export function Switch({ checked, onChange, disabled, label }: SwitchProps) {
       aria-label={label}
       disabled={disabled}
       onClick={() => onChange(!checked)}
+      data-test-id={testId}
       className={cn(
         "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-300 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
         checked ? "bg-black" : "bg-gray-200",

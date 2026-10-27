@@ -22,7 +22,7 @@ export function SelectedVehicleCard({
           No vehicle selected.
         </p>
 
-        <button type="button" onClick={onChange} className={buttonClass}>
+        <button data-test-id="selected-vehicle-select" type="button" onClick={onChange} className={buttonClass}>
           Select
         </button>
       </div>
@@ -69,6 +69,7 @@ export function SelectedVehicleCard({
 
         {/* Change */}
         <button
+          data-test-id="selected-vehicle-change"
           type="button"
           onClick={onChange}
           className={cn(buttonClass, "w-full @[420px]:w-auto")}

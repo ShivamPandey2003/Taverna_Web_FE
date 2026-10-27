@@ -45,6 +45,7 @@ export function BookingActions({ booking, details, canCancel }: BookingActionsPr
 
       <div className="flex shrink-0 flex-col-reverse gap-3 sm:flex-row">
         <button
+          data-test-id="tracking-share-button"
           type="button"
           onClick={() => shareBooking(booking, user, details)}
           className="flex h-11 items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-5 text-sm font-semibold text-gray-900 transition hover:bg-gray-50"
@@ -55,6 +56,7 @@ export function BookingActions({ booking, details, canCancel }: BookingActionsPr
 
         {canCancel && (
           <button
+            data-test-id="tracking-cancel-booking"
             type="button"
             onClick={() => setConfirming(true)}
             className="h-11 rounded-lg border border-gray-200 bg-white px-5 text-sm font-semibold text-red-600 transition hover:border-red-200 hover:bg-red-50"
@@ -64,6 +66,7 @@ export function BookingActions({ booking, details, canCancel }: BookingActionsPr
         )}
 
         <button
+          data-test-id="tracking-go-home"
           type="button"
           onClick={() => navigate("/dashboard")}
           className="h-11 rounded-lg bg-black px-5 text-sm font-semibold text-white transition hover:bg-gray-800"
@@ -74,6 +77,7 @@ export function BookingActions({ booking, details, canCancel }: BookingActionsPr
 
       {confirming && (
         <ConfirmModal
+          testId="cancel-booking-modal"
           title="Cancel Booking?"
           confirmLabel="Cancel Booking"
           cancelLabel="Keep Booking"

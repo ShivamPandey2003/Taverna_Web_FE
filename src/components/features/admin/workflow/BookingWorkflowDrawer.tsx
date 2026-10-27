@@ -49,6 +49,7 @@ export function BookingWorkflowDrawer() {
 
   return (
     <Drawer
+      testId="workflow-drawer"
       title={
         <>
           <h2>Manage Booking</h2>

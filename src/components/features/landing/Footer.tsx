@@ -107,6 +107,7 @@ function FooterColumn({
         {links.map((link) => (
           <li key={link}>
             <a
+              data-test-id={`footer-link-${link.toLowerCase().replace(/\s+/g, "-")}`}
               href="#"
               className="text-xs text-text-secondary hover:text-gray-900"
             >

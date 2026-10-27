@@ -131,6 +131,7 @@ export function AdvisorStep({ booking, onDone }: AdvisorStepProps) {
               : "The customer can pay from their tracking page. Confirm here if they paid another way."}
           </p>
           <ActionButton
+            testId="workflow-confirm-payment"
             pending={confirm.isPending}
             pendingLabel="Confirming..."
             onClick={confirmPayment}

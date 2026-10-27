@@ -47,6 +47,7 @@ export function ConfirmStep({ booking, onDone }: ConfirmStepProps) {
             Confirming lets the customer know their booking was accepted.
           </p> */}
           <ActionButton
+            testId="workflow-confirm-booking"
             pending={confirmBooking.isPending}
             pendingLabel="Confirming..."
             onClick={handleConfirm}

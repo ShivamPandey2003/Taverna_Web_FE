@@ -50,6 +50,7 @@ export function RefreshBookingsButton() {
         )}
       >
         <button
+          data-test-id="bookings-refresh-now"
           type="button"
           onClick={refresh}
           title="Refresh now"
@@ -64,6 +65,7 @@ export function RefreshBookingsButton() {
         <label className="relative flex h-full items-center">
           <span className="sr-only">Auto refresh</span>
           <select
+            data-test-id="bookings-refresh-interval"
             value={seconds}
             onChange={(event) => onPick(Number(event.target.value) as BookingsRefreshSeconds)}
             title={seconds ? `Refreshes every ${seconds} seconds` : "Auto refresh is off"}

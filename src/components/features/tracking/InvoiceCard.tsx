@@ -80,6 +80,7 @@ export function InvoiceCard({ bookingId, invoice }: InvoiceCardProps) {
           </div>
         ) : (
           <button
+            data-test-id="invoice-pay-now"
             type="button"
             onClick={() => setConfirming(true)}
             disabled={payInvoice.isPending}
@@ -92,6 +93,7 @@ export function InvoiceCard({ bookingId, invoice }: InvoiceCardProps) {
 
       {confirming && (
         <ConfirmModal
+          testId="pay-invoice-modal"
           title="Pay Invoice?"
           confirmLabel={`Pay ${money(invoice.total)}`}
           cancelLabel="Not Now"

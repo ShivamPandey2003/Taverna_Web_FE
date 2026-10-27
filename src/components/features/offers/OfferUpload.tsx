@@ -88,6 +88,7 @@ export function OfferUpload({ onUploaded }: { onUploaded?: () => void }) {
         </p>
 
         <input
+          data-test-id="offer-upload-file-input"
           ref={inputRef}
           type="file"
           accept=".csv,text/csv"
@@ -123,6 +124,7 @@ export function OfferUpload({ onUploaded }: { onUploaded?: () => void }) {
                 </p>
               </div>
               <button
+                data-test-id="offer-upload-choose-file"
                 type="button"
                 onClick={() => inputRef.current?.click()}
                 className="flex h-9 shrink-0 items-center rounded-lg bg-black px-4 text-sm font-semibold text-white transition hover:bg-gray-800"
@@ -176,6 +178,7 @@ export function OfferUpload({ onUploaded }: { onUploaded?: () => void }) {
         </ul>
 
         <button
+          data-test-id="offer-upload-download-example"
           type="button"
           onClick={downloadExampleOfferCsv}
           className="mt-5 flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-gray-300 text-sm font-semibold text-gray-900 transition hover:bg-gray-50"
@@ -218,6 +221,7 @@ function SelectedFile({
         </div>
 
         <button
+          data-test-id="offer-upload-clear"
           type="button"
           onClick={onClear}
           disabled={uploading}
@@ -227,6 +231,7 @@ function SelectedFile({
           Remove
         </button>
         <button
+          data-test-id="offer-upload-submit"
           type="button"
           onClick={onUpload}
           disabled={!valid || uploading}

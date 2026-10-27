@@ -108,6 +108,7 @@ function TaskList({
                 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"
               />
               <input
+                data-test-id="staff-tasks-search"
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -120,6 +121,7 @@ function TaskList({
             {/* A dropdown, like the status filter of the admin's bookings table:
                 the API's statuses (a valet's grouped by trip) */}
             <select
+              data-test-id="staff-tasks-status-filter"
               value={status}
               onChange={(event) => onStatusChange(event.target.value)}
               className="field w-auto shrink-0 pr-8 text-sm"
@@ -144,6 +146,7 @@ function TaskList({
 
             {filtered && (
               <button
+                data-test-id="staff-tasks-clear"
                 type="button"
                 onClick={() => {
                   setSearch("");
@@ -188,6 +191,7 @@ function TaskList({
           {totalPages > 1 && (
             <div className="card overflow-hidden p-0 [&>div]:border-t-0">
               <TablePagination
+                testId="staff-tasks-pagination"
                 page={page}
                 pageSize={TASKS_PAGE_SIZE}
                 total={totalItems}
@@ -214,9 +218,10 @@ function TaskRow({ task }: { task: StaffTask }) {
   const { role, state } = task;
 
   return (
-    <tr onClick={() => navigate(task.path)} className="group cursor-pointer">
+    <tr data-test-id={`staff-task-row-${task.role}-${task.bookingId}`} onClick={() => navigate(task.path)} className="group cursor-pointer">
       <td className={cn(cellClass, "whitespace-nowrap")}>
         <Link
+          data-test-id={`staff-task-link-${task.role}-${task.bookingId}`}
           to={task.path}
           onClick={(event) => event.stopPropagation()}
           className="font-bold text-text"

@@ -54,6 +54,7 @@ function SelectVehicleContent({ onClose }: { onClose: () => void }) {
     <div className="absolute inset-0 z-50">
       {/* Backdrop */}
       <div
+        data-test-id="select-vehicle-backdrop"
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
       />
@@ -72,6 +73,7 @@ function SelectVehicleContent({ onClose }: { onClose: () => void }) {
             </h2>
 
             <button
+              data-test-id="select-vehicle-close"
               type="button"
               onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
@@ -105,6 +107,7 @@ function SelectVehicleContent({ onClose }: { onClose: () => void }) {
           {/* Actions: sharing the width on phones */}
           <div className="flex justify-end gap-3">
             <button
+              data-test-id="select-vehicle-cancel"
               type="button"
               onClick={onClose}
               className="h-10 flex-1 whitespace-nowrap rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-600 transition hover:bg-gray-50 sm:flex-none sm:px-5"
@@ -113,6 +116,7 @@ function SelectVehicleContent({ onClose }: { onClose: () => void }) {
             </button>
 
             <button
+              data-test-id="select-vehicle-confirm"
               type="button"
               disabled={!selected}
               onClick={handleConfirm}
@@ -141,6 +145,7 @@ function VehicleOption({
 }: VehicleOptionProps) {
   return (
     <button
+      data-test-id={`select-vehicle-option-${vehicle.id}`}
       type="button"
       onClick={onSelect}
       className={[

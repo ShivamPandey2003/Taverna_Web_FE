@@ -16,6 +16,8 @@ interface ModalProps {
   stacked?: boolean;
   // Covers only the nearest positioned parent (e.g. the drawer) instead of the whole screen
   contained?: boolean;
+  // data-test-id of the dialog; its close button gets "<testId>-close"
+  testId?: string;
 }
 
 // Centred dialog with a backdrop, a header with a close button and a scrolling body
@@ -28,13 +30,18 @@ export function Modal({
   width = "max-w-[760px]",
   stacked = false,
   contained = false,
+  testId = "modal",
 }: ModalProps) {
   return (
     <div
       className={cn("inset-0", contained ? "absolute" : "fixed", stacked ? "z-[60]" : "z-50")}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/40"
+        onClick={onClose}
+        data-test-id={`${testId}-backdrop`}
+      />
 
       {/* Modal wrapper */}
       <div className="relative flex h-full items-center justify-center p-6">
@@ -42,6 +49,7 @@ export function Modal({
         <div
           role="dialog"
           aria-modal="true"
+          data-test-id={testId}
           className={cn(
             "relative flex max-h-full w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl",
             width,
@@ -60,6 +68,7 @@ export function Modal({
             <button
               type="button"
               onClick={onClose}
+              data-test-id={`${testId}-close`}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 transition hover:bg-gray-200 hover:text-gray-900"
               aria-label="Close"
             >

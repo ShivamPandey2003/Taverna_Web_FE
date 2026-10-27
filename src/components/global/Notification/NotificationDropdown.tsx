@@ -51,6 +51,7 @@ export function NotificationDropdown() {
     <div ref={containerRef} className="relative">
       {/* Notification button */}
       <button
+        data-test-id="notifications-bell-button"
         type="button"
         onClick={() => dispatch(toggleNotifications())}
         className="relative flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-gray-100"
@@ -74,6 +75,7 @@ export function NotificationDropdown() {
         <>
           {/* Mobile backdrop */}
           <div
+            data-test-id="notifications-backdrop"
             className="fixed inset-0 z-40 bg-black/10 md:hidden"
             onClick={() => dispatch(closeNotifications())}
           />
@@ -88,6 +90,7 @@ export function NotificationDropdown() {
               </h2>
 
               <button
+                data-test-id="notifications-mark-all-read"
                 type="button"
                 onClick={() => markAllRead.mutate()}
                 disabled={unreadCount === 0 || markAllRead.isPending}

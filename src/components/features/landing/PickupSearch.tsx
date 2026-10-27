@@ -128,6 +128,7 @@ export function PickupSearch({ value, placeholder, near, onPick, onUseCurrentLoc
         </label>
 
         <input
+          data-test-id="pickup-search-input"
           id="pickup-search"
           ref={inputRef}
           type="text"
@@ -148,6 +149,7 @@ export function PickupSearch({ value, placeholder, near, onPick, onUseCurrentLoc
 
         {editing && text && (
           <button
+            data-test-id="pickup-search-clear"
             type="button"
             aria-label="Clear"
             // Keeps the box focused
@@ -173,6 +175,7 @@ export function PickupSearch({ value, placeholder, near, onPick, onUseCurrentLoc
           className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-gray-200 bg-white py-2 shadow-lg"
         >
           <SuggestionRow
+            testId="pickup-suggestion-current-location"
             active={highlighted === -1}
             icon={<Location size={20} className="text-primary" />}
             onHover={() => setHighlighted(-1)}
@@ -183,6 +186,7 @@ export function PickupSearch({ value, placeholder, near, onPick, onUseCurrentLoc
 
           {suggestions.map((suggestion, index) => (
             <SuggestionRow
+              testId={`pickup-suggestion-${suggestion.id}`}
               key={suggestion.id}
               active={highlighted === index}
               icon={<Pin size={20} className="text-gray-500" />}
@@ -211,11 +215,13 @@ interface SuggestionRowProps {
   onHover: () => void;
   onClick: () => void;
   children: ReactNode;
+  testId: string;
 }
 
-function SuggestionRow({ active, icon, onHover, onClick, children }: SuggestionRowProps) {
+function SuggestionRow({ active, icon, onHover, onClick, children, testId }: SuggestionRowProps) {
   return (
     <li
+      data-test-id={testId}
       role="option"
       aria-selected={active}
       onMouseEnter={onHover}

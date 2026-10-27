@@ -265,6 +265,7 @@ export function BookingHistoryButton() {
   const dispatch = useAppDispatch();
   return (
     <button
+      data-test-id="booking-history-button"
       type="button"
       onClick={() => dispatch(openBookingHistory())}
       className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-gray-100 px-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-200 hover:text-gray-900"
@@ -296,6 +297,7 @@ export function BookingHistoryModal() {
 
   return (
     <Modal
+      testId="booking-history-modal"
       title="Booking History"
       subtitle={history ? `${id} · Times in ${zoneName(zone)}` : id}
       onClose={() => dispatch(closeBookingHistory())}
@@ -308,6 +310,7 @@ export function BookingHistoryModal() {
         <div className="py-10 text-center">
           <p className="text-sm text-gray-500">Couldn't load the history.</p>
           <button
+            data-test-id="booking-history-retry"
             type="button"
             onClick={() => refetch()}
             className="mt-3 rounded-button bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800"

@@ -94,6 +94,7 @@ export function SavedVehicleDetailsModal() {
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
       <div
+        data-test-id="vehicle-details-backdrop"
         className="absolute inset-0 bg-black/40"
         onClick={onClose}
       />
@@ -116,6 +117,7 @@ export function SavedVehicleDetailsModal() {
             <div className="flex items-center gap-2">
               {SHOW_DETAILS && showingHistory && (
                 <button
+                  data-test-id="vehicle-details-back-button"
                   type="button"
                   onClick={() => setHistoryFor(null)}
                   className="-ml-1 flex h-8 w-8 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
@@ -130,6 +132,7 @@ export function SavedVehicleDetailsModal() {
             </div>
 
             <button
+              data-test-id="vehicle-details-close"
               type="button"
               onClick={onClose}
               className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-50 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
@@ -166,6 +169,7 @@ export function SavedVehicleDetailsModal() {
             // Its running service, as the vehicle's card shows it: the status in
             // its colour, opening the tracking page
             <button
+              data-test-id="vehicle-details-track-button"
               type="button"
               onClick={onTrackService}
               aria-label={`${statusLabel}: ${service.display.message}. Open tracking`}
@@ -180,6 +184,7 @@ export function SavedVehicleDetailsModal() {
             </button>
           ) : (
             <button
+              data-test-id="vehicle-details-book-pickup"
               type="button"
               onClick={onBookPickup}
               className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#111827] text-sm font-semibold text-white transition hover:bg-black"
@@ -346,6 +351,7 @@ function ServiceHistorySection({
 
         {/* Disabled until there's a service history to open */}
         <button
+          data-test-id="vehicle-details-view-history"
           type="button"
           onClick={onViewHistory}
           disabled={!onViewHistory || history.length === 0}

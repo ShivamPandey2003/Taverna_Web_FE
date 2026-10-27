@@ -32,6 +32,7 @@ export function WorkflowStepper({ booking, activeStep, onSelect }: WorkflowStepp
         return (
           <li key={step}>
             <button
+              data-test-id={`workflow-step-${step}`}
               type="button"
               disabled={!unlocked}
               onClick={() => onSelect(step)}

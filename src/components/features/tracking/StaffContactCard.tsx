@@ -30,6 +30,7 @@ export function StaffContactCard({ member, role }: StaffContactCardProps) {
 
       <div className="flex shrink-0 gap-2">
         <a
+          data-test-id={`staff-call-${role.toLowerCase().replace(/\s+/g, "-")}`}
           href={`tel:${phone}`}
           className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-900 transition hover:bg-gray-200"
           aria-label={`Call ${member.name}`}

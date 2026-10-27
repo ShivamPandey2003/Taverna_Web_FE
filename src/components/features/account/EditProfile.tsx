@@ -42,6 +42,7 @@ export function EditProfile() {
           </div>
 
           <button
+            data-test-id="profile-photo-button"
             type="button"
             className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-gray-700 shadow-sm transition hover:bg-gray-300"
             aria-label="Change profile photo"
@@ -51,6 +52,7 @@ export function EditProfile() {
         </div>
 
         <button
+          data-test-id="profile-change-photo"
           type="button"
           className="mt-3 text-xs font-semibold text-gray-900 hover:underline"
         >
@@ -65,6 +67,7 @@ export function EditProfile() {
           </p>
 
           <button
+            data-test-id="profile-retry"
             type="button"
             onClick={() => refetch()}
             disabled={isFetching}
@@ -147,6 +150,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
         <div className="grid gap-5 sm:grid-cols-2">
           <FormField label="First Name" htmlFor="firstName" error={errors.firstName?.message}>
             <input
+              data-test-id="profile-first-name-input"
               id="firstName"
               {...register("firstName")}
               autoComplete="given-name"
@@ -156,6 +160,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
 
           <FormField label="Last Name" htmlFor="lastName" error={errors.lastName?.message}>
             <input
+              data-test-id="profile-last-name-input"
               id="lastName"
               {...register("lastName")}
               autoComplete="family-name"
@@ -167,6 +172,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
         {/* Email: shown, never sent */}
         <FormField label="Email Address" htmlFor="email" description="Email cannot be changed.">
           <input
+            data-test-id="profile-email-input"
             id="email"
             type="email"
             value={profile.email}
@@ -178,6 +184,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
 
         <FormField label="Phone Number" htmlFor="phone" error={errors.phone?.message}>
           <input
+            data-test-id="profile-phone-input"
             id="phone"
             {...register("phone")}
             type="tel"
@@ -189,6 +196,7 @@ function ProfileForm({ profile }: { profile: Profile }) {
 
       {/* Save: only once something changed */}
       <button
+        data-test-id="profile-save-button"
         type="submit"
         disabled={saving || !isDirty}
         className="mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-black text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"

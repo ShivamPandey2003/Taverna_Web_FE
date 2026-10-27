@@ -97,6 +97,7 @@ export function CompleteStep({ booking }: { booking: AdminBooking }) {
 
       {!complete && (
         <ActionButton
+          testId="workflow-mark-complete"
           tone="success"
           pending={completeBooking.isPending}
           pendingLabel="Completing..."

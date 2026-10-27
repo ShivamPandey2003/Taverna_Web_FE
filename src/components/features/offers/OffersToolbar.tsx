@@ -25,6 +25,7 @@ export function OffersToolbar() {
   return (
     <div className="flex flex-wrap items-center gap-3">
       <SearchInput
+        testId="offers-search"
         value={search}
         onSearch={(value) => dispatch(setOffersSearch(value))}
         placeholder="Search by VIN, stock number, vehicle or lender"
@@ -32,6 +33,7 @@ export function OffersToolbar() {
       />
 
       <select
+        data-test-id="offers-condition-filter"
         value={condition}
         onChange={(event) => dispatch(setOfferConditionFilter(event.target.value))}
         className={selectClass}
@@ -46,6 +48,7 @@ export function OffersToolbar() {
       </select>
 
       <select
+        data-test-id="offers-type-filter"
         value={offerType}
         onChange={(event) => dispatch(setOfferTypeFilter(event.target.value))}
         className={selectClass}
@@ -61,6 +64,7 @@ export function OffersToolbar() {
 
       {hasFilters && (
         <button
+          data-test-id="offers-clear-filters"
           type="button"
           onClick={() => dispatch(resetOfferFilters())}
           className="h-9 rounded-lg px-3 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900"
@@ -70,6 +74,7 @@ export function OffersToolbar() {
       )}
 
       <button
+        data-test-id="offers-bulk-upload"
         type="button"
         onClick={() => dispatch(openOfferUpload())}
         className="flex h-9 shrink-0 items-center gap-1.5 rounded-lg bg-black px-4 text-sm font-semibold text-white transition hover:bg-gray-800"

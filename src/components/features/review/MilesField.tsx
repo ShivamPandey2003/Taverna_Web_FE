@@ -44,6 +44,7 @@ export function MilesField({ vehicle }: { vehicle: Vehicle }) {
         <label htmlFor="vehicle-miles">Miles:</label>
 
         <input
+          data-test-id="miles-input"
           id="vehicle-miles"
           autoFocus
           inputMode="numeric"
@@ -56,6 +57,7 @@ export function MilesField({ vehicle }: { vehicle: Vehicle }) {
         />
 
         <button
+          data-test-id="miles-save-button"
           type="submit"
           disabled={!draft || saving}
           className="h-8 rounded-lg bg-black px-3 text-xs font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
@@ -64,6 +66,7 @@ export function MilesField({ vehicle }: { vehicle: Vehicle }) {
         </button>
 
         <button
+          data-test-id="miles-cancel-button"
           type="button"
           onClick={() => setDraft(null)}
           disabled={saving}
@@ -83,6 +86,7 @@ export function MilesField({ vehicle }: { vehicle: Vehicle }) {
         <span className="flex items-center gap-1.5 whitespace-nowrap">
           <span className="font-semibold text-gray-900">{miles}</span>
           <button
+            data-test-id="miles-edit-button"
             type="button"
             onClick={() => setDraft(digitsOf(miles))}
             title="Edit miles"
@@ -94,6 +98,7 @@ export function MilesField({ vehicle }: { vehicle: Vehicle }) {
         </span>
       ) : (
         <button
+          data-test-id="miles-add-button"
           type="button"
           onClick={() => setDraft("")}
           className="text-xs font-semibold text-gray-900 underline underline-offset-4 transition hover:text-black"
