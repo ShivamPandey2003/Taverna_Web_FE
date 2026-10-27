@@ -25,6 +25,27 @@ export function useServiceStatus(id: string | null) {
   });
 }
 
+// The Stripe checkout the customer came back from. Asked again every 3s while
+// the API says the payment may still change (`canRefresh`); once it's paid the
+// customer's bookings are loaded again, so the tracking page shows it.
+export function usePaymentSession(sessionId: string | null) {
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: ["payments", "session", sessionId],
+    queryFn: () => bookingApi.getPaymentSession(sessionId!),
+    enabled: !!sessionId,
+    refetchInterval: (current) => (current.state.data?.canRefresh ? 3000 : false),
+    retry: false,
+  });
+
+  const paidBooking = query.data?.paymentStatus === "PAID" ? query.data.bookingId : null;
+  useEffect(() => {
+    if (paidBooking) queryClient.invalidateQueries({ queryKey: ["bookings"] });
+  }, [paidBooking, queryClient]);
+
+  return query;
+}
+
 // The valet or advisor the tracking page shows (the real API's staff-details).
 // Called only while the status (`code`) needs someone (staffNeeded): never before
 // the status is known, nor at a stage with nobody to show. Not polled: asked

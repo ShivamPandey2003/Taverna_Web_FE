@@ -1,4 +1,5 @@
-import { USE_MOCK_API, request } from "./apiClient";
+import { USE_MOCK_API, request, toQueryString } from "./apiClient";
+import { apiRequest } from "./apiService";
 import { mockServer } from "./mock/mockServer";
 import { formatMiles } from "./vehicleApi";
 import {
@@ -404,7 +405,51 @@ export const bookingApi = {
   // pays on Stripe's page; the API then moves the status on (polled).
   checkout: (id: string) =>
     request<CheckoutResponse>("post", `booking/${id}/checkout`),
+
+  // Real API: where a Stripe checkout stands, for the page Stripe sends the
+  // customer back to. The API's message is what the page says.
+  getPaymentSession: async (sessionId: string): Promise<PaymentSession> => {
+    const body = await apiRequest(
+      "get",
+      `payments/session-details${toQueryString({ session_id: sessionId })}`,
+    );
+    const session: PaymentSessionResponse = body?.response ?? body?.data ?? body;
+    return {
+      bookingId: session.bmsId,
+      amount: Number(session.amount) || 0,
+      currency: session.currency || "USD",
+      paymentStatus: session.paymentStatus,
+      bookingStatus: session.bookingStatus,
+      paidAt: session.paidAt,
+      canRefresh: !!session.canRefresh,
+      message: body?.message ?? null,
+    };
+  },
 };
+
+// GET payments/session-details
+interface PaymentSessionResponse {
+  bmsId: string;
+  amount: string;
+  currency: string;
+  // PAID, …
+  paymentStatus: string;
+  bookingStatus: string;
+  paidAt: string | null;
+  // The payment isn't settled yet: asking again may give a newer answer
+  canRefresh: boolean;
+}
+
+export interface PaymentSession {
+  bookingId: string;
+  amount: number;
+  currency: string;
+  paymentStatus: string;
+  bookingStatus: string;
+  paidAt: string | null;
+  canRefresh: boolean;
+  message: string | null;
+}
 
 // POST booking/:bmsId/checkout
 interface CheckoutResponse {
