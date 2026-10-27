@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import PlaceholderImage from "@/assets/jeep-grand-cherokee.webp";
+import { brandImage } from "@/libs/vehicleImage";
 import { request } from "./apiClient";
 import type {
   Vehicle,
@@ -52,7 +52,7 @@ function toVehicle(vehicle: VehicleResponse): Vehicle {
     year: Number(vehicle.year),
     vin: vehicle.vin,
     miles: formatMiles(vehicle.currentMileage),
-    image: vehicle.image_url || PlaceholderImage,
+    image: vehicle.image_url || brandImage(vehicle.make),
     trim: vehicle.trim,
     engine: vehicle.engine,
   };
@@ -126,7 +126,7 @@ export const vehicleApi = {
       year: Number(result.year),
       vin: result.vin,
       miles: null,
-      image: result.image_url || PlaceholderImage,
+      image: result.image_url || brandImage(result.make),
       imageUrl: result.image_url,
       trim: result.trim,
       engine: result.engine,

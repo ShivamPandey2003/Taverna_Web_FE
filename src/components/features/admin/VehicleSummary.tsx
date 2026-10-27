@@ -1,5 +1,5 @@
-import defaultVehicleImage from "@/assets/jeep-grand-cherokee.webp";
 import { cn, vehicleName } from "@/libs/utils";
+import { brandImage } from "@/libs/vehicleImage";
 
 interface VehicleSummaryProps {
   vehicle: { year: number; brand: string; model: string; vin: string; image?: string };
@@ -13,9 +13,9 @@ export function VehicleSummary({ vehicle, className }: VehicleSummaryProps) {
 
   return (
     <div className={cn("flex min-w-0 items-center gap-3", className)}>
-      {/* Bookings don't carry the vehicle's photo yet, so this is the stock one for now */}
+      {/* Bookings don't carry the vehicle's photo yet, so this is the brand's stock one for now */}
       <img
-        src={vehicle.image || defaultVehicleImage}
+        src={vehicle.image || brandImage(vehicle.brand)}
         alt=""
         className="h-11 w-16 shrink-0 object-contain"
       />

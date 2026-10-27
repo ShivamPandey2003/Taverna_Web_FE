@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Calendar, Call, Danger } from "reicon-react";
-import defaultVehicleImage from "@/assets/jeep-grand-cherokee.webp";
 import { telLink } from "@/libs/utils";
+import { brandImage } from "@/libs/vehicleImage";
 
 // What the card shows of a booking
 export interface HeroBooking {
@@ -56,7 +56,7 @@ export function BookingHero({
         <div className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-border">
           <div className="flex min-w-0 items-center gap-3 sm:pr-4">
             <img
-              src={vehicle.image || defaultVehicleImage}
+              src={vehicle.image || brandImage(vehicle.name)}
               alt=""
               className="h-9 w-14 shrink-0 object-contain"
             />
@@ -103,7 +103,7 @@ export function BookingHero({
           <div className="info-row">
             {/* Bookings don't carry the vehicle's photo yet, so this is the stock one for now */}
             <img
-              src={vehicle.image || defaultVehicleImage}
+              src={vehicle.image || brandImage(vehicle.name)}
               alt=""
               className="mt-0.5 h-9 w-14 shrink-0 object-contain"
             />

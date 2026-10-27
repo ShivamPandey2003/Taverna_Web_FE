@@ -24,7 +24,7 @@ import {
 } from "@/redux/tracking/trackingSlice";
 import { selectVehicles } from "@/redux/vehicle/vehicleSlice";
 import { useMyBookings } from "@/services/queries/bookingQueries";
-import defaultVehicleImage from "@/assets/jeep-grand-cherokee.webp";
+import { brandImage } from "@/libs/vehicleImage";
 import { statusColors, type StatusColor } from "@/libs/statusColors";
 import { BookingStatus, type Booking, type BookingSummary } from "@/types/booking";
 import type { Vehicle } from "@/types/vehicle";
@@ -234,7 +234,7 @@ function toTrackingBooking(summary: BookingSummary, vehicles: Vehicle[]): Bookin
     ...parseVehicle(summary.vehicle),
     vin: summary.vin,
     miles: "—",
-    image: defaultVehicleImage,
+    image: brandImage(summary.vehicle),
   };
   const scheduled = Date.parse(summary.scheduled);
   const scheduledAt = Number.isNaN(scheduled) ? null : new Date(scheduled).toISOString();
