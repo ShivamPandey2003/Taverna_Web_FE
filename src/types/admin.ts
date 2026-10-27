@@ -238,13 +238,31 @@ export function journeyIntakeMethod(
   return null;
 }
 
+// SERVICE_COMPLETE on the journey
+export const SERVICE_COMPLETED = "serviceComplete";
+
+// The vehicle is back with the customer: the valet delivered it, or the booking
+// is complete (however it went back). Read off the API alone, so it holds in any
+// browser, like journeyIntakeDone.
+export function journeyHandoverDone(journey: BookingJourney) {
+  return (
+    journey.current === SERVICE_COMPLETED ||
+    journeyReached(journey, HANDOVER_DELIVERED) ||
+    journeyReached(journey, SERVICE_COMPLETED)
+  );
+}
+
 // The way back, as the API tells it: Customer Drop Off while the status is
-// CUSTOMER_DROP_OFF after the vehicle came in. null when the API doesn't say.
+// CUSTOMER_DROP_OFF after the vehicle came in, and once it's back with the
+// customer with no delivery valet (the status has moved on from
+// CUSTOMER_DROP_OFF by then). null when the API doesn't say.
 export function journeyHandoverMethod(
-  booking: Pick<AdminBooking, "journey">,
+  booking: Pick<AdminBooking, "journey" | "deliveryValet">,
 ): IntakeMethod | null {
   const { journey } = booking;
-  if (journey?.current === "customerDropOff" && journeyIntakeDone(journey)) return "selfDrive";
+  if (!journey) return null;
+  if (journey.current === "customerDropOff" && journeyIntakeDone(journey)) return "selfDrive";
+  if (journeyHandoverDone(journey) && !booking.deliveryValet) return "selfDrive";
   return null;
 }
 
@@ -489,6 +507,44 @@ export interface BookingHistoryEvent {
   assignedStaffName: string | null;
 }
 
+// Someone on a booking, as the history names them; null when nobody had the role
+export interface HistoryContact {
+  name: string;
+  email: string | null;
+  phone: string | null;
+}
+
+// The booking as the history repeats it, shown under each section's title
+export interface BookingHistoryDetails {
+  customer: HistoryContact | null;
+  vehicle: { name: string; vin: string; color: string | null; miles: string | null };
+  // PICKUP_AND_DELIVERY / LOANER_ONLY
+  bookingType: string;
+  serviceDescription: string | null;
+  pickupValet: HistoryContact | null;
+  advisor: HistoryContact | null;
+  deliveryValet: HistoryContact | null;
+  invoice: {
+    total: number;
+    currency: string;
+    items: { description: string; amount: number }[];
+    generatedAt: string | null;
+    advisorName: string | null;
+  } | null;
+  payment: {
+    // PAID, …
+    status: string;
+    amount: number;
+    currency: string;
+    // STRIPE, …
+    method: string | null;
+    providerPaymentId: string | null;
+    createdAt: string | null;
+    paidAt: string | null;
+    failureReason: string | null;
+  } | null;
+}
+
 export interface BookingHistory {
   id: string;
   currentStatus: string;
@@ -498,4 +554,5 @@ export interface BookingHistory {
   timezone: string | null;
   isClosed: boolean;
   events: BookingHistoryEvent[];
+  details: BookingHistoryDetails;
 }

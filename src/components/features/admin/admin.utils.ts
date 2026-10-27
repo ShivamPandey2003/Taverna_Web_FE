@@ -4,6 +4,7 @@ import {
   HANDOVER_DELIVERED,
   INTAKE_CONFIRMED,
   journeyIntakeDone,
+  journeyHandoverDone,
   journeyHandoverMethod,
   journeyIntakeMethod,
   journeyReached,
@@ -195,6 +196,9 @@ const tripDone = (booking: AdminBooking, leg: ValetLeg) => {
   // The API says the vehicle is in: done, however it came (a tow truck chosen in
   // another browser leaves this one guessing the method)
   if (leg === "pickup" && booking.journey && journeyIntakeDone(booking.journey)) return true;
+  // Likewise the vehicle is back with the customer, by valet or Customer Drop Off
+  // (a drop off confirmed in another browser isn't in this one's mock copy)
+  if (leg === "delivery" && booking.journey && journeyHandoverDone(booking.journey)) return true;
   const { valet, progress } = valetTrip(booking, leg);
   const method = legMethod(booking, leg);
   if (!method || (method === "valet" && !valet)) return false;

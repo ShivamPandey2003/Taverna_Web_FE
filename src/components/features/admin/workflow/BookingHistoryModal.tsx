@@ -1,4 +1,5 @@
-import { Check, History } from "reicon-react";
+import { useState, type ReactNode } from "react";
+import { ArrowDown2, Check, History } from "reicon-react";
 import { cn } from "@/libs/utils";
 import { Modal } from "@/components/ui/Modal";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
@@ -10,7 +11,13 @@ import {
 } from "@/redux/modals/adminModal/adminModalSlice";
 import { useAdminBooking, useBookingHistory } from "@/services/queries/adminQueries";
 import { statusName } from "@/services/bookingApi";
-import type { BookingHistory, BookingHistoryEvent, HistoryActor } from "@/types/admin";
+import type {
+  BookingHistory,
+  BookingHistoryDetails,
+  BookingHistoryEvent,
+  HistoryActor,
+  HistoryContact,
+} from "@/types/admin";
 import { stepLabels } from "../admin.utils";
 
 // ---- Formatting ----
@@ -78,6 +85,20 @@ function formatDuration(ms: number) {
 }
 
 const between = (from: string, to: string) => Date.parse(to) - Date.parse(from);
+
+function formatMoney(amount: number, currency: string) {
+  try {
+    return amount.toLocaleString("en-US", { style: "currency", currency });
+  } catch {
+    // A currency code the browser doesn't know
+    return `${amount.toFixed(2)} ${currency}`;
+  }
+}
+
+const bookingTypeLabels: Record<string, string> = {
+  PICKUP_AND_DELIVERY: "Pickup & Delivery",
+  LOANER_ONLY: "Loaner Only",
+};
 
 // "VALET_DISPATCHED" -> "valetDispatched", the journey's name for its label
 const toStepKey = (status: string) =>
@@ -240,6 +261,124 @@ function EventRow({ event, previous, label, current, last, zone }: EventRowProps
   );
 }
 
+// ---- Section details ----
+
+type Row = [label: string, value: ReactNode];
+
+// A labelled group of rows; rows without a value are left out
+function DetailGroup({ title, rows }: { title: string; rows: Row[] }) {
+  const shown = rows.filter(([, value]) => value != null && value !== "");
+  if (shown.length === 0) return null;
+  return (
+    <div>
+      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+        {title}
+      </p>
+      <dl className="space-y-1">
+        {shown.map(([label, value]) => (
+          <div key={label} className="flex items-start justify-between gap-4 text-[13px]">
+            <dt className="shrink-0 text-gray-500">{label}</dt>
+            <dd className="min-w-0 wrap-break-word text-right font-medium text-gray-900">{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
+const contactRows = (person: HistoryContact | null, none: string): Row[] =>
+  person
+    ? [
+        ["Name", person.name],
+        ["Phone", person.phone],
+        ["Email", person.email],
+      ]
+    : [["Name", none]];
+
+// What the history's details say about one step's part of the booking. null
+// for a step with nothing more to show.
+function phaseDetails(
+  step: WorkflowStep,
+  details: BookingHistoryDetails,
+  zone: string | null,
+): ReactNode {
+  const when = (value: string | null) => (value ? dateTimeOf(value, zone) : null);
+
+  switch (step) {
+    case "confirm":
+      return (
+        <>
+          <DetailGroup
+            title="Customer"
+            rows={contactRows(details.customer, "—")}
+          />
+          <DetailGroup
+            title="Vehicle"
+            rows={[
+              ["Vehicle", details.vehicle.name],
+              ["VIN", details.vehicle.vin],
+              ["Color", details.vehicle.color],
+              ["Mileage", details.vehicle.miles],
+            ]}
+          />
+          <DetailGroup
+            title="Service"
+            rows={[
+              ["Type", bookingTypeLabels[details.bookingType] ?? statusName(details.bookingType)],
+              ["Concern", details.serviceDescription],
+            ]}
+          />
+        </>
+      );
+    case "pickup":
+      return <DetailGroup title="Pickup valet" rows={contactRows(details.pickupValet, "No valet")} />;
+    case "delivery":
+      return (
+        <DetailGroup title="Delivery valet" rows={contactRows(details.deliveryValet, "No valet")} />
+      );
+    case "advisor": {
+      const { invoice, payment } = details;
+      return (
+        <>
+          <DetailGroup title="Advisor" rows={contactRows(details.advisor, "Not assigned")} />
+          {invoice && (
+            <DetailGroup
+              title="Invoice"
+              rows={[
+                ...invoice.items.map(
+                  (item, index): Row => [
+                    item.description || `Item ${index + 1}`,
+                    formatMoney(item.amount, invoice.currency),
+                  ],
+                ),
+                ["Total", formatMoney(invoice.total, invoice.currency)],
+                ["Generated", when(invoice.generatedAt)],
+                ["By", invoice.advisorName],
+              ]}
+            />
+          )}
+          {payment && (
+            <DetailGroup
+              title="Payment"
+              rows={[
+                ["Status", statusName(payment.status)],
+                ["Amount", formatMoney(payment.amount, payment.currency)],
+                ["Method", payment.method && statusName(payment.method)],
+                ["Started", when(payment.createdAt)],
+                ["Paid", when(payment.paidAt)],
+                ["Payment ID", payment.providerPaymentId],
+                ["Failure", payment.failureReason],
+              ]}
+            />
+          )}
+        </>
+      );
+    }
+    case "complete":
+      return null;
+  }
+}
+
 function HistorySkeleton() {
   return (
     <div className="space-y-5">
@@ -285,8 +424,15 @@ export function BookingHistoryModal() {
   const { data: history, isPending, isError, refetch } = useBookingHistory(id);
   // Already loaded by the drawer: its journey has the API's name for each status
   const { data: booking } = useAdminBooking(workflowBookingId);
+  // The sections whose details are open, by where they start
+  const [expanded, setExpanded] = useState<number[]>([]);
 
   if (!id) return null;
+
+  const toggle = (start: number) =>
+    setExpanded((open) =>
+      open.includes(start) ? open.filter((item) => item !== start) : [...open, start],
+    );
 
   const labels = new Map(booking?.journey?.steps.map((step) => [step.key, step.label]));
   const labelOf = (code: string) => labels.get(toStepKey(code)) ?? statusName(code);
@@ -300,7 +446,10 @@ export function BookingHistoryModal() {
       testId="booking-history-modal"
       title="Booking History"
       subtitle={history ? `${id} · Times in ${zoneName(zone)}` : id}
-      onClose={() => dispatch(closeBookingHistory())}
+      onClose={() => {
+        setExpanded([]);
+        dispatch(closeBookingHistory());
+      }}
       width="max-w-[560px]"
       contained
     >
@@ -332,24 +481,55 @@ export function BookingHistoryModal() {
 
           {phases.map((phase, phaseIndex) => {
             const done = history.isClosed || phaseIndex < phases.length - 1;
+            const extra = phaseDetails(phase.step, history.details, zone);
+            const open = expanded.includes(phase.start);
+            const duration = (
+              <span
+                className={cn(
+                  "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                  done
+                    ? "bg-status-active/12 text-[#047a42]"
+                    : "bg-status-pending/12 text-[#c2410c]",
+                )}
+              >
+                {!done && "In progress · "}
+                {formatDuration(phaseDuration(phase, events))}
+              </span>
+            );
             return (
               <section key={phase.start}>
-                <header className="mb-3 flex items-center justify-between gap-3">
-                  <h3 className="text-xs font-bold uppercase tracking-wide text-gray-500">
-                    {stepLabels[phase.step]}
-                  </h3>
-                  <span
-                    className={cn(
-                      "rounded-full px-2 py-0.5 text-[11px] font-semibold",
-                      done
-                        ? "bg-status-active/12 text-[#047a42]"
-                        : "bg-status-pending/12 text-[#c2410c]",
-                    )}
+                {/* The title opens the step's details, when it has any */}
+                {extra ? (
+                  <button
+                    data-test-id={`booking-history-section-${phase.step}-${phase.start}`}
+                    type="button"
+                    onClick={() => toggle(phase.start)}
+                    aria-expanded={open}
+                    className="group mb-3 flex w-full items-center justify-between gap-3 rounded-lg text-left"
                   >
-                    {!done && "In progress · "}
-                    {formatDuration(phaseDuration(phase, events))}
-                  </span>
-                </header>
+                    <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-gray-500 transition group-hover:text-gray-900">
+                      {stepLabels[phase.step]}
+                      <ArrowDown2
+                        size={14}
+                        className={cn("transition-transform", open && "rotate-180")}
+                      />
+                    </h3>
+                    {duration}
+                  </button>
+                ) : (
+                  <header className="mb-3 flex items-center justify-between gap-3">
+                    <h3 className="text-xs font-bold uppercase tracking-wide text-gray-500">
+                      {stepLabels[phase.step]}
+                    </h3>
+                    {duration}
+                  </header>
+                )}
+
+                {extra && open && (
+                  <div className="mb-4 space-y-3 rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-3">
+                    {extra}
+                  </div>
+                )}
 
                 <ol>
                   {phase.events.map((event, index) => {

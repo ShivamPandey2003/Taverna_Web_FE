@@ -2,6 +2,7 @@ import { USE_MOCK_API, callApi, request, toQueryString } from "./apiClient";
 import { toast } from "sonner";
 import { mockServer } from "./mock/mockServer";
 import { toOfferPage, type OfferPagination, type OfferResponse } from "./offerApi";
+import { formatMiles } from "./vehicleApi";
 import { BookingStatus } from "@/types/booking";
 import type { ServiceId } from "@/types/service";
 import { journeyAdvisorProgress, journeyTripProgress } from "@/types/admin";
@@ -9,8 +10,10 @@ import type {
   AdminBooking,
   AdminBookingRow,
   BookingHistory,
+  BookingHistoryDetails,
   BookingHistoryEvent,
   BookingJourney,
+  HistoryContact,
   BookingListParams,
   IntakeMethod,
   Paginated,
@@ -341,16 +344,109 @@ async function getJourney(id: string): Promise<{ journey: BookingJourney; status
   };
 }
 
-// GET booking/admin/:bmsId/history (it also repeats the booking's details,
-// which aren't read: the drawer has them)
+// GET booking/admin/:bmsId/history: the events, and the booking's details,
+// shown under the history's section titles
 interface BookingHistoryResponse {
   bmsId: string;
+  bookingType: string;
   currentStatus: string;
   bookedAt: string;
   appointmentAt: string | null;
   dealershipTimezone: string | null;
+  serviceDescription: string | null;
   isClosed: boolean;
+  user_name: string | null;
+  user_email: string | null;
+  user_phone: string | null;
+  vin: string;
+  vehicleYear: number | null;
+  vehicleMake: string | null;
+  vehicleModel: string | null;
+  vehicleColor: string | null;
+  currentMileage: number | null;
+  invoiceId: string | null;
+  invoiceTotal: number | null;
+  invoiceCurrency: string | null;
+  invoiceItems: { description: string; amount: string }[] | null;
+  invoiceGeneratedAt: string | null;
+  invoiceAdvisorName: string | null;
+  paymentId: string | null;
+  paymentStatus: string | null;
+  paymentAmount: number | null;
+  paymentCurrency: string | null;
+  paymentMethodType: string | null;
+  providerPaymentId: string | null;
+  paymentCreatedAt: string | null;
+  paymentPaidAt: string | null;
+  paymentFailureReason: string | null;
+  pickupValetName: string | null;
+  pickupValetEmail: string | null;
+  pickupValetPhone: string | null;
+  advisorName: string | null;
+  advisorEmail: string | null;
+  advisorPhone: string | null;
+  deliveryValetName: string | null;
+  deliveryValetEmail: string | null;
+  deliveryValetPhone: string | null;
   history: BookingHistoryEvent[] | null;
+}
+
+const historyContact = (
+  name: string | null,
+  email: string | null,
+  phone: string | null,
+): HistoryContact | null => (name ? { name, email: email || null, phone: phone || null } : null);
+
+function toHistoryDetails(response: BookingHistoryResponse): BookingHistoryDetails {
+  const currency = response.invoiceCurrency || "USD";
+  return {
+    customer: historyContact(response.user_name, response.user_email, response.user_phone),
+    vehicle: {
+      name: [response.vehicleYear, response.vehicleMake, response.vehicleModel]
+        .filter(Boolean)
+        .join(" "),
+      vin: response.vin,
+      color: response.vehicleColor || null,
+      miles: formatMiles(response.currentMileage),
+    },
+    bookingType: response.bookingType,
+    serviceDescription: response.serviceDescription?.trim() || null,
+    pickupValet: historyContact(
+      response.pickupValetName,
+      response.pickupValetEmail,
+      response.pickupValetPhone,
+    ),
+    advisor: historyContact(response.advisorName, response.advisorEmail, response.advisorPhone),
+    deliveryValet: historyContact(
+      response.deliveryValetName,
+      response.deliveryValetEmail,
+      response.deliveryValetPhone,
+    ),
+    invoice: response.invoiceId
+      ? {
+          total: response.invoiceTotal ?? 0,
+          currency,
+          items: (response.invoiceItems ?? []).map((item) => ({
+            description: item.description,
+            amount: Number(item.amount) || 0,
+          })),
+          generatedAt: response.invoiceGeneratedAt,
+          advisorName: response.invoiceAdvisorName,
+        }
+      : null,
+    payment: response.paymentId
+      ? {
+          status: response.paymentStatus ?? "",
+          amount: response.paymentAmount ?? 0,
+          currency: response.paymentCurrency || currency,
+          method: response.paymentMethodType,
+          providerPaymentId: response.providerPaymentId,
+          createdAt: response.paymentCreatedAt,
+          paidAt: response.paymentPaidAt,
+          failureReason: response.paymentFailureReason,
+        }
+      : null,
+  };
 }
 
 // Who booking/staff/assign can put on a booking. One call assigns one person:
@@ -442,6 +538,7 @@ export const adminApi = {
       events: [...(response.history ?? [])].sort(
         (a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt),
       ),
+      details: toHistoryDetails(response),
     };
   },
 
